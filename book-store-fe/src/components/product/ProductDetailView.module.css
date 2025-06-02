@@ -1,0 +1,132 @@
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 1rem;
+  background-color: #fff;
+}
+
+.gallerySection {
+  flex: 1 1 300px;
+  max-width: 400px;
+}
+
+.infoSection {
+  flex: 1 1 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.author,
+.publisher {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.priceSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.originalPrice {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 1rem;
+}
+
+.salePrice {
+  font-weight: 700;
+  color: #d32f2f;
+  font-size: 1.25rem;
+}
+
+.discountPercent {
+  background-color: #d32f2f;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.details {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.quantitySelector {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quantitySelector input {
+  width: 60px;
+  padding: 0.25rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.addToCartButton,
+.buyNowButton {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.addToCartButton {
+  background-color: #007bff;
+  color: white;
+}
+
+.addToCartButton:hover {
+  background-color: #0056b3;
+}
+
+.buyNowButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.buyNowButton:hover {
+  background-color: #1e7e34;
+}
+
+.description {
+  flex-basis: 100%;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.5;
+}
