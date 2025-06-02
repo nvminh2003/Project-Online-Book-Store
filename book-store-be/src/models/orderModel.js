@@ -1,6 +1,8 @@
 // models/Order.js
-const OrderSchema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: "Account" },
+const mongoose = require('mongoose');
+
+const OrderSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     orderCode: String,
     fullName: String,
     phone: String,
@@ -13,7 +15,7 @@ const OrderSchema = new Schema({
     paymentStatus: String, // "pending", "paid", "failed"
     orderStatus: String, // "pending", "shipping", "completed", "cancelled"
     items: [{
-        book: { type: Schema.Types.ObjectId, ref: "Book" },
+        book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
         quantity: Number,
         price: Number
     }]

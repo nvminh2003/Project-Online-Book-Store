@@ -1,8 +1,9 @@
+// models/Wishlist.js
 const mongoose = require("mongoose");
 
-const discountBookSchema = new mongoose.Schema({
-    discountId: { type: mongoose.Schema.Types.ObjectId, ref: "DiscountCode" },
-    bookId: { type: mongoose.Schema.Types.ObjectId, ref: "Book" }
-});
+const WishlistSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "Account", required: true },
+    books: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }]
+}, { timestamps: true });
 
-module.exports = mongoose.model("DiscountBook", discountBookSchema); 
+module.exports = mongoose.model("Wishlist", WishlistSchema);

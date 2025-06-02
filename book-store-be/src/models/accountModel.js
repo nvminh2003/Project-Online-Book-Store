@@ -1,13 +1,11 @@
 // models/Account.js
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
-const { Schema } = mongoose;
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
-const AccountSchema = new Schema({
-    username: { type: String, required: true },
+const AccountSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String },
-    googleId: { type: String },
+    password: { type: String }, // chỉ có nếu không đăng nhập Google
+    googleId: { type: String }, // nếu đăng nhập bằng Google
     role: { type: String, enum: ["customer", "admin", "superadmin"], default: "customer" },
     isActive: { type: Boolean, default: true },
     refreshToken: { type: String },
@@ -22,12 +20,12 @@ const AccountSchema = new Schema({
 
     adminInfo: {
         fullName: String,
-        department: String,
+        department: String, // ví dụ: "sales", "content", "support"
         permissions: [String]
     }
 }, { timestamps: true });
 
-// ✅ Hash password trước khi lưu nếu có thay đổi
+// ✅ Hash password trước khi lưu (chỉ nếu được thay đổi)
 AccountSchema.pre("save", async function (next) {
     if (this.isModified("password") && this.password) {
         const salt = await bcrypt.genSalt(10);
@@ -36,7 +34,7 @@ AccountSchema.pre("save", async function (next) {
     next();
 });
 
-// ✅ Thêm phương thức so sánh password
+// ✅ So sánh password khi đăng nhập
 AccountSchema.methods.comparePassword = async function (rawPassword) {
     return await bcrypt.compare(rawPassword, this.password);
 };

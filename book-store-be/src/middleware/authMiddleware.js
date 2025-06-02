@@ -15,9 +15,7 @@ const checkAdminMiddleware = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
-        const user = await Account.findById(decoded.id)
-            // .populate('permissions')
-            .select('-Password');
+        const user = await Account.findById(decoded.id).select('-password');
 
         if (!user) {
             return res.status(401).json({
@@ -26,11 +24,49 @@ const checkAdminMiddleware = async (req, res, next) => {
             });
         }
 
-        // Check specifically for Admin permission
-        const isAdmin = user.permissions.some(p => p.PermissionName === "Admin");
-        if (!isAdmin) {
+        // Check if user is admin or superadmin
+        if (user.role !== "admin" && user.role !== "superadmin") {
             return res.status(403).json({
                 message: "Access denied. Admin privileges required.",
+                status: "Error",
+            });
+        }
+
+        req.account = user;
+        next();
+    } catch (error) {
+        return res.status(401).json({
+            message: "Invalid token",
+            status: "Error",
+        });
+    }
+};
+
+const checkSuperAdminMiddleware = async (req, res, next) => {
+    try {
+        let token = req.headers.token?.split(" ")[1] || req.headers.authorization?.split(" ")[1];
+
+        if (!token) {
+            return res.status(401).json({
+                message: "Access denied. No token provided.",
+                status: "Error",
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
+        const user = await Account.findById(decoded.id).select('-password');
+
+        if (!user) {
+            return res.status(401).json({
+                message: "User not found",
+                status: "Error",
+            });
+        }
+
+        // Check if user is superadmin
+        if (user.role !== "superadmin") {
+            return res.status(403).json({
+                message: "Access denied. Super Admin privileges required.",
                 status: "Error",
             });
         }
@@ -57,9 +93,7 @@ const checkAuthMiddleware = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
-        const user = await Account.findById(decoded.id)
-            .populate('permissions')
-            .select('-Password');
+        const user = await Account.findById(decoded.id).select('-password');
 
         if (!user) {
             return res.status(401).json({
@@ -68,7 +102,14 @@ const checkAuthMiddleware = async (req, res, next) => {
             });
         }
 
-        // Just verify the user is logged in, no specific permission check
+        // Check if account is active
+        if (!user.isActive) {
+            return res.status(401).json({
+                message: "Account is deactivated",
+                status: "Error",
+            });
+        }
+
         req.account = user;
         next();
     } catch (error) {
@@ -80,6 +121,7 @@ const checkAuthMiddleware = async (req, res, next) => {
 };
 
 module.exports = {
-    checkAdminMiddleware,  // for admin-only routes
-    checkAuthMiddleware,   // for any authenticated user
+    checkAdminMiddleware,     // for admin and superadmin routes
+    checkSuperAdminMiddleware, // for superadmin-only routes
+    checkAuthMiddleware,      // for any authenticated user
 };

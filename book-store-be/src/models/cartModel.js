@@ -1,8 +1,10 @@
 // models/Cart.js
-const CartSchema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: "Account" },
+const mongoose = require('mongoose');
+
+const CartSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     items: [{
-        book: { type: Schema.Types.ObjectId, ref: "Book" },
+        book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
         quantity: Number
     }]
 }, { timestamps: true });

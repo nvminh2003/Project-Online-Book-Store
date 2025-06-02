@@ -1,10 +1,12 @@
 // models/BlogPost.js
-const BlogPostSchema = new Schema({
+const mongoose = require('mongoose');
+
+const BlogSchema = new mongoose.Schema({
     title: String,
     content: String,
-    author: { type: Schema.Types.ObjectId, ref: "Account" },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     viewCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
-module.exports = mongoose.model("BlogPost", BlogPostSchema);
+module.exports = mongoose.model("Blog", BlogSchema);
