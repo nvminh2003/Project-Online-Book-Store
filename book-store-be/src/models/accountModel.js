@@ -1,0 +1,44 @@
+// models/Account.js
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const { Schema } = mongoose;
+
+const AccountSchema = new Schema({
+    username: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String },
+    googleId: { type: String },
+    role: { type: String, enum: ["customer", "admin", "superadmin"], default: "customer" },
+    isActive: { type: Boolean, default: true },
+    refreshToken: { type: String },
+
+    customerInfo: {
+        fullName: String,
+        phone: String,
+        address: String,
+        gender: { type: String, enum: ["male", "female", "other"] },
+        birthday: Date
+    },
+
+    adminInfo: {
+        fullName: String,
+        department: String,
+        permissions: [String]
+    }
+}, { timestamps: true });
+
+// ✅ Hash password trước khi lưu nếu có thay đổi
+AccountSchema.pre("save", async function (next) {
+    if (this.isModified("password") && this.password) {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
+});
+
+// ✅ Thêm phương thức so sánh password
+AccountSchema.methods.comparePassword = async function (rawPassword) {
+    return await bcrypt.compare(rawPassword, this.password);
+};
+
+module.exports = mongoose.model("Account", AccountSchema);

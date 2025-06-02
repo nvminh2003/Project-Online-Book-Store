@@ -5,4 +5,4 @@ const discountBookSchema = new mongoose.Schema({
     bookId: { type: mongoose.Schema.Types.ObjectId, ref: "Book" }
 });
 
-module.exports = mongoose.model("DiscountBook", discountBookSchema);
+module.exports = mongoose.model("DiscountBook", discountBookSchema); 

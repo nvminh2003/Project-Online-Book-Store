@@ -1,4 +1,4 @@
-const BookRouter = require("./BookRouter");
+const BookRouter = require("./bookRoutes");
 
 const routes = (app) => {
     app.use("/api/books", BookRouter);
