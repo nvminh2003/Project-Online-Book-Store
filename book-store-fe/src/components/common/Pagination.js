@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Pagination.module.css";
+// import styles from "./Pagination.module.css";
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
@@ -28,9 +28,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       {pages.map((page) => (
         <button
           key={page}
-          className={`${styles.pageButton} ${
-            page === currentPage ? styles.active : ""
-          }`}
+          className={`${styles.pageButton} ${page === currentPage ? styles.active : ""
+            }`}
           onClick={() => handlePageChange(page)}
           aria-current={page === currentPage ? "page" : undefined}
         >

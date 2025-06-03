@@ -1,3 +1,9 @@
-export default function OrderDetailPage() {
-  return null;
+import React from 'react'
+
+const OrderDetailPage = () => {
+  return (
+    <div>OrderDetailPage</div>
+  )
 }
+
+export default OrderDetailPage

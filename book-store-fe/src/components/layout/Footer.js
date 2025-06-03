@@ -1,140 +1,137 @@
 import React from "react";
-import Link from "next/link";
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-gray-100 text-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-8">
-        {/* Column 1: Company Info */}
-        <div>
-          <h3 className="font-bold mb-4">Công ty Cổ phần Sách Tao Đàn</h3>
-          <p>Chúng tôi cung cấp sách chất lượng cao và dịch vụ tốt nhất.</p>
+    <footer className="w-full bg-gray-900 text-gray-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Company Info */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white mb-4">Công ty Cổ phần Sách Tao Đàn</h3>
+            <p className="text-gray-400 leading-relaxed">
+              Chúng tôi cung cấp sách chất lượng cao và dịch vụ tốt nhất cho độc giả Việt Nam.
+            </p>
+            <div className="flex space-x-4">
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <i className="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <i className="fab fa-twitter"></i>
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <i className="fab fa-instagram"></i>
+              </a>
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white mb-4">Kênh thông tin liên hệ</h3>
+            <div className="space-y-2">
+              <p className="flex items-start">
+                <i className="fas fa-map-marker-alt mt-1 mr-3 text-blue-500"></i>
+                <span>Địa chỉ văn phòng Hà Nội: (Địa chỉ cụ thể)</span>
+              </p>
+              <p className="flex items-center">
+                <i className="fas fa-phone-alt mr-3 text-blue-500"></i>
+                <span>024.2214.9698</span>
+              </p>
+              <p className="flex items-center">
+                <i className="fas fa-mobile-alt mr-3 text-blue-500"></i>
+                <span>0974.148.047 / 0777720254</span>
+              </p>
+              <p className="flex items-center">
+                <i className="fas fa-envelope mr-3 text-blue-500"></i>
+                <span>info@sachtaodan.vn</span>
+              </p>
+              <p className="flex items-center">
+                <i className="fas fa-clock mr-3 text-blue-500"></i>
+                <span>8h00-17h30 từ thứ 2 đến thứ 6</span>
+              </p>
+              <p className="font-bold text-blue-400">CHỈ BÁN ONLINE</p>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white mb-4">Liên kết nhanh</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/" className="text-gray-400 hover:text-white transition-colors">
+                  Trang chủ
+                </Link>
+              </li>
+              <li>
+                <Link to="/products" className="text-gray-400 hover:text-white transition-colors">
+                  Sản phẩm
+                </Link>
+              </li>
+              <li>
+                <Link to="/products?filter=new-arrivals" className="text-gray-400 hover:text-white transition-colors">
+                  Sách hay sách mới
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">
+                  Liên hệ mua sách
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Policy Links */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white mb-4">Chính sách</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/chinh-sach-thanh-toan" className="text-gray-400 hover:text-white transition-colors">
+                  Chính sách thanh toán
+                </Link>
+              </li>
+              <li>
+                <Link to="/chinh-sach-van-chuyen" className="text-gray-400 hover:text-white transition-colors">
+                  Chính sách vận chuyển
+                </Link>
+              </li>
+              <li>
+                <Link to="/chinh-sach-doi-tra" className="text-gray-400 hover:text-white transition-colors">
+                  Chính sách đổi trả
+                </Link>
+              </li>
+              <li>
+                <Link to="/chinh-sach-bao-hanh" className="text-gray-400 hover:text-white transition-colors">
+                  Chính sách bảo hành
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        {/* Column 2: Contact Info */}
-        <div>
-          <h3 className="font-bold mb-4">Kênh thông tin liên hệ</h3>
-          <p>Địa chỉ văn phòng Hà Nội: (Địa chỉ cụ thể)</p>
-          <p>Số điện thoại: 024.2214.9698</p>
-          <p>Hotline: 0974.148.047 / 0777720254</p>
-          <p>Email: info@sachtaodan.vn / sachtaodan@gmail.com</p>
-          <p>Giờ làm việc: 8h00-17h30 từ thứ 2 đến thứ 6.</p>
-          <p>Hỗ trợ ngoài giờ hành chính: 0974 148 047.</p>
-          <p className="font-bold">CHỈ BÁN ONLINE</p>
+        {/* Newsletter Subscription */}
+        <div className="mt-12 pt-8 border-t border-gray-800">
+          <div className="max-w-xl mx-auto text-center">
+            <h4 className="text-lg font-semibold text-white mb-4">Đăng ký nhận thông tin</h4>
+            <form className="flex gap-2">
+              <input
+                type="email"
+                placeholder="Nhập email của bạn"
+                className="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-white placeholder-gray-400"
+              />
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Đăng ký
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Column 3: Customer Info Links */}
-        <div>
-          <h3 className="font-bold mb-4">Thông tin khách hàng</h3>
-          <ul>
-            <li>
-              <Link href="/">
-                <a className="hover:underline">Trang chủ</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/products">
-                <a className="hover:underline">Sản phẩm</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/products?filter=new-arrivals">
-                <a className="hover:underline">Sách hay sách mới</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact">
-                <a className="hover:underline">Liên hệ mua sách</a>
-              </Link>
-            </li>
-          </ul>
+        {/* Copyright */}
+        <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
+          <p>© {new Date().getFullYear()} Bản quyền thuộc về Sachtaodan.vn | Cung cấp bởi Sapo</p>
         </div>
-
-        {/* Column 4: Service Support Links */}
-        <div>
-          <h3 className="font-bold mb-4">Hỗ trợ dịch vụ</h3>
-          <ul>
-            <li>
-              <Link href="/dieu-khoan-su-dung">
-                <a className="hover:underline">Điều khoản sử dụng</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/dieu-khoan-giao-dich">
-                <a className="hover:underline">Điều khoản giao dịch</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/quyen-so-huu-tri-tue">
-                <a className="hover:underline">Quyền sở hữu trí tuệ</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/dich-vu-tien-ich">
-                <a className="hover:underline">Dịch vụ tiện ích</a>
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Column 5: Policy Links */}
-        <div>
-          <h3 className="font-bold mb-4">Chính sách ưu đãi</h3>
-          <ul>
-            <li>
-              <Link href="/chinh-sach-thanh-toan">
-                <a className="hover:underline">Chính sách thanh toán</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/chinh-sach-van-chuyen">
-                <a className="hover:underline">Chính sách vận chuyển</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/chinh-sach-doi-tra">
-                <a className="hover:underline">Chính sách đổi trả</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/chinh-sach-bao-hanh">
-                <a className="hover:underline">Chính sách bảo hành</a>
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Column 6: Service Guide Links */}
-        <div>
-          <h3 className="font-bold mb-4">Hướng dẫn dịch vụ</h3>
-          <ul>
-            <li>
-              <Link href="/doi-tra-bao-hanh">
-                <a className="hover:underline">Đổi trả và bảo hành</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/huong-dan-mua-hang">
-                <a className="hover:underline">Hướng dẫn mua hàng</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/giao-nhan-thanh-toan">
-                <a className="hover:underline">Giao nhận và thanh toán</a>
-              </Link>
-            </li>
-            <li>
-              <Link href="/auth/register">
-                <a className="hover:underline">Đăng ký thành viên</a>
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Copyright Row */}
-      <div className="bg-gray-200 text-center py-4 text-sm">
-        © Bản quyền thuộc về Sachtaodan.vn | Cung cấp bởi Sapo
       </div>
     </footer>
   );

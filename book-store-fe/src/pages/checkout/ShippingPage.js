@@ -1,3 +1,9 @@
-export default function ShippingPage() {
-  return null;
+import React from 'react'
+
+const ShippingPage = () => {
+  return (
+    <div>ShippingPage</div>
+  )
 }
+
+export default ShippingPage

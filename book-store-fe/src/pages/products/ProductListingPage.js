@@ -1,3 +1,9 @@
-export default function ProductListingPage() {
-  return null;
+import React from 'react'
+
+const ProductListingPage = () => {
+  return (
+    <div>ProductListingPage</div>
+  )
 }
+
+export default ProductListingPage

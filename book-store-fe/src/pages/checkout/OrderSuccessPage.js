@@ -1,3 +1,9 @@
-export default function OrderSuccessPage() {
-  return null;
+import React from 'react'
+
+const OrderSuccessPage = () => {
+  return (
+    <div>OrderSuccessPage</div>
+  )
 }
+
+export default OrderSuccessPage

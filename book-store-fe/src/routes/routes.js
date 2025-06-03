@@ -1,7 +1,5 @@
-import AccountPage from "../pages/AccountPage";
-import HomePage from "../pages/HomPage";
+import HomePage from "../pages/HomePage";
 import NotFoundPage from "../pages/NotFoundPage";
-import OrderPage from "../pages/OrderPage";
 
 export const routes = [
     {
@@ -11,12 +9,7 @@ export const routes = [
     },
     {
         path: "/account",
-        page: AccountPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/order",
-        page: OrderPage,
+        // page: AccountPage,
         isShowHeader: true,
     },
     {

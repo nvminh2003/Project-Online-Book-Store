@@ -1,5 +1,5 @@
 import React from "react";
-import "./Spinner.css";
+// import "./Spinner.css";
 
 const Spinner = ({ size = "md", color = "#007bff" }) => {
   const sizeMap = {

@@ -1,3 +1,9 @@
-export default function WishlistPage() {
-  return null;
+import React from 'react'
+
+const WishlistPage = () => {
+  return (
+    <div>WishlistPage</div>
+  )
 }
+
+export default WishlistPage
