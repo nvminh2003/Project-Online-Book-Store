@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./ProductCard.module.css";
 import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
@@ -15,29 +14,40 @@ const ProductCard = ({ product }) => {
   } = product;
 
   return (
-    <div className={styles.card}>
-      <Link to={`/products/${slug}`} className={styles.imageWrapper}>
-        <img src={coverImage} alt={title} className={styles.coverImage} />
+    <div className="border rounded-md overflow-hidden shadow hover:shadow-lg transition-shadow duration-300">
+      <Link to={`/products/${slug}`} className="block overflow-hidden">
+        <img
+          src={coverImage}
+          alt={title}
+          className="w-full h-48 object-cover"
+        />
       </Link>
-      <div className={styles.info}>
-        <Link to={`/products/${slug}`} className={styles.title}>
+      <div className="p-4">
+        <Link
+          to={`/products/${slug}`}
+          className="text-lg font-semibold text-gray-900 hover:text-blue-600"
+        >
           {title}
         </Link>
-        {author && <div className={styles.author}>{author}</div>}
-        <div className={styles.priceSection}>
+        {author && <div className="text-sm text-gray-600 mt-1">{author}</div>}
+        <div className="mt-2 flex items-center space-x-2">
           {originalPrice && (
-            <span className={styles.originalPrice}>
+            <span className="line-through text-gray-500 text-sm">
               {originalPrice.toLocaleString()}₫
             </span>
           )}
-          <span className={styles.salePrice}>
+          <span className="text-red-600 font-bold text-lg">
             {salePrice.toLocaleString()}₫
           </span>
           {discountPercent > 0 && (
-            <span className={styles.discountPercent}>-{discountPercent}%</span>
+            <span className="bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded">
+              -{discountPercent}%
+            </span>
           )}
         </div>
-        <button className={styles.addToCartButton}>Thêm vào giỏ</button>
+        <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors duration-300">
+          Thêm vào giỏ
+        </button>
       </div>
     </div>
   );

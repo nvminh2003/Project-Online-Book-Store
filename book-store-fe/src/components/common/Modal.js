@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import styles from "./Modal.module.css";
 
 const Modal = ({ isOpen, onClose, title, children, footerContent }) => {
   const modalRef = useRef(null);
@@ -52,20 +51,25 @@ const Modal = ({ isOpen, onClose, title, children, footerContent }) => {
 
   return (
     <div
-      className={styles.overlay}
+      className="fixed inset-0 w-screen h-screen bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={handleOutsideClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className={styles.modal} ref={modalRef}>
+      <div
+        className="bg-white rounded-lg max-w-2xl w-[90%] max-h-[90vh] overflow-y-auto shadow-lg p-6 flex flex-col"
+        ref={modalRef}
+      >
         {title && (
-          <h2 id="modal-title" className={styles.title}>
+          <h2 id="modal-title" className="m-0 mb-4 text-2xl font-bold">
             {title}
           </h2>
         )}
-        <div className={styles.content}>{children}</div>
-        {footerContent && <div className={styles.footer}>{footerContent}</div>}
+        <div className="flex-grow mb-4">{children}</div>
+        {footerContent && (
+          <div className="flex justify-end gap-2">{footerContent}</div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import ProductImageGallery from "./ProductImageGallery";
-import styles from "./ProductDetailView.module.css";
 
 const ProductDetailView = ({ product, onAddToCart }) => {
   const [quantity, setQuantity] = useState(1);
@@ -38,66 +37,82 @@ const ProductDetailView = ({ product, onAddToCart }) => {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.gallerySection}>
+    <div className="flex flex-col md:flex-row gap-8">
+      <div className="md:w-1/2">
         <ProductImageGallery images={images} />
       </div>
-      <div className={styles.infoSection}>
-        <h1 className={styles.title}>{title}</h1>
+      <div className="md:w-1/2 space-y-4">
+        <h1 className="text-2xl font-bold">{title}</h1>
         {author && (
-          <div className={styles.author}>
+          <div>
             Tác giả:{" "}
-            <a href={`/authors/${authorSlug}`} className={styles.link}>
+            <a
+              href={`/authors/${authorSlug}`}
+              className="text-blue-600 hover:underline"
+            >
               {author}
             </a>
           </div>
         )}
         {publisher && (
-          <div className={styles.publisher}>
+          <div>
             Nhà xuất bản:{" "}
-            <a href={`/publishers/${publisherSlug}`} className={styles.link}>
+            <a
+              href={`/publishers/${publisherSlug}`}
+              className="text-blue-600 hover:underline"
+            >
               {publisher}
             </a>
           </div>
         )}
-        <div className={styles.priceSection}>
+        <div className="flex items-center space-x-4 text-lg">
           {originalPrice && (
-            <span className={styles.originalPrice}>
+            <span className="line-through text-gray-500">
               {originalPrice.toLocaleString()}₫
             </span>
           )}
-          <span className={styles.salePrice}>
+          <span className="text-red-600 font-bold">
             {salePrice.toLocaleString()}₫
           </span>
           {discountPercent > 0 && (
-            <span className={styles.discountPercent}>-{discountPercent}%</span>
+            <span className="bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded">
+              -{discountPercent}%
+            </span>
           )}
         </div>
-        <div className={styles.details}>
+        <div className="space-y-1 text-sm text-gray-700">
           <div>Loại bìa: {coverType}</div>
           <div>Số trang: {pageCount}</div>
           <div>Kích thước: {size}</div>
           <div>ISBN: {isbn}</div>
         </div>
-        <div className={styles.quantitySelector}>
-          <label htmlFor="quantity">Số lượng:</label>
+        <div className="flex items-center space-x-2">
+          <label htmlFor="quantity" className="font-semibold">
+            Số lượng:
+          </label>
           <input
             id="quantity"
             type="number"
             min="1"
             value={quantity}
             onChange={handleQuantityChange}
+            className="w-16 border border-gray-300 rounded px-2 py-1"
           />
         </div>
-        <div className={styles.buttons}>
-          <button className={styles.addToCartButton} onClick={handleAddToCart}>
+        <div className="flex space-x-4">
+          <button
+            className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors duration-300"
+            onClick={handleAddToCart}
+          >
             Thêm vào giỏ hàng
           </button>
-          <button className={styles.buyNowButton}>Mua ngay</button>
+          <button className="flex-1 border border-blue-600 text-blue-600 py-2 rounded hover:bg-blue-100 transition-colors duration-300">
+            Mua ngay
+          </button>
         </div>
       </div>
       <div
-        className={styles.description}
+        className="prose max-w-none"
         dangerouslySetInnerHTML={{ __html: description }}
       />
       {/* Optional author info and reviews can be added here */}

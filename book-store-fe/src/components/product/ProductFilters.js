@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./ProductFilters.module.css";
 
 const ProductFilters = ({
   availableFilters = {},
@@ -31,27 +30,34 @@ const ProductFilters = ({
   };
 
   return (
-    <div className={styles.filters}>
+    <div className="space-y-6">
       {/* Categories */}
-      <div className={styles.filterGroup}>
-        <h4>Danh mục</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Danh mục</h4>
         {categories.map((cat) => (
-          <label key={cat.id} className={styles.checkboxLabel}>
+          <label
+            key={cat.id}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="checkbox"
               checked={(selectedFilters.categories || []).includes(cat.id)}
               onChange={() => handleCheckboxChange("categories", cat.id)}
+              className="form-checkbox h-4 w-4 text-blue-600"
             />
-            {cat.name}
+            <span>{cat.name}</span>
           </label>
         ))}
       </div>
 
       {/* Price Range */}
-      <div className={styles.filterGroup}>
-        <h4>Khoảng giá</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Khoảng giá</h4>
         {priceRanges.map((range) => (
-          <label key={range.value} className={styles.radioLabel}>
+          <label
+            key={range.value}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="radio"
               name="priceRange"
@@ -59,70 +65,87 @@ const ProductFilters = ({
               onChange={() =>
                 handleSingleSelectChange("priceRange", range.value)
               }
+              className="form-radio h-4 w-4 text-blue-600"
             />
-            {range.label}
+            <span>{range.label}</span>
           </label>
         ))}
       </div>
 
       {/* Authors */}
-      <div className={styles.filterGroup}>
-        <h4>Tác giả</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Tác giả</h4>
         {authors.map((author) => (
-          <label key={author.id} className={styles.checkboxLabel}>
+          <label
+            key={author.id}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="checkbox"
               checked={(selectedFilters.authors || []).includes(author.id)}
               onChange={() => handleCheckboxChange("authors", author.id)}
+              className="form-checkbox h-4 w-4 text-blue-600"
             />
-            {author.name}
+            <span>{author.name}</span>
           </label>
         ))}
       </div>
 
       {/* Publishers */}
-      <div className={styles.filterGroup}>
-        <h4>Nhà xuất bản</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Nhà xuất bản</h4>
         {publishers.map((publisher) => (
-          <label key={publisher.id} className={styles.checkboxLabel}>
+          <label
+            key={publisher.id}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="checkbox"
               checked={(selectedFilters.publishers || []).includes(
                 publisher.id
               )}
               onChange={() => handleCheckboxChange("publishers", publisher.id)}
+              className="form-checkbox h-4 w-4 text-blue-600"
             />
-            {publisher.name}
+            <span>{publisher.name}</span>
           </label>
         ))}
       </div>
 
       {/* Cover Types */}
-      <div className={styles.filterGroup}>
-        <h4>Loại bìa</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Loại bìa</h4>
         {coverTypes.map((cover) => (
-          <label key={cover} className={styles.checkboxLabel}>
+          <label
+            key={cover}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="checkbox"
               checked={(selectedFilters.coverTypes || []).includes(cover)}
               onChange={() => handleCheckboxChange("coverTypes", cover)}
+              className="form-checkbox h-4 w-4 text-blue-600"
             />
-            {cover}
+            <span>{cover}</span>
           </label>
         ))}
       </div>
 
       {/* Stock Status */}
-      <div className={styles.filterGroup}>
-        <h4>Trạng thái</h4>
+      <div>
+        <h4 className="font-semibold mb-2">Trạng thái</h4>
         {stockStatuses.map((status) => (
-          <label key={status} className={styles.checkboxLabel}>
+          <label
+            key={status}
+            className="flex items-center space-x-2 mb-1 cursor-pointer"
+          >
             <input
               type="checkbox"
               checked={(selectedFilters.stockStatuses || []).includes(status)}
               onChange={() => handleCheckboxChange("stockStatuses", status)}
+              className="form-checkbox h-4 w-4 text-blue-600"
             />
-            {status}
+            <span>{status}</span>
           </label>
         ))}
       </div>

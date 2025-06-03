@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./Input.module.css";
 
 const Input = React.forwardRef(
   (
@@ -20,14 +19,21 @@ const Input = React.forwardRef(
     ref
   ) => {
     return (
-      <div className={styles.inputWrapper}>
+      <div className="flex flex-col mb-4">
         {label && (
-          <label htmlFor={id || name} className={styles.label}>
+          <label
+            htmlFor={id || name}
+            className="font-semibold mb-1 text-gray-800"
+          >
             {label}
           </label>
         )}
-        <div className={styles.inputContainer}>
-          {iconLeft && <span className={styles.iconLeft}>{iconLeft}</span>}
+        <div className="relative flex items-center">
+          {iconLeft && (
+            <span className="absolute left-2 flex items-center justify-center text-gray-600 pointer-events-none">
+              {iconLeft}
+            </span>
+          )}
           <input
             id={id || name}
             name={name}
@@ -36,14 +42,20 @@ const Input = React.forwardRef(
             onChange={onChange}
             placeholder={placeholder}
             disabled={disabled}
-            className={`${styles.input} ${error ? styles.errorInput : ""}`}
+            className={`w-full px-3 py-2 text-base border rounded outline-none transition-colors focus:border-blue-600 ${
+              error ? "border-red-600" : "border-gray-300"
+            } ${iconLeft ? "pl-8" : ""} ${iconRight ? "pr-8" : ""}`}
             ref={ref}
             {...rest}
           />
-          {iconRight && <span className={styles.iconRight}>{iconRight}</span>}
+          {iconRight && (
+            <span className="absolute right-2 flex items-center justify-center text-gray-600 pointer-events-none">
+              {iconRight}
+            </span>
+          )}
         </div>
         {error && typeof error === "string" && (
-          <p className={styles.errorMessage}>{error}</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
         )}
       </div>
     );

@@ -1,16 +1,21 @@
 import React from "react";
-import styles from "./OrderReviewItem.module.css";
 
 const OrderReviewItem = ({ item }) => {
   const { coverImage, title, quantity, price } = item;
 
   return (
-    <div className={styles.orderReviewItem}>
-      <img src={coverImage} alt={title} className={styles.coverImage} />
-      <div className={styles.info}>
-        <div className={styles.title}>{title}</div>
-        <div className={styles.quantity}>Số lượng: {quantity}</div>
-        <div className={styles.price}>{price.toLocaleString()}₫</div>
+    <div className="flex items-center gap-4 p-3 border-b border-gray-300">
+      <img
+        src={coverImage}
+        alt={title}
+        className="w-20 h-24 object-cover rounded"
+      />
+      <div className="flex-grow flex flex-col gap-1">
+        <div className="font-bold text-base text-gray-800">{title}</div>
+        <div className="text-sm text-gray-600">Số lượng: {quantity}</div>
+        <div className="font-bold text-red-700 text-base">
+          {price.toLocaleString()}₫
+        </div>
       </div>
     </div>
   );

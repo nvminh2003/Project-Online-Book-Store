@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./BlogDetailView.module.css";
 
 const BlogDetailView = ({ post }) => {
   const {
@@ -19,29 +18,29 @@ const BlogDetailView = ({ post }) => {
   });
 
   return (
-    <article className={styles.blogDetail}>
-      <h1 className={styles.title}>{title}</h1>
+    <article className="prose max-w-none">
+      <h1 className="font-bold text-3xl mb-4">{title}</h1>
       {featuredImage && (
-        <img src={featuredImage} alt={title} className={styles.featuredImage} />
+        <img src={featuredImage} alt={title} className="w-full mb-6 rounded" />
       )}
-      <div className={styles.meta}>
-        <span className={styles.date}>{formattedDate}</span>
-        {author && <span className={styles.author}> - {author}</span>}
+      <div className="text-gray-500 text-sm mb-4">
+        <span>{formattedDate}</span>
+        {author && <span> - {author}</span>}
       </div>
       <div
-        className={styles.content}
+        className="prose max-w-none"
         dangerouslySetInnerHTML={{ __html: content }}
       />
       {(categories?.length > 0 || tags?.length > 0) && (
-        <div className={styles.taxonomy}>
+        <div className="mt-6">
           {categories?.length > 0 && (
-            <div className={styles.categories}>
+            <div className="mb-2">
               <strong>Chuyên mục: </strong>
               {categories.join(", ")}
             </div>
           )}
           {tags?.length > 0 && (
-            <div className={styles.tags}>
+            <div>
               <strong>Tags: </strong>
               {tags.join(", ")}
             </div>

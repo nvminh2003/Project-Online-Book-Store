@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import styles from "./AddressForm.module.css";
 import Input from "../common/Input";
 import Button from "../common/Button";
 
@@ -30,7 +29,7 @@ const AddressForm = ({ initialData = {}, onSubmit }) => {
   };
 
   return (
-    <form className={styles.addressForm} onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-4 max-w-md" onSubmit={handleSubmit}>
       <Input
         label="Họ và tên"
         name="fullName"

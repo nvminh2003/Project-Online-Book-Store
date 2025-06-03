@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import styles from "./ProfileForm.module.css";
 import Input from "../common/Input";
 import Button from "../common/Button";
 
@@ -28,7 +27,7 @@ const ProfileForm = ({ userData = {}, onSubmit }) => {
   };
 
   return (
-    <form className={styles.profileForm} onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-4 max-w-md" onSubmit={handleSubmit}>
       <Input
         label="Họ và tên"
         name="fullName"
@@ -58,7 +57,12 @@ const ProfileForm = ({ userData = {}, onSubmit }) => {
         value={formData.birthDate}
         onChange={handleChange}
       />
-      <Button type="submit">Lưu thay đổi</Button>
+      <Button
+        type="submit"
+        className="bg-blue-600 hover:bg-blue-800 text-white font-bold py-3 rounded"
+      >
+        Lưu thay đổi
+      </Button>
     </form>
   );
 };

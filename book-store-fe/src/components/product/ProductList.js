@@ -1,12 +1,11 @@
 import React from "react";
 import ProductCard from "./ProductCard";
 import Spinner from "../common/Spinner";
-import styles from "./ProductList.module.css";
 
 const ProductList = ({ products = [], loading = false }) => {
   if (loading) {
     return (
-      <div className={styles.spinnerWrapper}>
+      <div className="flex justify-center items-center min-h-[200px]">
         <Spinner size={50} />
       </div>
     );
@@ -17,7 +16,7 @@ const ProductList = ({ products = [], loading = false }) => {
   }
 
   return (
-    <div className={styles.grid}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
