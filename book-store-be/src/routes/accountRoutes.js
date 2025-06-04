@@ -8,7 +8,7 @@ const { checkAuthMiddleware } = require('../middleware/authMiddleware');
 router.post('/register', accountController.register);
 router.post('/login', accountController.login);
 router.post('/refresh-token', accountController.refreshToken);
-
+//profile
 // Protected routes
 router.post('/logout', checkAuthMiddleware, accountController.logout);
 
