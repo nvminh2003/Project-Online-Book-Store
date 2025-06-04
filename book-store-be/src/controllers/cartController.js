@@ -37,69 +37,68 @@ const getCart = async (req, res) => {
 // Add item to cart
 const addToCart = async (req, res) => {
     try {
-        const { bookId, quantity } = req.body;
+        const { items } = req.body; // items là mảng [{bookId, quantity}, ...]
 
-        if (!bookId || !quantity) {
+        if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({
-                message: "Book ID and quantity are required",
-                status: "Error"
-            });
-        }
-
-        if (quantity <= 0) {
-            return res.status(400).json({
-                message: "Quantity must be greater than 0",
-                status: "Error"
-            });
-        }
-
-        // Check if book exists
-        const book = await Book.findById(bookId);
-        if (!book) {
-            return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
-            });
-        }
-
-        // Check if book is in stock
-        if (book.stockQuantity < quantity) {
-            return res.status(400).json({
-                message: "Not enough stock available",
+                message: "Items array is required",
                 status: "Error"
             });
         }
 
         let cart = await Cart.findOne({ user: req.account._id });
-
         if (!cart) {
-            cart = new Cart({
-                user: req.account._id,
-                items: [{ book: bookId, quantity }]
-            });
-        } else {
-            // Check if book already in cart
+            cart = new Cart({ user: req.account._id, items: [] });
+        }
+
+        for (const { bookId, quantity } of items) {
+            if (!bookId || !quantity) {
+                return res.status(400).json({
+                    message: "Book ID and quantity are required for each item",
+                    status: "Error"
+                });
+            }
+
+            if (quantity <= 0) {
+                return res.status(400).json({
+                    message: "Quantity must be greater than 0",
+                    status: "Error"
+                });
+            }
+
+            const book = await Book.findById(bookId);
+            if (!book) {
+                return res.status(404).json({
+                    message: `Book not found: ${bookId}`,
+                    status: "Error"
+                });
+            }
+
             const existingItem = cart.items.find(
                 item => item.book.toString() === bookId
             );
 
             if (existingItem) {
-                // Check if new total quantity exceeds stock
                 if (book.stockQuantity < existingItem.quantity + quantity) {
                     return res.status(400).json({
-                        message: "Not enough stock available",
+                        message: `Not enough stock for book ${book.title}`,
                         status: "Error"
                     });
                 }
                 existingItem.quantity += quantity;
             } else {
+                if (book.stockQuantity < quantity) {
+                    return res.status(400).json({
+                        message: `Not enough stock for book ${book.title}`,
+                        status: "Error"
+                    });
+                }
                 cart.items.push({ book: bookId, quantity });
             }
         }
 
         await cart.save();
 
-        // Populate book details and calculate total
         cart = await Cart.findById(cart._id)
             .populate('items.book', 'title sellingPrice images authors publisher')
             .populate('user', 'email customerInfo.fullName');
@@ -123,6 +122,7 @@ const addToCart = async (req, res) => {
         });
     }
 };
+
 
 // Update cart item quantity
 const updateCartItem = async (req, res) => {

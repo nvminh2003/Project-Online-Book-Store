@@ -1,6 +1,7 @@
 const Account = require("../models/accountModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const getPermissions = require("../utils/getPermissions");
 
 // Register new account
 // const register = async (req, res) => {
@@ -81,13 +82,6 @@ const register = async (req, res) => {
     try {
         const { email, password, role, customerInfo, adminInfo } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({
-                message: "Email và mật khẩu là bắt buộc",
-                status: "Error"
-            });
-        }
-
         const existingAccount = await Account.findOne({ email });
         if (existingAccount) {
             return res.status(400).json({
@@ -96,13 +90,31 @@ const register = async (req, res) => {
             });
         }
 
+        // Xử lý thông tin tài khoản theo vai trò
+        let finalAdminInfo = undefined;
+
+        if (role === "superadmin") {
+            const permissions = getPermissions(role); // không cần department
+            finalAdminInfo = {
+                fullName: adminInfo?.fullName,
+                permissions
+            };
+        } else if (role === "admin") {
+            const department = adminInfo?.department;
+            const permissions = getPermissions(role, department);
+            finalAdminInfo = {
+                ...adminInfo,
+                permissions
+            };
+        }
+
         // Khởi tạo tài khoản (chưa có token)
         const newAccount = new Account({
             email,
             password,
             role,
             customerInfo: role === "customer" ? customerInfo : undefined,
-            adminInfo: (role === "admin" || role === "superadmin") ? adminInfo : undefined
+            adminInfo: finalAdminInfo
         });
 
         // Tạo token sau khi đã có _id
@@ -135,7 +147,10 @@ const register = async (req, res) => {
                     email: newAccount.email,
                     role: newAccount.role,
                     customerInfo: newAccount.customerInfo,
-                    adminInfo: newAccount.adminInfo
+                    adminInfo: {
+                        ...newAccount.adminInfo,
+                        permissions: newAccount.adminInfo?.permissions || getPermissions(role, adminInfo?.department)
+                    }
                 }
             }
         });
