@@ -1,4 +1,3 @@
-const AccountRouter = require("./accountRoutes");
 const BookRouter = require("./bookRoutes");
 const CategoryRouter = require("./categoryRoutes");
 const BlogRouter = require("./blogRoutes");
@@ -9,7 +8,6 @@ const ReviewRouter = require("./reviewRoutes");
 const WishlistRouter = require("./wishlistRoutes");
 
 const routes = (app) => {
-    app.use("/api/accounts", AccountRouter);
     app.use("/api/books", BookRouter);
     app.use("/api/categories", CategoryRouter);
     app.use("/api/blogs", BlogRouter);
