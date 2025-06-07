@@ -4,6 +4,7 @@ import Input from "../common/Input";
 import Button from "../common/Button";
 import Icon from "../common/Icon";
 import logo from '../../assets/image.png';
+import RegisterPage from "../auth/RegisterForm";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
