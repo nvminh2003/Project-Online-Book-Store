@@ -8,7 +8,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-white mb-4">Công ty Cổ phần Sách Tao Đàn</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Công ty Cổ phần Sách</h3>
             <p className="text-gray-400 leading-relaxed">
               Chúng tôi cung cấp sách chất lượng cao và dịch vụ tốt nhất cho độc giả Việt Nam.
             </p>
@@ -31,25 +31,20 @@ const Footer = () => {
             <div className="space-y-2">
               <p className="flex items-start">
                 <i className="fas fa-map-marker-alt mt-1 mr-3 text-blue-500"></i>
-                <span>Địa chỉ văn phòng Hà Nội: (Địa chỉ cụ thể)</span>
+                <span>Địa chỉ văn phòng: Hà Nội</span>
               </p>
               <p className="flex items-center">
                 <i className="fas fa-phone-alt mr-3 text-blue-500"></i>
-                <span>024.2214.9698</span>
-              </p>
-              <p className="flex items-center">
-                <i className="fas fa-mobile-alt mr-3 text-blue-500"></i>
-                <span>0974.148.047 / 0777720254</span>
+                <span>024.3333.5678</span>
               </p>
               <p className="flex items-center">
                 <i className="fas fa-envelope mr-3 text-blue-500"></i>
-                <span>info@sachtaodan.vn</span>
+                <span>bookstore@gmail.com</span>
               </p>
               <p className="flex items-center">
                 <i className="fas fa-clock mr-3 text-blue-500"></i>
-                <span>8h00-17h30 từ thứ 2 đến thứ 6</span>
+                <span>8h00-17h30 từ thứ 2 đến thứ 7</span>
               </p>
-              <p className="font-bold text-blue-400">CHỈ BÁN ONLINE</p>
             </div>
           </div>
 
@@ -58,22 +53,22 @@ const Footer = () => {
             <h3 className="text-xl font-bold text-white mb-4">Liên kết nhanh</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Trang chủ
                 </Link>
               </li>
               <li>
-                <Link to="/products" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/products" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Sản phẩm
                 </Link>
               </li>
               <li>
-                <Link to="/products?filter=new-arrivals" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/products?filter=new-arrivals" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Sách hay sách mới
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/contact" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Liên hệ mua sách
                 </Link>
               </li>
@@ -85,22 +80,22 @@ const Footer = () => {
             <h3 className="text-xl font-bold text-white mb-4">Chính sách</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/chinh-sach-thanh-toan" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/chinh-sach-thanh-toan" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Chính sách thanh toán
                 </Link>
               </li>
               <li>
-                <Link to="/chinh-sach-van-chuyen" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/chinh-sach-van-chuyen" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Chính sách vận chuyển
                 </Link>
               </li>
               <li>
-                <Link to="/chinh-sach-doi-tra" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/chinh-sach-doi-tra" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Chính sách đổi trả
                 </Link>
               </li>
               <li>
-                <Link to="/chinh-sach-bao-hanh" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/chinh-sach-bao-hanh" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Chính sách bảo hành
                 </Link>
               </li>
@@ -128,10 +123,7 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="mt-12 pt-8 border-t border-gray-800 text-center text-gray-400">
-          <p>© {new Date().getFullYear()} Bản quyền thuộc về Sachtaodan.vn | Cung cấp bởi Sapo</p>
-        </div>
+
       </div>
     </footer>
   );

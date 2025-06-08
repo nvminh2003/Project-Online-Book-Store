@@ -1,5 +1,5 @@
 import React from "react";
-// import "./Icon.css";
+import { Icon as Iconify } from '@iconify/react';
 
 const icons = {
   search: (
@@ -22,21 +22,25 @@ const icons = {
   ),
 };
 
-const Icon = ({ name, size = 24, color = "currentColor", ...rest }) => {
-  const icon = icons[name];
-
-  if (!icon) return null;
-
+/**
+ * Universal Icon component using Iconify
+ *
+ * @param {string} name - icon name, e.g. "mdi:book-open"
+ * @param {number} size - icon size in px
+ * @param {string} color - icon color
+ */
+const Icon = ({ name, size = 24, color = 'currentColor', className = '', ...props }) => {
   return (
-    <span
-      className="icon"
-      style={{ width: size, height: size, color }}
-      aria-hidden="true"
-      {...rest}
-    >
-      {icon}
-    </span>
+    <Iconify
+      icon={name}
+      width={size}
+      height={size}
+      color={color}
+      className={className}
+      {...props}
+    />
   );
 };
 
 export default Icon;
+
