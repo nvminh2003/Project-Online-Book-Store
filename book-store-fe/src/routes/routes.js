@@ -20,6 +20,7 @@ import AdminReports from "../pages/admin/Reports";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 
 export const routes = [
     {
@@ -56,6 +57,11 @@ export const routes = [
         path: "/auth/change-password",
         page: ChangePasswordPage,
         isShowHeader: true,
+    },
+    {
+        path: "/reset-password",
+        page: ResetPasswordPage,
+        isShowHeader: true
     },
     // Admin Routes
     {

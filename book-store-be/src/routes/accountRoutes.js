@@ -9,6 +9,8 @@ const Account = require('../models/accountModel');
 router.post('/register', accountController.register);
 router.post('/login', accountController.login);
 router.post('/refresh-token', accountController.refreshToken);
+router.post('/forgot-password', accountController.forgotPassword);
+router.post('/reset-password', accountController.resetPassword);
 
 // Protected routes
 router.post('/logout', checkAuthMiddleware, accountController.logout);

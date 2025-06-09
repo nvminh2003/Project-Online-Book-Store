@@ -9,6 +9,8 @@ const AccountSchema = new mongoose.Schema({
     role: { type: String, enum: ["customer", "admin", "superadmin"], default: "customer" },
     isActive: { type: Boolean, default: true },
     refreshToken: { type: String },
+    resetToken: { type: String },
+    resetTokenExpires: { type: Date },
 
     customerInfo: {
         fullName: String,

@@ -123,6 +123,24 @@ const accountService = {
             return response.data;
         }
         throw new Error(response.data.message || 'Lỗi đổi mật khẩu');
+    },
+
+    // Forgot password
+    forgotPassword: async (email) => {
+        const response = await axios.post(`${API_URL}/accounts/forgot-password`, { email });
+        if (response.data.status === 'Success') {
+            return response.data;
+        }
+        throw new Error(response.data.message || 'Lỗi gửi yêu cầu quên mật khẩu');
+    },
+
+    // Reset password
+    resetPassword: async (token, newPassword) => {
+        const response = await axios.post(`${API_URL}/accounts/reset-password`, { token, newPassword });
+        if (response.data.status === 'Success') {
+            return response.data;
+        }
+        throw new Error(response.data.message || 'Lỗi đặt lại mật khẩu');
     }
 };
 

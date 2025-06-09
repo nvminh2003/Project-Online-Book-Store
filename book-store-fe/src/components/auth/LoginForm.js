@@ -124,7 +124,7 @@ const LoginForm = () => {
         <div className="col-span-1 md:col-span-2 text-center mt-4">
           <p className="text-sm text-gray-600">
             Bạn chưa có tài khoản?{' '}
-            <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-medium no-underline">
               Đăng ký ngay
             </Link>
           </p>

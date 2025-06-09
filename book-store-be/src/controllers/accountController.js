@@ -2,6 +2,8 @@ const Account = require("../models/accountModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const getPermissions = require("../utils/getPermissions");
+const { sendResetPasswordEmail } = require("../utils/emailService");
+const crypto = require('crypto');
 
 // Register new account
 const register = async (req, res) => {
@@ -375,6 +377,85 @@ const getAllAccounts = async (req, res) => {
     }
 };
 
+// Forgot password
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const account = await Account.findOne({ email });
+
+        if (!account) {
+            return res.status(404).json({
+                status: 'Error',
+                message: 'Không tìm thấy tài khoản với email này'
+            });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+
+        // Save reset token to account
+        account.resetToken = resetToken;
+        account.resetTokenExpires = resetTokenExpires;
+        await account.save();
+
+        // Send reset password email
+        const emailSent = await sendResetPasswordEmail(email, resetToken);
+
+        if (!emailSent) {
+            return res.status(500).json({
+                status: 'Error',
+                message: 'Không thể gửi email đặt lại mật khẩu'
+            });
+        }
+
+        res.json({
+            status: 'Success',
+            message: 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn'
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'Error',
+            message: error.message
+        });
+    }
+};
+
+// Reset password
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        const account = await Account.findOne({
+            resetToken: token,
+            resetTokenExpires: { $gt: Date.now() }
+        });
+
+        if (!account) {
+            return res.status(400).json({
+                status: 'Error',
+                message: 'Token không hợp lệ hoặc đã hết hạn'
+            });
+        }
+
+        // Update password
+        account.password = newPassword;
+        account.resetToken = undefined;
+        account.resetTokenExpires = undefined;
+        await account.save();
+
+        res.json({
+            status: 'Success',
+            message: 'Mật khẩu đã được đặt lại thành công'
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'Error',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -383,5 +464,7 @@ module.exports = {
     profile,
     updateProfile,
     changePassword,
-    getAllAccounts
+    getAllAccounts,
+    forgotPassword,
+    resetPassword
 };
