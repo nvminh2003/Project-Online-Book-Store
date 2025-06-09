@@ -20,8 +20,8 @@ const AccountSchema = new mongoose.Schema({
 
     adminInfo: {
         fullName: String,
-        department: String, // ví dụ: "sales", "content", "support"
-        permissions: [String]
+        department: { type: String, enum: ["dev", "business"] }
+        // permissions: [String]
     }
 }, { timestamps: true });
 

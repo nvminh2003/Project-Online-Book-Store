@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
-const { checkAuthMiddleware, checkAdminMiddleware } = require('../middleware/authMiddleware');
+const { checkAuthMiddleware } = require('../middleware/authMiddleware');
 
 // All order routes require authentication
 router.use(checkAuthMiddleware);
@@ -12,6 +12,6 @@ router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 
 // Admin only routes
-router.put('/:id/status', checkAdminMiddleware, orderController.updateOrderStatus);
+router.put('/:id/status', orderController.updateOrderStatus);
 
 module.exports = router;

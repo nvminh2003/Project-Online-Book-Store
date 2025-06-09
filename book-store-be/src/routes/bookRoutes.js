@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bookController = require('../controllers/bookController');
-const { checkAdminMiddleware } = require('../middleware/authMiddleware');
+const { authorizeRole } = require('../middleware/authMiddleware');
 
 // Public routes
 router.get('/', bookController.getAllBooks);
@@ -9,8 +9,8 @@ router.get('/search', bookController.searchBooks);
 router.get('/:id', bookController.getBookById);
 
 // Admin only routes
-router.post('/', checkAdminMiddleware, bookController.createBook);
-router.put('/:id', checkAdminMiddleware, bookController.updateBook);
-router.delete('/:id', checkAdminMiddleware, bookController.deleteBook);
+router.post('/', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.createBook);
+router.put('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.updateBook);
+router.delete('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.deleteBook);
 
 module.exports = router; 

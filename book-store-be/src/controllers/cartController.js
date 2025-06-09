@@ -54,70 +54,73 @@ const getCart = async (req, res) => {
 
 // Add item to cart
 const addToCart = async (req, res) => {
-  try {
-    const { bookId, quantity } = req.body;
+    try {
+        const { bookId, quantity } = req.body;
 
-    if (!bookId || quantity === undefined) {
-      return res.status(400).json({
-        message: "Book ID and quantity are required",
-        status: "Error",
-      });
-    }
-
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-      return res.status(400).json({
-        message: "Quantity must be a positive integer",
-        status: "Error",
-      });
-    }
-
-    // Check if book exists
-    const book = await Book.findById(bookId);
-    if (!book) {
-      return res.status(404).json({
-        message: "Book not found",
-        status: "Error",
-      });
-    }
-
-    // Check if book is in stock
-    if (book.stockQuantity < quantity) {
-      return res.status(400).json({
-        message: "Not enough stock available",
-        status: "Error",
-      });
-    }
-
-    let cart = await Cart.findOne({ user: req.account._id });
-
-    if (!cart) {
-      cart = new Cart({
-        user: req.account._id,
-        items: [{ book: bookId, quantity }],
-      });
-    } else {
-      // Check if book already in cart
-      const existingItem = cart.items.find(
-        (item) => item.book.toString() === bookId
-      );
-
-      if (existingItem) {
-        // Check if new total quantity exceeds stock
-        if (book.stockQuantity < existingItem.quantity + quantity) {
-          return res.status(400).json({
-            message: "Not enough stock available",
-            status: "Error",
-          });
+        if (!bookId || !quantity) {
+            return res.status(400).json({
+                message: "Book ID and quantity are required",
+                status: "Error"
+            });
         }
-        existingItem.quantity += quantity;
-      } else {
-        cart.items.push({ book: bookId, quantity });
-      }
-    }
+
+        if (quantity <= 0) {
+            return res.status(400).json({
+                message: "Quantity must be greater than 0",
+                status: "Error"
+            });
+        }
+
+        // Check if book exists
+        const book = await Book.findById(bookId);
+        if (!book) {
+            return res.status(404).json({
+                message: "Book not found",
+                status: "Error"
+            });
+        }
+
+        // Check if book is in stock
+        if (book.stockQuantity < quantity) {
+            return res.status(400).json({
+                message: "Not enough stock available",
+                status: "Error"
+            });
+        }
+
+        let cart = await Cart.findOne({ user: req.account._id });
+
+        if (!cart) {
+            cart = new Cart({
+                user: req.account._id,
+                items: [{ book: bookId, quantity }]
+            });
+        } else {
+            // Check if book already in cart
+            const existingItem = cart.items.find(
+                item => item.book.toString() === bookId
+            );
+
+            if (existingItem) {
+                // Check if new total quantity exceeds stock
+                if (book.stockQuantity < existingItem.quantity + quantity) {
+                    return res.status(400).json({
+                        message: "Not enough stock available",
+                        status: "Error"
+                    });
+                }
+                existingItem.quantity += quantity;
+            } else {
+                cart.items.push({ book: bookId, quantity });
+            }
+        }
 
     await cart.save();
 
-    cart = await populateCart(cart._id);
+        // Populate book details and calculate total
+        cart = await Cart.findById(cart._id)
+            .populate('items.book', 'title sellingPrice images authors publisher')
+            .populate('user', 'email customerInfo.fullName');
 
     const total = calculateTotal(cart.items);
 
@@ -141,6 +144,7 @@ const addToCart = async (req, res) => {
     });
   }
 };
+
 
 // Update cart item quantity
 const updateCartItem = async (req, res) => {

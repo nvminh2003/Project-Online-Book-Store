@@ -1,9 +1,13 @@
-import React from 'react'
+// LoginPage.js
+import React from 'react';
+import LoginForm from '../../components/auth/LoginForm';
 
 const LoginPage = () => {
   return (
-    <div>LoginPage</div>
-  )
-}
+    <div className="flex justify-center items-center">
+      <LoginForm />
+    </div>
+  );
+};
 
-export default LoginPage
+export default LoginPage;

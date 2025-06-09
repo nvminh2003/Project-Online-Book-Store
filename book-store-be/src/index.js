@@ -8,6 +8,8 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 dotenv.config();
 const connectDB = require("../dbConnect/db");
+const passport = require('./config/passport');
+const session = require('express-session');
 
 const app = express();
 const port = process.env.PORT || 9999;
@@ -29,6 +31,14 @@ app.use(express.urlencoded({ limit: "2000mb", extended: true }));
 app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 routes(app);
 

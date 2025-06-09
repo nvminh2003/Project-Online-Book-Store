@@ -2,10 +2,11 @@ import React, { Fragment } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { routes } from "./routes/routes";
 import MainLayout from "./components/layout/MainLayout";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function App() {
   return (
-    <div>
+    <AuthProvider>
       <Router>
         <Routes>
           {routes.map((route) => {
@@ -25,7 +26,7 @@ function App() {
           })}
         </Routes>
       </Router>
-    </div>
+    </AuthProvider>
   );
 }
 
