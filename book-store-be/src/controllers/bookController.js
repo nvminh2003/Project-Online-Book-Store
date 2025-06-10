@@ -1,5 +1,7 @@
 const Book = require("../models/bookModel");
 
+const mongoose = require("mongoose"); // Thêm nếu chưa import ở đầu file
+
 // Create a new book (Admin only)
 const createBook = async (req, res) => {
     try {
@@ -22,7 +24,7 @@ const createBook = async (req, res) => {
         } = req.body;
 
         console.log("body: ", req.body);
-        // Validate required fields
+
         if (!title || !authors || !publisher || !originalPrice || !sellingPrice || !stockQuantity) {
             return res.status(400).json({
                 message: "Missing required fields",
@@ -32,17 +34,15 @@ const createBook = async (req, res) => {
 
         function removeVietnameseTones(str) {
             return str.normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") // remove diacritics
+                .replace(/[\u0300-\u036f]/g, "")
                 .replace(/đ/g, "d").replace(/Đ/g, "D");
         }
 
-        // Generate slug from name
         const slug = removeVietnameseTones(title)
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, "");
 
-        // Create new book
         const newBook = new Book({
             title,
             slug,
@@ -59,8 +59,8 @@ const createBook = async (req, res) => {
             stockQuantity,
             isFeatured: isFeatured || false,
             isNewArrival: isNewArrival || false,
-            categories,
-            createdBy: req.account._id
+            categories: categories.map(id => new mongoose.Types.ObjectId(id)),
+            createdBy: req.account?._id // sẽ undefined nếu bạn chưa có login, có thể bỏ nếu chưa cần
         });
 
         await newBook.save();
@@ -71,12 +71,14 @@ const createBook = async (req, res) => {
             data: newBook
         });
     } catch (error) {
+        console.error("Error creating book:", error.stack);
         res.status(500).json({
             message: error.message,
             status: "Error"
         });
     }
 };
+
 
 // Get all books with pagination
 const getAllBooks = async (req, res) => {
