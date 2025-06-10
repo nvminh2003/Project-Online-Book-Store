@@ -9,7 +9,7 @@ router.get('/search', bookController.searchBooks);
 router.get('/:id', bookController.getBookById);
 
 // Admin only routes
-router.post('/', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.createBook);
+router.post('/', bookController.createBook);
 router.put('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.updateBook);
 router.delete('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.deleteBook);
 
