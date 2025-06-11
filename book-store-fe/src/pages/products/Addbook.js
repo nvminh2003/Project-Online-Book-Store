@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 
 const AddBook = () => {
@@ -30,11 +30,10 @@ const AddBook = () => {
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
 
   useEffect(() => {
-    // Kiểm tra quyền truy cập
     const token = localStorage.getItem("accessToken");
     if (!token) {
       alert("Bạn cần đăng nhập.");
-      return navigate("/login");  
+      return navigate("/login");
     }
 
     try {
@@ -49,7 +48,6 @@ const AddBook = () => {
       return navigate("/login");
     }
 
-    // Lấy danh mục
     const fetchCategories = async () => {
       try {
         const res = await axios.get(`${apiUrl}/categories`);
@@ -150,52 +148,52 @@ const AddBook = () => {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">Thêm sách mới</h2>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input name="title" placeholder="Tiêu đề" value={bookData.title} onChange={handleChange} required className="border p-2 w-full" />
-        <input name="authors" placeholder="Tác giả (cách nhau bằng dấu phẩy)" value={bookData.authors} onChange={handleChange} required className="border p-2 w-full" />
-        <input name="publisher" placeholder="NXB" value={bookData.publisher} onChange={handleChange} required className="border p-2 w-full" />
-        <input name="publicationYear" type="number" placeholder="Năm XB" value={bookData.publicationYear} onChange={handleChange} required className="border p-2 w-full" />
-        <input name="pageCount" type="number" placeholder="Số trang" value={bookData.pageCount} onChange={handleChange} className="border p-2 w-full" />
-        <input name="coverType" placeholder="Loại bìa" value={bookData.coverType} onChange={handleChange} className="border p-2 w-full" />
-        <textarea name="description" placeholder="Mô tả" value={bookData.description} onChange={handleChange} className="border p-2 w-full" />
-        <input name="isbn" placeholder="ISBN" value={bookData.isbn} onChange={handleChange} className="border p-2 w-full" />
-        <input name="originalPrice" type="number" placeholder="Giá gốc" value={bookData.originalPrice} onChange={handleChange} className="border p-2 w-full" />
-        <input name="sellingPrice" type="number" placeholder="Giá bán" value={bookData.sellingPrice} onChange={handleChange} className="border p-2 w-full" />
-        <input name="stockQuantity" type="number" placeholder="Số lượng" value={bookData.stockQuantity} onChange={handleChange} className="border p-2 w-full" />
+    <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
+      <h2 className="text-2xl font-semibold mb-6 text-center text-blue-700">Thêm sách mới</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input name="title" placeholder="Tiêu đề" value={bookData.title} onChange={handleChange} required className="input-field" />
+        <input name="authors" placeholder="Tác giả (cách nhau bằng dấu phẩy)" value={bookData.authors} onChange={handleChange} required className="input-field" />
+        <input name="publisher" placeholder="NXB" value={bookData.publisher} onChange={handleChange} required className="input-field" />
+        <input name="publicationYear" type="number" placeholder="Năm XB" value={bookData.publicationYear} onChange={handleChange} required className="input-field" />
+        <input name="pageCount" type="number" placeholder="Số trang" value={bookData.pageCount} onChange={handleChange} className="input-field" />
+        <input name="coverType" placeholder="Loại bìa" value={bookData.coverType} onChange={handleChange} className="input-field" />
+        <textarea name="description" placeholder="Mô tả" value={bookData.description} onChange={handleChange} className="input-field h-28" />
+        <input name="isbn" placeholder="ISBN" value={bookData.isbn} onChange={handleChange} className="input-field" />
+        <input name="originalPrice" type="number" placeholder="Giá gốc" value={bookData.originalPrice} onChange={handleChange} className="input-field" />
+        <input name="sellingPrice" type="number" placeholder="Giá bán" value={bookData.sellingPrice} onChange={handleChange} className="input-field" />
+        <input name="stockQuantity" type="number" placeholder="Số lượng" value={bookData.stockQuantity} onChange={handleChange} className="input-field" />
 
-        <label className="block">
-          Danh mục:
-          <select multiple value={bookData.categories} onChange={handleCategorySelect} className="border p-2 w-full mt-1">
+        <div>
+          <label className="font-medium">Danh mục:</label>
+          <select multiple value={bookData.categories} onChange={handleCategorySelect} className="input-field h-32">
             {categoryOptions.map((cat) => (
               <option key={cat._id} value={cat._id}>{cat.name}</option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <div className="flex gap-4">
-          <label>
+        <div className="flex gap-6">
+          <label className="flex items-center gap-2">
             <input type="checkbox" name="isFeatured" checked={bookData.isFeatured} onChange={handleChange} />
-            <span className="ml-1">Nổi bật</span>
+            Nổi bật
           </label>
-          <label>
+          <label className="flex items-center gap-2">
             <input type="checkbox" name="isNewArrival" checked={bookData.isNewArrival} onChange={handleChange} />
-            <span className="ml-1">Mới về</span>
+            Mới về
           </label>
         </div>
 
-        <input type="file" multiple accept="image/*" onChange={handleImageChange} className="border p-2 w-full" />
+        <input type="file" multiple accept="image/*" onChange={handleImageChange} className="input-field" />
 
         {previewUrls.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {previewUrls.map((url, idx) => (
-              <img key={idx} src={url} alt="preview" className="w-24 h-24 object-cover border" />
+              <img key={idx} src={url} alt="preview" className="w-24 h-24 object-cover rounded border" />
             ))}
           </div>
         )}
 
-        <button type="submit" disabled={uploading} className="bg-blue-600 text-white p-2 rounded">
+        <button type="submit" disabled={uploading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition">
           {uploading ? 'Đang upload...' : 'Thêm sách'}
         </button>
       </form>

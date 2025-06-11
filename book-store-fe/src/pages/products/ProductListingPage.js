@@ -10,6 +10,9 @@ const ProductListingPage = () => {
   const [books, setBooks] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const booksPerPage = 3;
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,6 +61,7 @@ const ProductListingPage = () => {
 
       fetchedBooks.sort((a, b) => (b.publicationYear || 0) - (a.publicationYear || 0));
       setBooks(fetchedBooks);
+      setCurrentPage(1); // Reset về trang đầu sau khi lọc
     } catch (err) {
       console.error("Error fetching books:", err);
     }
@@ -72,29 +76,42 @@ const ProductListingPage = () => {
     book.title.toLowerCase().includes(searchKeyword.toLowerCase())
   );
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+  const startIndex = (currentPage - 1) * booksPerPage;
+  const paginatedBooks = filteredBooks.slice(startIndex, startIndex + booksPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+  };
+
   const handleAddToCart = async (bookId) => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) throw new Error("Bạn chưa đăng nhập");
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) throw new Error("Bạn chưa đăng nhập");
 
-    await axios.post(
-      `${API_URL}/cart/add`,
-      {
-        items: [{ bookId, quantity: 1 }],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      await axios.post(
+        `${API_URL}/cart/add`,
+        {
+          items: [{ bookId, quantity: 1 }],
         },
-      }
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    alert("Đã thêm vào giỏ hàng!");
-  } catch (err) {
-    console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
-    alert("Không thể thêm vào giỏ hàng.");
-  }
-};
+      alert("Đã thêm vào giỏ hàng!");
+    } catch (err) {
+      console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
+      alert("Không thể thêm vào giỏ hàng.");
+    }
+  };
 
   const handleAddToWishlist = async (bookId) => {
     try {
@@ -170,81 +187,119 @@ const ProductListingPage = () => {
         </div>
 
         <div className="w-3/4 pl-4">
-          {filteredBooks.length === 0 ? (
+          {paginatedBooks.length === 0 ? (
             <p>Không có sách nào.</p>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {filteredBooks.map((book) => {
-                const hasDiscount =
-                  book.sellingPrice > 0 &&
-                  book.originalPrice &&
-                  book.originalPrice > book.sellingPrice;
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {paginatedBooks.map((book) => {
+                  const hasDiscount =
+                    book.sellingPrice > 0 &&
+                    book.originalPrice &&
+                    book.originalPrice > book.sellingPrice;
 
-                const discountPercent = hasDiscount
-                  ? Math.round(
-                      ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
-                    )
-                  : 0;
+                  const discountPercent = hasDiscount
+                    ? Math.round(
+                        ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
+                      )
+                    : 0;
 
-                return (
-                  <div
-                    key={book._id}
-                    className="border p-4 rounded shadow flex flex-col"
-                  >
-                    <img
-                      src={book.images?.[0] || "/default-book.jpg"}
-                      alt={book.title}
-                      className="h-40 w-full object-cover mb-2 rounded"
-                    />
-                    <h3 className="text-lg font-semibold">{book.title}</h3>
-                    <p className="text-sm text-gray-600">{book.authors}</p>
+                  return (
+                    <div
+                      key={book._id}
+                      className="bg-white rounded-2xl shadow-md p-4 flex flex-col hover:shadow-lg transition-shadow"
+                    >
+                      <div className="mb-2 relative">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                          {book.images?.length > 0 ? (
+                            book.images.map((imgUrl, idx) => (
+                              <img
+                                key={idx}
+                                src={imgUrl}
+                                alt={`Ảnh ${idx + 1}`}
+                                className="h-40 w-32 object-cover rounded-lg shadow-sm flex-shrink-0"
+                              />
+                            ))
+                          ) : (
+                            <img
+                              src="/default-book.jpg"
+                              alt="default"
+                              className="h-40 w-32 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            />
+                          )}
+                        </div>
+                      </div>
 
-                    <div className="mb-2">
-                      {hasDiscount ? (
-                        <>
-                          <div className="text-sm text-gray-500">
-                            <span className="line-through mr-2">
-                              {book.originalPrice.toLocaleString()} đ
-                            </span>
-                            <span className="text-red-500 font-medium">
-                              -{discountPercent}%
-                            </span>
-                          </div>
+                      <h3 className="text-lg font-semibold truncate">{book.title}</h3>
+                      <p className="text-sm text-gray-600 truncate">{book.authors}</p>
+
+                      <div className="mb-2">
+                        {hasDiscount ? (
+                          <>
+                            <div className="text-sm text-gray-500">
+                              <span className="line-through mr-2">
+                                {book.originalPrice.toLocaleString()} đ
+                              </span>
+                              <span className="text-red-500 font-medium">
+                                -{discountPercent}%
+                              </span>
+                            </div>
+                            <p className="text-red-500 font-bold">
+                              {book.sellingPrice.toLocaleString()} đ
+                            </p>
+                          </>
+                        ) : (
                           <p className="text-red-500 font-bold">
-                            {book.sellingPrice.toLocaleString()} đ
+                            {(book.originalPrice || book.sellingPrice).toLocaleString()} đ
                           </p>
-                        </>
-                      ) : (
-                        <p className="text-red-500 font-bold">
-                          {(book.originalPrice || book.sellingPrice).toLocaleString()} đ
-                        </p>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    <div className="mt-auto flex gap-2">
-                      <button
-                        onClick={() => handleAddToCart(book._id)}
-                        className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 text-sm"
-                      >
-                        Thêm vào giỏ
-                      </button>
-                      <button
-                        onClick={() => handleAddToWishlist(book._id)}
-                        className="bg-pink-500 text-white px-2 py-1 rounded hover:bg-pink-600 text-sm"
-                      >
-                        Yêu thích
-                      </button>
-                      <button
-                        onClick={() => handleViewDetail(book._id)}
-                        className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 text-sm"
-                      >
-                        Xem chi tiết
-                      </button>
+                      <div className="mt-auto flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleAddToCart(book._id)}
+                          className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 text-sm"
+                        >
+                          Thêm vào giỏ
+                        </button>
+                        <button
+                          onClick={() => handleAddToWishlist(book._id)}
+                          className="bg-pink-500 text-white px-2 py-1 rounded hover:bg-pink-600 text-sm"
+                        >
+                          Yêu thích
+                        </button>
+                        <button
+                          onClick={() => handleViewDetail(book._id)}
+                          className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 text-sm"
+                        >
+                          Xem chi tiết
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-center mt-4 gap-4">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={handlePrevPage}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Trang trước
+                </button>
+                <span className="px-4 py-2">
+                  Trang {currentPage} / {totalPages}
+                </span>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={handleNextPage}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Trang sau
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
