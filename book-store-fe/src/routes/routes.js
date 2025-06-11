@@ -6,7 +6,9 @@ import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import CartPage from "../pages/cart/CartPage";
 import AdminLayout from "../components/layout/AdminLayout";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
-
+import ProductDetailPage from "../pages/products/ProductDetailPage";
+import ProductListingPage from "../pages/products/ProductListingPage";
+import AddBook from "../pages/products/Addbook";
 // Admin Pages
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminBooks from "../pages/admin/Books";
@@ -177,5 +179,20 @@ export const routes = [
     {
         path: "*",
         page: NotFoundPage,
+    },
+    {
+        path: "/getbook",
+         page: ProductListingPage,
+        isShowHeader: true,
+    },
+    {
+        path: "/detailbook/:bookId",
+         page: ProductDetailPage,
+        isShowHeader: true,
+    },
+    {
+        path: "/addbook",
+         page: AddBook,
+        isShowHeader: true,
     },
 ];

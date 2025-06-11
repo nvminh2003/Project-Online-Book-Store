@@ -20,6 +20,8 @@ export const AuthProvider = ({ children }) => {
             const response = await accountService.login(credentials);
             const userData = response.data.account;
             setUser(userData);
+            const { accessToken} = response.data;
+            localStorage.setItem('accessToken', accessToken);
             // Lưu thông tin user vào localStorage
             localStorage.setItem('user', JSON.stringify(userData));
             return response;
