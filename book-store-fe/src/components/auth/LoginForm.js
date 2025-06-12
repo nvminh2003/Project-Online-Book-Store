@@ -84,7 +84,7 @@ const LoginForm = () => {
         <div className="col-span-1 md:col-span-2 text-left -mt-2 mb-2">
           <Link
             to="/auth/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium no-underline"
           >
             Quên mật khẩu?
           </Link>

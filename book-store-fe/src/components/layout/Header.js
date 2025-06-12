@@ -157,7 +157,7 @@ const Header = () => {
                   className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline"
                 >
                   {/* {user?.customerInfo?.fullName || user?.email} */}
-                  Tài khoảns
+                  Tài khoản
                 </Link>
                 {(user?.role === 'admin' || user?.role === 'superadmin') && (
                   <button

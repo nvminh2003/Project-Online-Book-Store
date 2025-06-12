@@ -141,6 +141,58 @@ const accountService = {
             return response.data;
         }
         throw new Error(response.data.message || 'Lỗi đặt lại mật khẩu');
+    },
+
+    // Add this to accountService.js
+    getAllUsers: async (page = 1, limit = 10) => {
+        const token = localStorage.getItem('accessToken');
+        const response = await axios.get(`${API_URL}/accounts?page=${page}&limit=${limit}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.status === 'Success') {
+            return response.data;
+        }
+        throw new Error(response.data.message || 'Lỗi lấy danh sách người dùng');
+    },
+
+    // Thêm vào accountService.js
+    updateUser: async (userId, userData) => {
+        const token = localStorage.getItem('accessToken');
+        const response = await axios.put(`${API_URL}/accounts/${userId}`, userData, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.status === 'Success') {
+            return response.data;
+        }
+        throw new Error(response.data.message || 'Lỗi cập nhật người dùng');
+    },
+
+    //delete 
+    deleteUser: async (userId) => {
+        const token = localStorage.getItem('accessToken');
+        const response = await axios.delete(`${API_URL}/accounts/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.status === 'Success') {
+            return response.data;
+        }
+        throw new Error(response.data.message || 'Lỗi xóa người dùng');
+    },
+
+    // Create account by Admin
+    createAccountByAdmin: async (userData) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await axios.post(`${API_URL}/accounts/admin/create`, userData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === "Success") {
+                return response.data;
+            }
+            throw new Error(response.data.message);
+        } catch (error) {
+            throw error;
+        }
     }
 };
 
