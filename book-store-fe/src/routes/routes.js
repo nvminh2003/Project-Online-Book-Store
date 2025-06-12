@@ -9,6 +9,7 @@ import ProtectedRoute from "../components/auth/ProtectedRoute";
 import ProductDetailPage from "../pages/products/ProductDetailPage";
 import ProductListingPage from "../pages/products/ProductListingPage";
 import AddBook from "../pages/products/Addbook";
+import EditBook from "../pages/products/Editbook";
 // Admin Pages
 import AdminDashboard from "../pages/admin/Dashboard";
 import AdminBooks from "../pages/admin/Books";
@@ -22,6 +23,7 @@ import AdminReports from "../pages/admin/Reports";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+import { Component } from "react";
 
 export const routes = [
     {
@@ -193,6 +195,11 @@ export const routes = [
     {
         path: "/addbook",
          page: AddBook,
+        isShowHeader: true,
+    },
+     {
+        path: "/editbook/:id",
+         page: EditBook,
         isShowHeader: true,
     },
 ];

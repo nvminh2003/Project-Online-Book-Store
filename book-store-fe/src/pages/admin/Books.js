@@ -1,157 +1,147 @@
-import React, { useState } from 'react';
-import AdminPageLayout from '../../components/admin/AdminPageLayout';
-import AdminTable from '../../components/admin/AdminTable';
-import AdminSearch from '../../components/admin/AdminSearch';
-import AdminPagination from '../../components/admin/AdminPagination';
-import AdminModal from '../../components/admin/AdminModal';
-import AdminForm from '../../components/admin/AdminForm';
-import { Icon } from '@iconify/react';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+const API_URL = process.env.REACT_APP_API_URL_BACKEND;
 
 const Books = () => {
-    const [books, setBooks] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [formValues, setFormValues] = useState({});
-    const [formErrors, setFormErrors] = useState({});
+  const [books, setBooks] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredBooks, setFilteredBooks] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-    const handleAddBook = () => {
-        setFormValues({});
-        setFormErrors({});
-        setIsModalOpen(true);
-    };
+  const navigate = useNavigate();
 
-    const handleEditBook = (bookId) => {
-        const book = books.find(b => b.id === bookId);
-        if (book) {
-            setFormValues(book);
-            setFormErrors({});
-            setIsModalOpen(true);
-        }
-    };
+  useEffect(() => {
+    fetchBooks();
+    fetchCategories();
+  }, [page]);
 
-    const handleDeleteBook = (bookId) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa sách này?')) {
-            // TODO: Implement delete book functionality
-        }
-    };
+  const fetchBooks = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/books?page=${page}&limit=10`);
+      const result = res.data?.data;
+      if (result) {
+        setBooks(result.books);
+        setFilteredBooks(result.books);
+        setTotalPages(result.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching books:", error);
+      setBooks([]);
+      setFilteredBooks([]);
+    }
+  };
 
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormValues(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/categories`);
+      setCategories(res.data?.data?.categories || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([]);
+    }
+  };
 
-    const handleFormSubmit = (e) => {
-        e.preventDefault();
-        // TODO: Implement form submission
-        setIsModalOpen(false);
-    };
-
-    const columns = [
-        { key: 'title', label: 'Tên sách' },
-        { key: 'author', label: 'Tác giả' },
-        { key: 'category', label: 'Danh mục' },
-        { key: 'price', label: 'Giá' },
-        { key: 'status', label: 'Trạng thái' }
-    ];
-
-    const formFields = [
-        { name: 'title', label: 'Tên sách', required: true },
-        { name: 'author', label: 'Tác giả', required: true },
-        { name: 'category', label: 'Danh mục', type: 'select', required: true },
-        { name: 'price', label: 'Giá', type: 'number', required: true },
-        { name: 'description', label: 'Mô tả', type: 'textarea' }
-    ];
-
-    const filters = [
-        {
-            value: selectedCategory,
-            onChange: setSelectedCategory,
-            placeholder: 'Tất cả danh mục',
-            options: [
-                { value: '', label: 'Tất cả danh mục' },
-                { value: 'fiction', label: 'Tiểu thuyết' },
-                { value: 'non-fiction', label: 'Phi hư cấu' },
-                { value: 'children', label: 'Sách thiếu nhi' }
-            ]
-        }
-    ];
-
-    return (
-        <AdminPageLayout
-            title="Quản lý sách"
-            actions={
-                <button
-                    onClick={handleAddBook}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                >
-                    <Icon icon="mdi:plus" width="20" />
-                    Thêm sách mới
-                </button>
-            }
-        >
-            <div className="p-6">
-                <AdminSearch
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    filters={filters}
-                    placeholder="Tìm kiếm sách..."
-                />
-
-                <AdminTable
-                    columns={columns}
-                    data={books}
-                    loading={loading}
-                    onEdit={handleEditBook}
-                    onDelete={handleDeleteBook}
-                    emptyMessage="Chưa có sách nào"
-                />
-
-                <AdminPagination
-                    currentPage={currentPage}
-                    totalPages={10}
-                    totalItems={100}
-                    itemsPerPage={10}
-                    onPageChange={setCurrentPage}
-                />
-
-                <AdminModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    title={formValues.id ? 'Chỉnh sửa sách' : 'Thêm sách mới'}
-                    size="lg"
-                    footer={
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                onClick={handleFormSubmit}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                {formValues.id ? 'Cập nhật' : 'Thêm mới'}
-                            </button>
-                        </div>
-                    }
-                >
-                    <AdminForm
-                        fields={formFields}
-                        values={formValues}
-                        onChange={handleFormChange}
-                        errors={formErrors}
-                    />
-                </AdminModal>
-            </div>
-        </AdminPageLayout>
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    const filtered = books.filter((book) =>
+      book.title.toLowerCase().includes(term.toLowerCase())
     );
+    setFilteredBooks(filtered);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa sách này?")) return;
+    try {
+      await axios.delete(`${API_URL}/books/${id}`);
+      fetchBooks();
+    } catch (error) {
+      console.error("Error deleting book:", error);
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Quản lý sách</h1>
+      <div className="flex justify-between items-center mb-4">
+        <input
+          type="text"
+          placeholder="Tìm kiếm sách..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="border p-2 rounded w-1/2"
+        />
+        <button
+          onClick={() => navigate("/addbook")}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Thêm sách
+        </button>
+      </div>
+
+      <table className="min-w-full bg-white border">
+        <thead>
+          <tr>
+            <th className="border px-4 py-2">Tiêu đề</th>
+            <th className="border px-4 py-2">Tác giả</th>
+            <th className="border px-4 py-2">Giá bán</th>
+            <th className="border px-4 py-2">Số lượng</th>
+            <th className="border px-4 py-2">Danh mục</th>
+            <th className="border px-4 py-2">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.isArray(filteredBooks) && filteredBooks.map((book) => (
+            <tr key={book._id}>
+              <td className="border px-4 py-2">{book.title}</td>
+              <td className="border px-4 py-2">{book.authors}</td>
+              <td className="border px-4 py-2">{book.sellingPrice.toLocaleString()}đ</td>
+              <td className="border px-4 py-2">{book.stockQuantity}</td>
+              <td className="border px-4 py-2">
+                {book.categories.map((cat) => cat.name).join(", ")}
+              </td>
+              <td className="border px-4 py-2 space-x-2">
+                <button
+                  onClick={() => navigate(`/editbook/${book._id}`)}
+                  className="bg-yellow-500 text-white px-2 py-1 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(book._id)}
+                  className="bg-red-600 text-white px-2 py-1 rounded"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="flex justify-center mt-4 space-x-2">
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Trước
+        </button>
+        <span className="px-3 py-1">Trang {page} / {totalPages}</span>
+        <button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Sau
+        </button>
+      </div>
+    </div>
+  );
 };
 
-export default Books; 
+export default Books;
