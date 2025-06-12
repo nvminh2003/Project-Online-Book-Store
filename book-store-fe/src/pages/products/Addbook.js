@@ -96,56 +96,90 @@ const AddBook = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setUploading(true);
-      const imageUrls = await uploadImagesToCloudinary();
+  e.preventDefault();
 
-      const payload = {
-        ...bookData,
-        authors: bookData.authors.split(',').map((a) => a.trim()),
-        publicationYear: Number(bookData.publicationYear),
-        pageCount: Number(bookData.pageCount),
-        originalPrice: Number(bookData.originalPrice),
-        sellingPrice: Number(bookData.sellingPrice),
-        stockQuantity: Number(bookData.stockQuantity),
-        images: imageUrls,
-      };
+  // ✅ VALIDATE TRƯỚC
+  const requiredFields = [
+    { field: 'title', label: 'Tiêu đề' },
+    { field: 'authors', label: 'Tác giả' },
+    { field: 'publisher', label: 'NXB' },
+    { field: 'publicationYear', label: 'Năm xuất bản' },
+    { field: 'pageCount', label: 'Số trang' },
+    { field: 'coverType', label: 'Loại bìa' },
+    { field: 'description', label: 'Mô tả' },
+    { field: 'isbn', label: 'ISBN' },
+    { field: 'originalPrice', label: 'Giá gốc' },
+    { field: 'sellingPrice', label: 'Giá bán' },
+    { field: 'stockQuantity', label: 'Số lượng' },
+  ];
 
-      const token = localStorage.getItem("accessToken");
-
-      await axios.post(`${apiUrl}/books`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      alert('Thêm sách thành công!');
-      setBookData({
-        title: '',
-        authors: '',
-        publisher: '',
-        publicationYear: '',
-        pageCount: '',
-        coverType: '',
-        description: '',
-        isbn: '',
-        originalPrice: '',
-        sellingPrice: '',
-        stockQuantity: '',
-        categories: [],
-        isFeatured: false,
-        isNewArrival: false,
-      });
-      setImages([]);
-      setPreviewUrls([]);
-    } catch (error) {
-      console.error("Upload lỗi:", error);
-      alert('Có lỗi xảy ra khi thêm sách.');
-    } finally {
-      setUploading(false);
+  for (const item of requiredFields) {
+    if (!bookData[item.field] || String(bookData[item.field]).trim() === '') {
+      alert(`Vui lòng nhập ${item.label}`);
+      return;
     }
-  };
+  }
+
+  if (bookData.categories.length === 0) {
+    alert("Vui lòng chọn ít nhất một danh mục.");
+    return;
+  }
+
+  if (images.length === 0) {
+    alert("Vui lòng chọn ít nhất một ảnh sách.");
+    return;
+  }
+
+  try {
+    setUploading(true);
+    const imageUrls = await uploadImagesToCloudinary();
+
+    const payload = {
+      ...bookData,
+      authors: bookData.authors.split(',').map((a) => a.trim()),
+      publicationYear: Number(bookData.publicationYear),
+      pageCount: Number(bookData.pageCount),
+      originalPrice: Number(bookData.originalPrice),
+      sellingPrice: Number(bookData.sellingPrice),
+      stockQuantity: Number(bookData.stockQuantity),
+      images: imageUrls,
+    };
+
+    const token = localStorage.getItem("accessToken");
+
+    await axios.post(`${apiUrl}/books`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    alert('Thêm sách thành công!');
+    setBookData({
+      title: '',
+      authors: '',
+      publisher: '',
+      publicationYear: '',
+      pageCount: '',
+      coverType: '',
+      description: '',
+      isbn: '',
+      originalPrice: '',
+      sellingPrice: '',
+      stockQuantity: '',
+      categories: [],
+      isFeatured: false,
+      isNewArrival: false,
+    });
+    setImages([]);
+    setPreviewUrls([]);
+  } catch (error) {
+    console.error("Upload lỗi:", error);
+    alert('Có lỗi xảy ra khi thêm sách.');
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
