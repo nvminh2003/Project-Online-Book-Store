@@ -25,9 +25,6 @@ import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
 import { Component } from "react";
 
-import ProductDetailPage from "../pages/products/ProductDetailPage";
-import ProductListingPage from "../pages/products/ProductListingPage";
-import AddBook from "../pages/products/Addbook";
 export const routes = [
   {
     path: "/",
