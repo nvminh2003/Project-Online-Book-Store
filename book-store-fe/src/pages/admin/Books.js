@@ -109,7 +109,7 @@ const Books = () => {
                   onClick={() => navigate(`/editbook/${book._id}`)}
                   className="bg-yellow-500 text-white px-2 py-1 rounded"
                 >
-                  Edit
+                  Sửa
                 </button>
                 <button
                   onClick={() => handleDelete(book._id)}
