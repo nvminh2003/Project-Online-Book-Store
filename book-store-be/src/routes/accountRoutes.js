@@ -4,6 +4,8 @@ const accountController = require('../controllers/accountController');
 const { checkAuthMiddleware, authorizeRole } = require('../middleware/authMiddleware');
 const passport = require('passport');
 const Account = require('../models/accountModel');
+const A = require('../utils/actionTypes');
+const checkPermission = require('../middleware/checkPermission');
 
 // Public routes
 router.post('/register', accountController.register);
@@ -14,18 +16,18 @@ router.post('/reset-password', accountController.resetPassword);
 
 // Protected routes
 router.post('/logout', checkAuthMiddleware, accountController.logout);
-
-//Update profile
 router.put('/profile', checkAuthMiddleware, accountController.updateProfile);
-
-//Change password
 router.put('/change-password', checkAuthMiddleware, accountController.changePassword);
+router.get('/profile', checkAuthMiddleware, accountController.profile);
 
-//Get all accounts
+// SuperAdmin routes - Quản lý người dùng
 router.get('/', authorizeRole(['superadmin']), accountController.getAllAccounts);
+// Add checkPermission for account management routes
+router.post('/admin/create', checkAuthMiddleware, authorizeRole(['superadmin']), checkPermission(A.CREATE_USER), accountController.createAccountByAdmin);
+router.put('/:id', checkAuthMiddleware, authorizeRole(['superadmin']), checkPermission(A.UPDATE_USER), accountController.updateUser);
+router.delete('/:id', checkAuthMiddleware, authorizeRole(['superadmin']), checkPermission(A.DELETE_USER), accountController.deleteUser);
 
-
-// Thêm vào accountRoutes.js
+// Google OAuth routes
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 // Google OAuth routes
 router.get('/google/callback',
@@ -57,8 +59,5 @@ router.get('/me', checkAuthMiddleware, async (req, res) => {
         }
     });
 });
-
-// Lấy profile tài khoản hiện tại
-router.get('/profile', checkAuthMiddleware, accountController.profile);
 
 module.exports = router; 

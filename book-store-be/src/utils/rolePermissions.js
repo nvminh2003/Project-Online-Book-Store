@@ -1,16 +1,34 @@
-// config/rolePermissions.js
+const A = require('./actionTypes');
 module.exports = {
     superadmin: [
-        "manage_books", "manage_categories", "manage_discounts",
-        "manage_users", "manage_orders", "approve_reviews",
-        "manage_blog", "view_sales_reports", "access_system_logs"
+        A.CREATE_USER,
+        A.VIEW_USER,
+        A.VIEW_USER_BY_ID,
+        A.UPDATE_USER,
+        A.DELETE_USER,
+        A.VIEW_ADMIN_ACTIVITY,
+        A.VIEW_SYSTEM_LOGS
     ],
-    admin: {
-        dev: [
-            "manage_books", "manage_categories", "manage_blog", "access_system_logs"
-        ],
-        business: [
-            "manage_discounts", "manage_orders", "approve_reviews", "view_sales_reports"
-        ]
-    }
+    admindev: [
+        A.CREATE_BOOK,
+        A.UPDATE_BOOK,
+        A.DELETE_BOOK,
+        A.CREATE_CATEGORY,
+        A.UPDATE_CATEGORY,
+        A.DELETE_CATEGORY,
+        A.CREATE_BLOG,
+        A.UPDATE_BLOG,
+        A.DELETE_BLOG,
+        A.ACCESS_SYSTEM_LOGS
+    ],
+    adminbusiness: [
+        A.CREATE_DISCOUNT,
+        A.UPDATE_DISCOUNT,
+        A.DELETE_DISCOUNT,
+        A.CREATE_ORDER,
+        A.UPDATE_ORDER,
+        A.DELETE_ORDER,
+        A.APPROVE_REVIEW,
+        A.VIEW_SALES_REPORT
+    ]
 };
