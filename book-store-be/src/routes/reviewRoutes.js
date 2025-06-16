@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reviewController = require('../controllers/reviewController');
-const {checkAuthMiddleware, authorizeRole} = require('../middleware/authMiddleware');
+const { checkAuthMiddleware, authorizeRole } = require('../middleware/authMiddleware');
 
 // All review routes require authentication
 router.use(checkAuthMiddleware);
@@ -16,4 +16,5 @@ router.delete("/:id", reviewController.deleteReview);
 // Admin only routes
 router.get("/all", authorizeRole(['superadmin', 'admin'], ['business']), reviewController.getAllReviews);
 router.put("/:id/visibility", authorizeRole(['superadmin', 'admin'], ['business']), reviewController.setReviewVisibility);
+
 module.exports = router;
