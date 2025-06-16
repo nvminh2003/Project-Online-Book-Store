@@ -143,10 +143,15 @@ const accountService = {
         throw new Error(response.data.message || 'Lỗi đặt lại mật khẩu');
     },
 
-    // Add this to accountService.js
-    getAllUsers: async (page = 1, limit = 10) => {
+    // Get all users with search and filters
+    getAllUsers: async (params = {}) => {
         const token = localStorage.getItem('accessToken');
-        const response = await axios.get(`${API_URL}/accounts?page=${page}&limit=${limit}`, {
+        const queryString = new URLSearchParams({
+            ...params,
+            _t: Date.now() // Add timestamp to prevent caching
+        }).toString();
+
+        const response = await axios.get(`${API_URL}/accounts?${queryString}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         if (response.data.status === 'Success') {
