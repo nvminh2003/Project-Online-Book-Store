@@ -10,12 +10,18 @@ passport.use(new GoogleStrategy({
     async (accessToken, refreshToken, profile, done) => {
         try {
             let user = await Account.findOne({ googleId: profile.id });
+
+            // Nếu tài khoản tồn tại nhưng bị khóa
+            if (user && !user.isActive) {
+                return done(null, false, { message: 'Tài khoản của bạn đã bị khóa' });
+            }
+
             if (!user) {
                 user = await Account.create({
                     email: profile.emails[0].value,
                     googleId: profile.id,
                     role: 'customer',
-                    customerInfo: { fullName: profile.displayName }
+                    info: { fullName: profile.displayName }
                 });
             }
             return done(null, user);

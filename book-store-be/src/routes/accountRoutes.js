@@ -29,19 +29,36 @@ router.delete('/:id', checkAuthMiddleware, authorizeRole(['superadmin']), checkP
 
 // Google OAuth routes
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-// Google OAuth routes
+
+// Handle Google authentication
 router.get('/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: 'http://localhost:3000/auth/login' }),
+    (req, res, next) => {
+        passport.authenticate('google', { session: false }, (err, user, info) => {
+            if (err) {
+                return res.redirect(`http://localhost:3000/auth/login?error=${encodeURIComponent(err.message)}`);
+            }
+            if (!user) {
+                return res.redirect(`http://localhost:3000/auth/login?error=${encodeURIComponent(info?.message || 'Đăng nhập thất bại')}`);
+            }
+            if (!user.isActive) {
+                return res.redirect(`http://localhost:3000/auth/login?error=${encodeURIComponent('Tài khoản của bạn đã bị khóa')}`);
+            }
+            req.user = user;
+            next();
+        })(req, res, next);
+    },
     async (req, res) => {
-        const user = req.user;
-        // Tạo accessToken, refreshToken như login thường
-        const jwt = require('jsonwebtoken');
-        const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
-        const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN, { expiresIn: '7d' });
-        user.refreshToken = refreshToken;
-        await user.save();
-        // Redirect về FE kèm token trên URL
-        res.redirect(`http://localhost:3000/auth/google/success?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+        try {
+            const user = req.user;
+            const jwt = require('jsonwebtoken');
+            const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+            const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN, { expiresIn: '7d' });
+            user.refreshToken = refreshToken;
+            await user.save();
+            res.redirect(`http://localhost:3000/auth/google/success?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+        } catch (error) {
+            res.redirect(`http://localhost:3000/auth/login?error=${encodeURIComponent('Có lỗi xảy ra khi đăng nhập')}`);
+        }
     }
 );
 
@@ -54,10 +71,10 @@ router.get('/me', checkAuthMiddleware, async (req, res) => {
             id: user._id,
             email: user.email,
             role: user.role,
-            customerInfo: user.customerInfo,
-            adminInfo: user.adminInfo
+            info: user.info,
+            isActive: user.isActive
         }
     });
 });
 
-module.exports = router; 
+module.exports = router;
