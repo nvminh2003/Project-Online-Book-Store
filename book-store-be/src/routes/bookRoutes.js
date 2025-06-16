@@ -9,8 +9,8 @@ router.get('/search', bookController.searchBooks);
 router.get('/:id', bookController.getBookById);
 
 // Admin only routes
-router.post('/', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.createBook);
-router.put('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.updateBook);
-router.delete('/:id', authorizeRole(['superadmin', 'admin'], ['dev']), bookController.deleteBook);
+router.post('/', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.createBook);
+router.put('/:id', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.updateBook);
+router.delete('/:id', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.deleteBook);
 
 module.exports = router; 
