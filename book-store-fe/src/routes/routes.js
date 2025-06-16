@@ -23,9 +23,12 @@ import AdminReports from "../pages/admin/Reports";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import AdminActivity from "../pages/admin/AdminActivity";
 import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
+
+
 
 export const routes = [
     {
