@@ -108,14 +108,15 @@ const EditBook = () => {
     }
 
     const updatePayload = {
-      ...bookData,
-      images: uploadedImageUrls,
-      publicationYear: Number(bookData.publicationYear),
-      pageCount: Number(bookData.pageCount),
-      originalPrice: Number(bookData.originalPrice),
-      sellingPrice: Number(bookData.sellingPrice),
-      stockQuantity: Number(bookData.stockQuantity),
-    };
+  ...bookData,
+  images: uploadedImageUrls.length > 0 ? uploadedImageUrls : bookData.images, // ✅ merge
+  publicationYear: Number(bookData.publicationYear),
+  pageCount: Number(bookData.pageCount),
+  originalPrice: Number(bookData.originalPrice),
+  sellingPrice: Number(bookData.sellingPrice),
+  stockQuantity: Number(bookData.stockQuantity),
+};
+
 
     await axios.put(
       `${API_URL}/books/${bookId}`,

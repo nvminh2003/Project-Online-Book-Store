@@ -1,5 +1,6 @@
 const Book = require("../models/bookModel");
-
+const AdminActivityLog = require('../models/AdminActivityLog');
+// Create a new book (Admin only)
 // Create a new book (Admin only)
 const createBook = async (req, res) => {
     try {
@@ -22,7 +23,7 @@ const createBook = async (req, res) => {
         } = req.body;
 
         console.log("body: ", req.body);
-        // Validate required fields
+
         if (!title || !authors || !publisher || !originalPrice || !sellingPrice || !stockQuantity) {
             return res.status(400).json({
                 message: "Missing required fields",
@@ -32,17 +33,15 @@ const createBook = async (req, res) => {
 
         function removeVietnameseTones(str) {
             return str.normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") // remove diacritics
+                .replace(/[\u0300-\u036f]/g, "")
                 .replace(/đ/g, "d").replace(/Đ/g, "D");
         }
 
-        // Generate slug from name
         const slug = removeVietnameseTones(title)
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, "");
 
-        // Create new book
         const newBook = new Book({
             title,
             slug,
@@ -65,6 +64,12 @@ const createBook = async (req, res) => {
 
         await newBook.save();
 
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'CREATE_BOOK',
+            details: `Admin ${req.account.email} created book ${newBook.title} (ID: ${newBook._id})`
+        });
+
         res.status(201).json({
             message: "Book created successfully",
             status: "Success",
@@ -77,6 +82,7 @@ const createBook = async (req, res) => {
         });
     }
 };
+
 
 // Get all books with pagination
 const getAllBooks = async (req, res) => {
@@ -249,6 +255,11 @@ const updateBook = async (req, res) => {
             updatedFields,
             { new: true }
         ).populate('categories');
+        await AdminActivityLog.create({
+                    adminId: req.account._id,
+                    action: 'UPDATE_BOOK',
+                    details: `Admin ${req.account.email} updated account ${ updatedBook.tittle} (ID: ${updatedBook._id})`
+                });
 
         res.status(200).json({
             message: "Book updated successfully",
@@ -276,6 +287,11 @@ const deleteBook = async (req, res) => {
         }
 
         await Book.findByIdAndDelete(req.params.id);
+        await AdminActivityLog.create({
+                    adminId: req.account._id,
+                    action: 'DELETE_BOOK',
+                    details: `Admin ${req.account.email} updated account ${book.tittle} (ID: ${book._id})`
+                });
 
         res.status(200).json({
             message: "Book deleted successfully",
