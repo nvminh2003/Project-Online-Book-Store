@@ -1,38 +1,17 @@
 // src/store/slices/cartSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios"; // Import axios trực tiếp
+import axios from "axios";
 
-// --- CẦN BẠN CẤU HÌNH ---
-// 1. Đặt BASE URL của backend API của bạn
+// --- Cấu hình Base URL và Hàm Lấy Token ---
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-//    Ví dụ: 'http://localhost:5000/api' nếu backend chạy ở port 5000 và có prefix /api
-//    THAY THẾ 'http://localhost:5000/api' BẰNG URL ĐÚNG CỦA BẠN HOẶC CẤU HÌNH BIẾN MÔI TRƯỜNG
+  process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
-// 2. Hàm lấy token xác thực
-//    Điều chỉnh hàm này để lấy token từ nơi bạn lưu trữ
-//    (localStorage, AuthContext, hoặc từ một state Redux khác)
 const getAuthToken = () => {
-  // VÍ DỤ LẤY TỪ LOCALSTORAGE:
-  return localStorage.getItem("authToken"); // Hoặc tên key bạn dùng
-  // NẾU LẤY TỪ REDUX STORE (ví dụ state.auth.token), bạn sẽ cần dùng `thunkAPI.getState()`
-  // bên trong mỗi async thunk.
+  return localStorage.getItem("accessToken");
 };
 
-// 3. Hàm tạo config cho Axios request (bao gồm headers)
-//    Nếu bạn lấy token từ Redux store, bạn sẽ gọi hàm này với `thunkAPI`
-const getAuthConfig = (thunkAPIForToken) => {
-  // thunkAPIForToken là tùy chọn
-  let token;
-  if (thunkAPIForToken && typeof thunkAPIForToken.getState === "function") {
-    // Ví dụ nếu token trong Redux store là state.auth.token
-    // token = thunkAPIForToken.getState().auth?.token; // Bỏ comment và ĐIỀU CHỈNH ĐƯỜNG DẪN
-    // Hiện tại, ví dụ dưới đây vẫn dùng getAuthToken() cho đơn giản nếu bạn chưa tích hợp lấy từ store
-    token = getAuthToken(); // Nếu không dùng getState, hàm này phải tự lấy token
-  } else {
-    token = getAuthToken();
-  }
-
+const getAxiosConfig = () => {
+  const token = getAuthToken();
   const config = {
     headers: {
       "Content-Type": "application/json",
@@ -43,28 +22,31 @@ const getAuthConfig = (thunkAPIForToken) => {
   }
   return config;
 };
-// --- KẾT THÚC PHẦN CẦN CẤU HÌNH ---
+// --- Kết thúc Cấu hình ---
 
 // Async Thunk để lấy giỏ hàng từ backend
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
-  async (_, thunkAPI) => {
+  async (_, { rejectWithValue }) => {
     try {
+      console.log("cartSlice: Fetching cart...");
       const response = await axios.get(
         `${API_BASE_URL}/cart`,
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
       );
-      return response.data.data; // Backend trả về { message, status, data: { items, total, user, ... } }
+      console.log("cartSlice: Fetch cart response data:", response.data.data);
+      return response.data.data;
     } catch (error) {
       const errorMsg =
         error.response?.data?.message ||
         error.message ||
         "Failed to fetch cart";
-      if (error.response && error.response.status === 401) {
-        console.error("Unauthorized: ", errorMsg);
-        // Xử lý logout hoặc redirect có thể được thực hiện ở component dựa trên error này
-      }
-      return thunkAPI.rejectWithValue(errorMsg);
+      console.error(
+        "cartSlice: Fetch cart error - ",
+        errorMsg,
+        error.response?.status
+      );
+      return rejectWithValue(errorMsg);
     }
   }
 );
@@ -72,20 +54,29 @@ export const fetchCart = createAsyncThunk(
 // Async Thunk để thêm sản phẩm vào giỏ hàng
 export const addItemToCartAPI = createAsyncThunk(
   "cart/addItemToCartAPI",
-  async ({ bookId, quantity }, thunkAPI) => {
+  async ({ bookId, quantity }, { rejectWithValue }) => {
     try {
+      console.log(
+        `cartSlice: Adding item - bookId: ${bookId}, quantity: ${quantity}`
+      );
       const response = await axios.post(
         `${API_BASE_URL}/cart/add`,
         { bookId, quantity },
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
       );
+      console.log("cartSlice: Add item response data:", response.data.data);
       return response.data.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
+      const errorMsg =
         error.response?.data?.message ||
-          error.message ||
-          "Failed to add item to cart"
+        error.message ||
+        "Failed to add item to cart";
+      console.error(
+        "cartSlice: Add item error - ",
+        errorMsg,
+        error.response?.status
       );
+      return rejectWithValue(errorMsg);
     }
   }
 );
@@ -93,20 +84,32 @@ export const addItemToCartAPI = createAsyncThunk(
 // Async Thunk để cập nhật số lượng sản phẩm trong giỏ hàng
 export const updateCartItemQuantityAPI = createAsyncThunk(
   "cart/updateCartItemQuantityAPI",
-  async ({ bookId, quantity }, thunkAPI) => {
+  async ({ bookId, quantity }, { rejectWithValue }) => {
     try {
+      console.log(
+        `cartSlice: Updating item quantity - bookId: ${bookId}, quantity: ${quantity}`
+      );
       const response = await axios.put(
         `${API_BASE_URL}/cart/items/${bookId}`,
         { quantity },
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
+      );
+      console.log(
+        "cartSlice: Update item quantity response data:",
+        response.data.data
       );
       return response.data.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
+      const errorMsg =
         error.response?.data?.message ||
-          error.message ||
-          "Failed to update item quantity"
+        error.message ||
+        "Failed to update item quantity";
+      console.error(
+        "cartSlice: Update item quantity error - ",
+        errorMsg,
+        error.response?.status
       );
+      return rejectWithValue(errorMsg);
     }
   }
 );
@@ -114,42 +117,55 @@ export const updateCartItemQuantityAPI = createAsyncThunk(
 // Async Thunk để xóa sản phẩm khỏi giỏ hàng
 export const removeCartItemAPI = createAsyncThunk(
   "cart/removeCartItemAPI",
-  async (bookId, thunkAPI) => {
+  async (bookId, { rejectWithValue }) => {
     try {
+      console.log(`cartSlice: Removing item - bookId: ${bookId}`);
       const response = await axios.delete(
         `${API_BASE_URL}/cart/items/${bookId}`,
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
       );
+      console.log("cartSlice: Remove item response data:", response.data.data);
       return response.data.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
+      const errorMsg =
         error.response?.data?.message ||
-          error.message ||
-          "Failed to remove item from cart"
+        error.message ||
+        "Failed to remove item from cart";
+      console.error(
+        "cartSlice: Remove item error - ",
+        errorMsg,
+        error.response?.status
       );
+      return rejectWithValue(errorMsg);
     }
   }
 );
 
-// Async Thunk để áp dụng mã giảm giá (CẦN ENDPOINT BACKEND: POST /api/cart/coupon)
+// Async Thunk để áp dụng mã giảm giá
 export const applyCouponToCartAPI = createAsyncThunk(
   "cart/applyCouponToCartAPI",
-  async (couponCode, thunkAPI) => {
+  async (couponCode, { rejectWithValue }) => {
     try {
-      // Giả sử bạn có endpoint POST /api/cart/coupon
+      console.log(`cartSlice: Applying coupon - code: ${couponCode}`);
+      // Đảm bảo endpoint này tồn tại ở backend: POST /api/cart/coupon
       const response = await axios.post(
         `${API_BASE_URL}/cart/coupon`,
         { couponCode },
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
       );
-      // Backend nên trả về giỏ hàng đã cập nhật với thông tin giảm giá
+      console.log("cartSlice: Apply coupon response data:", response.data.data);
       return response.data.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
+      const errorMsg =
         error.response?.data?.message ||
-          error.message ||
-          "Invalid coupon code or failed to apply"
+        error.message ||
+        "Invalid coupon code or failed to apply";
+      console.error(
+        "cartSlice: Apply coupon error - ",
+        errorMsg,
+        error.response?.status
       );
+      return rejectWithValue(errorMsg);
     }
   }
 );
@@ -157,17 +173,26 @@ export const applyCouponToCartAPI = createAsyncThunk(
 // Async Thunk để xóa toàn bộ giỏ hàng
 export const clearCartAPI = createAsyncThunk(
   "cart/clearCartAPI",
-  async (_, thunkAPI) => {
+  async (_, { rejectWithValue }) => {
     try {
+      console.log("cartSlice: Clearing cart");
       const response = await axios.delete(
         `${API_BASE_URL}/cart/clear`,
-        getAuthConfig(thunkAPI)
+        getAxiosConfig()
       );
+      console.log("cartSlice: Clear cart response data:", response.data.data);
       return response.data.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to clear cart"
+      const errorMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to clear cart";
+      console.error(
+        "cartSlice: Clear cart error - ",
+        errorMsg,
+        error.response?.status
       );
+      return rejectWithValue(errorMsg);
     }
   }
 );
@@ -175,113 +200,110 @@ export const clearCartAPI = createAsyncThunk(
 const initialState = {
   items: [],
   user: null,
-  total: 0,
+  total: 0, // Sẽ được cập nhật trực tiếp từ payload của các API thành công
   status: "idle", // 'idle' | 'loading_fetch' | 'loading_add' | 'loading_update' | 'loading_remove' | 'loading_clear' | 'succeeded' | 'failed'
   error: null,
-  couponStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
+  couponStatus: "idle",
   couponError: null,
-  couponAppliedDetails: null, // { code, discountType, value, discountAmountCalculated }
+  couponAppliedDetails: null, // Ví dụ: { code, discountType, value, discountAmountCalculated }
 };
 
-// Helper function để cập nhật state từ payload API
+// Helper function để cập nhật state từ payload API thành công
 const updateCartStateFromFulfilledAPI = (state, actionPayload) => {
+  console.log(
+    "cartSlice: Updating state from fulfilled API. Payload:",
+    actionPayload
+  );
   state.items = actionPayload.items || [];
   state.user = actionPayload.user || null;
   state.total = actionPayload.total || 0;
-  state.status = "succeeded"; // Trạng thái chung sau khi thành công
+  state.status = "succeeded";
   state.error = null;
 
+  // Xử lý thông tin coupon nếu có
   if (actionPayload.couponDetails) {
     state.couponAppliedDetails = actionPayload.couponDetails;
   } else if (
-    actionPayload.total <
-    actionPayload.items.reduce(
-      (sum, item) => sum + (item.book?.sellingPrice || 0) * item.quantity,
-      0
-    )
+    actionPayload.hasOwnProperty("couponDetails") &&
+    actionPayload.couponDetails === null
   ) {
-    // Logic này có thể cần xem lại, backend nên trả về couponDetails rõ ràng
+    // Nếu backend trả về couponDetails là null (ví dụ sau khi clear cart, hoặc fetch cart không có coupon)
+    state.couponAppliedDetails = null;
   }
-  // Không tự động reset couponAppliedDetails ở đây, để applyCouponToCartAPI.fulfilled xử lý
+  // Nếu action hiện tại không phải là applyCoupon, giữ nguyên couponStatus và couponError
 };
 
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    resetCart: () => initialState, // Action để reset giỏ hàng (ví dụ khi logout)
+    resetCart: () => {
+      console.log("cartSlice: Resetting cart state");
+      return initialState;
+    },
     resetCouponStatus: (state) => {
+      console.log("cartSlice: Resetting coupon status");
       state.couponStatus = "idle";
       state.couponError = null;
-      // Không reset couponAppliedDetails ở đây, chỉ reset khi áp dụng coupon mới hoặc fetchCart
+      // Không reset couponAppliedDetails ở đây trừ khi có logic cụ thể
     },
-    // Các reducers optimistic có thể thêm ở đây nếu cần
   },
   extraReducers: (builder) => {
+    // Định nghĩa các trạng thái loading cụ thể cho từng action
+    const createPendingHandler = (statusPrefix) => (state) => {
+      state.status = `loading_${statusPrefix}`;
+      state.error = null;
+    };
+    const createRejectedHandler = (statusPrefix) => (state, action) => {
+      state.status = `failed_${statusPrefix}`; // Hoặc chỉ là 'failed'
+      state.error = action.payload;
+    };
+
     // fetchCart
     builder
-      .addCase(fetchCart.pending, (state) => {
-        state.status = "loading_fetch"; // Trạng thái loading cụ thể
-        state.error = null;
-      })
+      .addCase(fetchCart.pending, createPendingHandler("fetch"))
       .addCase(fetchCart.fulfilled, (state, action) => {
         updateCartStateFromFulfilledAPI(state, action.payload);
-        // Nếu fetchCart không trả về couponDetails nhưng total < subtotal, có thể coupon cũ vẫn còn.
-        // Nếu muốn reset coupon khi fetch lại cart, thì thêm:
-        if (!action.payload.couponDetails) {
+        // Nếu fetchCart không có couponDetails rõ ràng, reset thông tin coupon hiện tại
+        if (!action.payload.couponDetails && state.couponAppliedDetails) {
           state.couponAppliedDetails = null;
-          state.couponStatus = "idle"; // Reset trạng thái coupon nếu không có thông tin
+          state.couponStatus = "idle";
+          state.couponError = null;
         }
       })
       .addCase(fetchCart.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload;
-        state.items = [];
+        createRejectedHandler("fetch")(state, action);
+        state.items = []; // Xóa items nếu fetch lỗi
         state.total = 0;
-        state.couponAppliedDetails = null; // Reset coupon nếu fetch lỗi
+        state.couponAppliedDetails = null;
       });
 
     // addItemToCartAPI
     builder
-      .addCase(addItemToCartAPI.pending, (state) => {
-        state.status = "loading_add";
-        state.error = null;
-      })
-      .addCase(addItemToCartAPI.fulfilled, (state, action) => {
-        updateCartStateFromFulfilledAPI(state, action.payload);
-      })
-      .addCase(addItemToCartAPI.rejected, (state, action) => {
-        state.status = "failed"; // Trạng thái thất bại chung
-        state.error = action.payload;
-      });
+      .addCase(addItemToCartAPI.pending, createPendingHandler("add"))
+      .addCase(addItemToCartAPI.fulfilled, updateCartStateFromFulfilledAPI)
+      .addCase(addItemToCartAPI.rejected, createRejectedHandler("add"));
 
     // updateCartItemQuantityAPI
     builder
-      .addCase(updateCartItemQuantityAPI.pending, (state) => {
-        state.status = "loading_update";
-        state.error = null;
-      })
-      .addCase(updateCartItemQuantityAPI.fulfilled, (state, action) => {
-        updateCartStateFromFulfilledAPI(state, action.payload);
-      })
-      .addCase(updateCartItemQuantityAPI.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload;
-      });
+      .addCase(
+        updateCartItemQuantityAPI.pending,
+        createPendingHandler("update")
+      )
+      .addCase(
+        updateCartItemQuantityAPI.fulfilled,
+        updateCartStateFromFulfilledAPI
+      )
+      .addCase(
+        updateCartItemQuantityAPI.rejected,
+        createRejectedHandler("update")
+      );
 
     // removeCartItemAPI
     builder
-      .addCase(removeCartItemAPI.pending, (state) => {
-        state.status = "loading_remove";
-        state.error = null;
-      })
-      .addCase(removeCartItemAPI.fulfilled, (state, action) => {
-        updateCartStateFromFulfilledAPI(state, action.payload);
-      })
-      .addCase(removeCartItemAPI.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload;
-      });
+      .addCase(removeCartItemAPI.pending, createPendingHandler("remove"))
+      .addCase(removeCartItemAPI.fulfilled, updateCartStateFromFulfilledAPI)
+      .addCase(removeCartItemAPI.rejected, createRejectedHandler("remove"));
 
     // applyCouponToCartAPI
     builder
@@ -292,32 +314,25 @@ const cartSlice = createSlice({
       })
       .addCase(applyCouponToCartAPI.fulfilled, (state, action) => {
         updateCartStateFromFulfilledAPI(state, action.payload); // Giỏ hàng đã được cập nhật với discount
-        state.couponAppliedDetails = action.payload.couponDetails || null; // Giả định backend trả về
+        state.couponAppliedDetails = action.payload.couponDetails || null;
         state.couponStatus = "succeeded";
-        state.couponError = null;
       })
       .addCase(applyCouponToCartAPI.rejected, (state, action) => {
         state.couponStatus = "failed";
         state.couponError = action.payload;
         state.couponAppliedDetails = null;
-        // Không thay đổi state.status hoặc state.error chung ở đây, vì đây là lỗi của coupon
+        state.status = "succeeded"; // Giỏ hàng vẫn có thể thành công, chỉ coupon lỗi
       });
 
     // clearCartAPI
     builder
-      .addCase(clearCartAPI.pending, (state) => {
-        state.status = "loading_clear";
-        state.error = null;
-      })
+      .addCase(clearCartAPI.pending, createPendingHandler("clear"))
       .addCase(clearCartAPI.fulfilled, (state, action) => {
         updateCartStateFromFulfilledAPI(state, action.payload); // Sẽ là giỏ hàng trống
         state.couponAppliedDetails = null; // Xóa coupon khi xóa giỏ hàng
         state.couponStatus = "idle";
       })
-      .addCase(clearCartAPI.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload;
-      });
+      .addCase(clearCartAPI.rejected, createRejectedHandler("clear"));
   },
 });
 
