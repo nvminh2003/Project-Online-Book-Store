@@ -25,8 +25,12 @@ const Header = () => {
   };
 
   const handleAdminClick = () => {
-    if (user?.role === 'admin' || user?.role === 'superadmin') {
-      navigate('/admin');
+    if (user?.role === 'superadmin') {
+      navigate('/admin/users');
+    } else if (user?.role === 'admindev') {
+      navigate('/admin/books');
+    } else if (user?.role === 'adminbusiness') {
+      navigate('/admin/orders');
     }
   };
 
@@ -81,7 +85,7 @@ const Header = () => {
               >
                 Lịch sử đơn hàng
               </Link>
-              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+              {(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                 <button
                   onClick={handleAdminClick}
                   className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
@@ -156,9 +160,9 @@ const Header = () => {
                   to="/auth/profile"
                   className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline"
                 >
-                  {user?.customerInfo?.fullName || user?.email}
+                  {user?.info?.fullName || user?.email}
                 </Link>
-                {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                {(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                   <button
                     onClick={handleAdminClick}
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
@@ -187,7 +191,7 @@ const Header = () => {
             </Link>
 
             {/* Mobile Menu Button (chỉ hiển thị khi đã đăng nhập và không phải admin/superadmin) */}
-            {isAuthenticated && !(user?.role === 'admin' || user?.role === 'superadmin') && (
+            {isAuthenticated && !(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
               <div className="relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}

@@ -9,12 +9,6 @@ const genderOptions = [
   { value: 'other', label: 'Khác' },
 ];
 
-const departmentOptions = [
-  { value: '', label: 'Chọn phòng ban' },
-  { value: 'dev', label: 'Dev' },
-  { value: 'business', label: 'Business' },
-];
-
 const ProfileForm = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,9 +16,8 @@ const ProfileForm = () => {
   const [form, setForm] = useState({});
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
-  const navigate = useNavigate();
   const [formErrors, setFormErrors] = useState({});
-
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -33,7 +26,10 @@ const ProfileForm = () => {
       try {
         const res = await accountService.getProfile();
         setProfile(res.data);
-        setForm(res.data);
+        setForm({
+          ...res.data,
+          info: res.data.info || {}
+        });
       } catch (err) {
         setError('Không thể tải thông tin tài khoản.');
       }
@@ -42,24 +38,11 @@ const ProfileForm = () => {
     fetchProfile();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCustomerInfoChange = (e) => {
+  const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      customerInfo: { ...prev.customerInfo, [name]: value }
-    }));
-  };
-
-  const handleAdminInfoChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      adminInfo: { ...prev.adminInfo, [name]: value }
+      info: { ...prev.info, [name]: value }
     }));
   };
 
@@ -74,29 +57,23 @@ const ProfileForm = () => {
     setSaving(true);
     setError(null);
     try {
-      // Gọi API cập nhật profile
-      const payload = {};
-      if (form.customerInfo) payload.customerInfo = form.customerInfo;
-      if (form.adminInfo) payload.adminInfo = form.adminInfo;
-      // const res = await accountService.updateProfile(payload);
-      // setProfile(res.data);
-      // setForm(res.data);
-      // setEditMode(false);
+      const payload = { info: form.info };
       const res = await accountService.updateProfile(payload);
       setProfile(res.data);
-      setForm(res.data);
+      setForm({
+        ...res.data,
+        info: res.data.info || {}
+      });
       setEditMode(false);
       setFormErrors({});
     } catch (err) {
-      // setError('Cập nhật thất bại.');
       const msg = err.response?.data?.message || 'Cập nhật thất bại.';
-      // Mapping thủ công theo nội dung
       if (msg.includes('Số điện thoại')) {
         setFormErrors({ phone: msg });
       } else if (msg.includes('16 tuổi')) {
         setFormErrors({ birthday: msg });
       } else {
-        setFormErrors({ general: msg }); // fallback lỗi chung
+        setFormErrors({ general: msg });
       }
     }
     setSaving(false);
@@ -131,111 +108,68 @@ const ProfileForm = () => {
           <input
             type="text"
             name="fullName"
-            value={form.customerInfo?.fullName || form.adminInfo?.fullName || ''}
-            onChange={form.customerInfo ? handleCustomerInfoChange : handleAdminInfoChange}
+            value={form.info.fullName || ''}
+            onChange={handleInfoChange}
             disabled={!editMode}
             className="w-full border rounded px-3 py-2"
           />
         </div>
 
-        {form.customerInfo && (
-          <>
-            {/* <div>
-              <label className="block font-medium mb-1">Số điện thoại</label>
-              <input
-                type="text"
-                name="phone"
-                value={form.customerInfo.phone || ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div> */}
-            <div>
-              <label className="block font-medium mb-1">Số điện thoại</label>
-              <input
-                type="text"
-                name="phone"
-                value={form.customerInfo.phone || ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              />
-              {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
-            </div>
+        <div>
+          <label className="block font-medium mb-1">Số điện thoại</label>
+          <input
+            type="text"
+            name="phone"
+            value={form.info.phone || ''}
+            onChange={handleInfoChange}
+            disabled={!editMode}
+            className="w-full border rounded px-3 py-2"
+          />
+          {formErrors.phone && <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>}
+        </div>
 
+        <div>
+          <label className="block font-medium mb-1">Địa chỉ</label>
+          <input
+            type="text"
+            name="address"
+            value={form.info.address || ''}
+            onChange={handleInfoChange}
+            disabled={!editMode}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
 
-            <div>
-              <label className="block font-medium mb-1">Địa chỉ</label>
-              <input
-                type="text"
-                name="address"
-                value={form.customerInfo.address || ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
+        <div>
+          <label className="block font-medium mb-1">Giới tính</label>
+          <select
+            name="gender"
+            value={form.info.gender || ''}
+            onChange={handleInfoChange}
+            disabled={!editMode}
+            className="w-full border rounded px-3 py-2"
+          >
+            {genderOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
 
-            <div>
-              <label className="block font-medium mb-1">Giới tính</label>
-              <select
-                name="gender"
-                value={form.customerInfo.gender || ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              >
-                {genderOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* <div>
-              <label className="block font-medium mb-1">Ngày sinh</label>
-              <input
-                type="date"
-                name="birthday"
-                value={form.customerInfo.birthday ? form.customerInfo.birthday.slice(0, 10) : ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div> */}
-            <div>
-              <label className="block font-medium mb-1">Ngày sinh</label>
-              <input
-                type="date"
-                name="birthday"
-                value={form.customerInfo.birthday?.slice(0, 10) || ''}
-                onChange={handleCustomerInfoChange}
-                disabled={!editMode}
-                className="w-full border rounded px-3 py-2"
-              />
-              {formErrors.birthday && <p className="text-red-500 text-sm mt-1">{formErrors.birthday}</p>}
-            </div>
-
-          </>
-        )}
-
-        {/* {form.adminInfo && (
-          <div>
-            <label className="block font-medium mb-1">Phòng ban</label>
-            <select
-              name="department"
-              value={form.adminInfo.department || ''}
-              onChange={handleAdminInfoChange}
-              disabled={!editMode || profile.role !== 'superadmin'}
-              className="w-full border rounded px-3 py-2 bg-gray-100"
-            >
-              {departmentOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        )} */}
+        <div>
+          <label className="block font-medium mb-1">Ngày sinh</label>
+          <input
+            type="date"
+            name="birthday"
+            value={form.info.birthday?.slice(0, 10) || ''}
+            onChange={handleInfoChange}
+            disabled={!editMode}
+            className="w-full border rounded px-3 py-2"
+          />
+          {formErrors.birthday && <p className="text-red-500 text-sm mt-1">{formErrors.birthday}</p>}
+        </div>
       </div>
+
+      {formErrors.general && <p className="text-red-500 text-sm mt-4">{formErrors.general}</p>}
 
       <div className="flex gap-3 mt-8 justify-end">
         <button

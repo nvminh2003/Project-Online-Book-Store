@@ -11,11 +11,24 @@ const AdminLayout = ({ children }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const adminRoutes = getAdminRoutes(user?.role, user?.adminInfo?.department);
+    const adminRoutes = getAdminRoutes(user?.role);
 
     const handleLogout = async () => {
         await logout();
         navigate('/auth/login');
+    };
+
+    const getRoleDisplay = () => {
+        switch (user?.role) {
+            case 'superadmin':
+                return 'Super Admin';
+            case 'admindev':
+                return 'Admin Dev';
+            case 'adminbusiness':
+                return 'Admin Business';
+            default:
+                return 'Admin';
+        }
     };
 
     return (
@@ -23,7 +36,6 @@ const AdminLayout = ({ children }) => {
             {/* Top Navigation */}
             <nav className="bg-white shadow-sm w-full fixed top-0 left-0 z-40 h-16 flex items-center">
                 <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-
                     <div className="flex items-center">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -40,7 +52,7 @@ const AdminLayout = ({ children }) => {
 
                     <div className="flex items-center">
                         <span className="text-gray-700 mr-4">
-                            {user?.role === 'superadmin' ? 'Super Admin' : `Admin ${user?.adminInfo?.department || ''}`}
+                            {getRoleDisplay()}
                         </span>
                         <button
                             onClick={handleLogout}

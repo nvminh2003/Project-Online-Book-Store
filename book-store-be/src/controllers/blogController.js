@@ -1,4 +1,5 @@
 const Blog = require("../models/blogModel");
+const AdminActivityLog = require("../models/AdminActivityLog");
 
 // Create a new blog post (Admin only)
 const createBlog = async (req, res) => {
@@ -23,6 +24,13 @@ const createBlog = async (req, res) => {
 
         await newBlog.save();
 
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'CREATE_BLOG',
+            details: `Admin ${req.account.email} created new blog post: ${title}`
+        });
+
         res.status(201).json({
             message: "Blog post created successfully",
             status: "Success",
@@ -45,12 +53,13 @@ const getAllBlogs = async (req, res) => {
         const status = req.query.status || "published";
 
         const query = { status };
-        if (req.account?.role === "admin") {
-            delete query.status; // Admin can see all posts
+        // Only admindev can see all posts including drafts
+        if (req.account?.role === "admindev") {
+            delete query.status;
         }
 
         const blogs = await Blog.find(query)
-            .populate('author', 'email adminInfo.fullName')
+            .populate('author', 'email info.fullName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -82,12 +91,13 @@ const getAllBlogs = async (req, res) => {
 const getBlogById = async (req, res) => {
     try {
         const query = { _id: req.params.id };
-        if (req.account?.role !== "admin") {
+        // Only admindev can see draft posts
+        if (req.account?.role !== "admindev") {
             query.status = "published";
         }
 
         const blog = await Blog.findOne(query)
-            .populate('author', 'email adminInfo.fullName');
+            .populate('author', 'email info.fullName');
 
         if (!blog) {
             return res.status(404).json({
@@ -138,7 +148,14 @@ const updateBlog = async (req, res) => {
             req.params.id,
             updatedFields,
             { new: true }
-        ).populate('author', 'email adminInfo.fullName');
+        ).populate('author', 'email info.fullName');
+
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'UPDATE_BLOG',
+            details: `Admin ${req.account.email} updated blog post: ${updatedBlog.title}`
+        });
 
         res.status(200).json({
             message: "Blog post updated successfully",
@@ -167,6 +184,13 @@ const deleteBlog = async (req, res) => {
 
         await Blog.findByIdAndDelete(req.params.id);
 
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'DELETE_BLOG',
+            details: `Admin ${req.account.email} deleted blog post: ${blog.title}`
+        });
+
         res.status(200).json({
             message: "Blog post deleted successfully",
             status: "Success"
@@ -188,25 +212,29 @@ const searchBlogs = async (req, res) => {
         const skip = (page - 1) * limit;
         const status = req.query.status || "published";
 
+        if (!query) {
+            return res.status(400).json({
+                message: "Search query is required",
+                status: "Error"
+            });
+        }
+
         const searchQuery = {
             $or: [
                 { title: { $regex: query, $options: 'i' } },
-                { content: { $regex: query, $options: 'i' } },
-                { summary: { $regex: query, $options: 'i' } },
-                { tags: { $regex: query, $options: 'i' } }
+                { content: { $regex: query, $options: 'i' } }
             ]
         };
 
-        if (status) {
+        // Only admindev can search in draft posts
+        if (req.account?.role !== "admindev") {
+            searchQuery.status = "published";
+        } else if (status) {
             searchQuery.status = status;
         }
 
-        if (req.account?.role !== "admin") {
-            searchQuery.status = "published";
-        }
-
         const blogs = await Blog.find(searchQuery)
-            .populate('author', 'email adminInfo.fullName')
+            .populate('author', 'email info.fullName')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);

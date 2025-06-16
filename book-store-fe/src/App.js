@@ -3,13 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { routes } from "./routes/routes";
 import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
-import { Provider } from "react-redux";
-import store from "./store/store";
+import { AdminActivityProvider } from "./contexts/AdminActivityContext";
 
 function App() {
   return (
-    <Provider store={store}>
-      <AuthProvider>
+    <AuthProvider>
+      <AdminActivityProvider>
         <Router>
           <Routes>
             {routes.map((route) => {
@@ -29,8 +28,8 @@ function App() {
             })}
           </Routes>
         </Router>
-      </AuthProvider>
-    </Provider>
+      </AdminActivityProvider>
+    </AuthProvider>
   );
 }
 

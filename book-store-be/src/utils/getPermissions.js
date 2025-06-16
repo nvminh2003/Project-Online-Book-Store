@@ -5,8 +5,11 @@ function getPermissions(role, department) {
     if (role === "superadmin") {
         return rolePermissions.superadmin;
     }
-    if (role === "admin" && department) {
-        return rolePermissions.admin[department] || [];
+    if (role === "admindev") {
+        return rolePermissions.admindev;
+    }
+    if (role === "adminbusiness") {
+        return rolePermissions.adminbusiness;
     }
     return [];
 }

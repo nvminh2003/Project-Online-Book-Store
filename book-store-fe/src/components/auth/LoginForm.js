@@ -1,5 +1,5 @@
 // LoginForm.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,6 +14,18 @@ const LoginForm = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    // Check for error message in URL parameters
+    const params = new URLSearchParams(location.search);
+    const errorMessage = params.get('error');
+    if (errorMessage) {
+      setError(decodeURIComponent(errorMessage));
+      // Clear the error from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,8 +48,14 @@ const LoginForm = () => {
       <h2 className="text-2xl font-bold text-cyan-600 mb-6">ĐĂNG NHẬP</h2>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
+          <span className="block sm:inline">{error}</span>
+          <button
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+            onClick={() => setError('')}
+          >
+            <Icon icon="mdi:close" className="h-5 w-5" />
+          </button>
         </div>
       )}
 
@@ -84,7 +102,7 @@ const LoginForm = () => {
         <div className="col-span-1 md:col-span-2 text-left -mt-2 mb-2">
           <Link
             to="/auth/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium no-underline"
           >
             Quên mật khẩu?
           </Link>
@@ -92,7 +110,6 @@ const LoginForm = () => {
 
         {/* Buttons */}
         <div className="col-span-1 md:col-span-2 flex items-center gap-4 mt-2">
-
           <a
             href="http://localhost:9999/api/accounts/google"
             className="btn-google"
@@ -124,7 +141,7 @@ const LoginForm = () => {
         <div className="col-span-1 md:col-span-2 text-center mt-4">
           <p className="text-sm text-gray-600">
             Bạn chưa có tài khoản?{' '}
-            <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-medium no-underline">
               Đăng ký ngay
             </Link>
           </p>

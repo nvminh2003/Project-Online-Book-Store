@@ -1,9 +1,11 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAdminActivity } from '../../contexts/AdminActivityContext';
 
-const ProtectedRoute = ({ children, requiredRole, requiredDepartment }) => {
+const ProtectedRoute = ({ children, requiredRole, requiredPermission }) => {
     const { user, isAuthenticated, loading } = useAuth();
+    const { hasPermission, canAccessRoute } = useAdminActivity();
     const location = useLocation();
 
     if (loading) {
@@ -14,6 +16,7 @@ const ProtectedRoute = ({ children, requiredRole, requiredDepartment }) => {
         return <Navigate to="/auth/login" state={{ from: location }} replace />;
     }
 
+    // Check role-based access
     if (requiredRole) {
         if (Array.isArray(requiredRole)) {
             if (!requiredRole.includes(user.role)) {
@@ -26,10 +29,16 @@ const ProtectedRoute = ({ children, requiredRole, requiredDepartment }) => {
         }
     }
 
-    if (requiredDepartment && user.role !== 'superadmin') {
-        if (user.adminInfo?.department?.toLowerCase() !== requiredDepartment.toLowerCase()) {
+    // Check permission-based access
+    if (requiredPermission) {
+        if (!hasPermission(requiredPermission)) {
             return <Navigate to="/" replace />;
         }
+    }
+
+    // Check route-based access (skip for main admin dashboard)
+    if (location.pathname !== '/admin' && !canAccessRoute(location.pathname)) {
+        return <Navigate to="/" replace />;
     }
 
     return children;
