@@ -200,37 +200,51 @@ export const clearCartAPI = createAsyncThunk(
 const initialState = {
   items: [],
   user: null,
-  total: 0, // Sẽ được cập nhật trực tiếp từ payload của các API thành công
-  status: "idle", // 'idle' | 'loading_fetch' | 'loading_add' | 'loading_update' | 'loading_remove' | 'loading_clear' | 'succeeded' | 'failed'
+  total: 0,
+  status: "idle",
   error: null,
   couponStatus: "idle",
   couponError: null,
-  couponAppliedDetails: null, // Ví dụ: { code, discountType, value, discountAmountCalculated }
+  couponAppliedDetails: null,
 };
 
 // Helper function để cập nhật state từ payload API thành công
-const updateCartStateFromFulfilledAPI = (state, actionPayload) => {
+const updateCartStateFromFulfilledAPI = (state, actionPayloadFromThunk) => {
+  // Đổi tên tham số cho rõ ràng
   console.log(
-    "cartSlice: Updating state from fulfilled API. Payload:",
-    actionPayload
+    "cartSlice: Updating state from fulfilled API. Payload received by helper:",
+    actionPayloadFromThunk
   );
-  state.items = actionPayload.items || [];
-  state.user = actionPayload.user || null;
-  state.total = actionPayload.total || 0;
-  state.status = "succeeded";
-  state.error = null;
 
-  // Xử lý thông tin coupon nếu có
-  if (actionPayload.couponDetails) {
-    state.couponAppliedDetails = actionPayload.couponDetails;
-  } else if (
-    actionPayload.hasOwnProperty("couponDetails") &&
-    actionPayload.couponDetails === null
+  // Đảm bảo actionPayloadFromThunk là object data giỏ hàng, không phải object action Redux
+  if (
+    actionPayloadFromThunk &&
+    typeof actionPayloadFromThunk === "object" &&
+    Array.isArray(actionPayloadFromThunk.items)
   ) {
-    // Nếu backend trả về couponDetails là null (ví dụ sau khi clear cart, hoặc fetch cart không có coupon)
-    state.couponAppliedDetails = null;
+    state.items = actionPayloadFromThunk.items;
+    state.user = actionPayloadFromThunk.user || null;
+    state.total = actionPayloadFromThunk.total || 0;
+    state.status = "succeeded";
+    state.error = null;
+
+    if (actionPayloadFromThunk.couponDetails) {
+      state.couponAppliedDetails = actionPayloadFromThunk.couponDetails;
+    } else if (
+      actionPayloadFromThunk.hasOwnProperty("couponDetails") &&
+      actionPayloadFromThunk.couponDetails === null
+    ) {
+      state.couponAppliedDetails = null;
+    }
+  } else {
+    console.error(
+      "cartSlice: Invalid payload received in updateCartStateFromFulfilledAPI. Expected cart data object, got:",
+      actionPayloadFromThunk
+    );
+    // Giữ lại state cũ hoặc set lỗi nếu payload không đúng để tránh làm trống giỏ hàng
+    state.status = "failed"; // Đánh dấu là thất bại nếu payload không đúng
+    state.error = "Invalid data structure received from server.";
   }
-  // Nếu action hiện tại không phải là applyCoupon, giữ nguyên couponStatus và couponError
 };
 
 const cartSlice = createSlice({
@@ -238,42 +252,40 @@ const cartSlice = createSlice({
   initialState,
   reducers: {
     resetCart: () => {
-      console.log("cartSlice: Resetting cart state");
+      console.log("cartSlice: Resetting cart state to initial");
       return initialState;
     },
     resetCouponStatus: (state) => {
       console.log("cartSlice: Resetting coupon status");
       state.couponStatus = "idle";
       state.couponError = null;
-      // Không reset couponAppliedDetails ở đây trừ khi có logic cụ thể
     },
   },
   extraReducers: (builder) => {
-    // Định nghĩa các trạng thái loading cụ thể cho từng action
     const createPendingHandler = (statusPrefix) => (state) => {
       state.status = `loading_${statusPrefix}`;
       state.error = null;
     };
     const createRejectedHandler = (statusPrefix) => (state, action) => {
-      state.status = `failed_${statusPrefix}`; // Hoặc chỉ là 'failed'
-      state.error = action.payload;
+      state.status = `failed_${statusPrefix}`;
+      state.error = action.payload; // action.payload từ rejectWithValue
+      console.error(`cartSlice: ${statusPrefix} rejected - `, action.payload);
     };
 
     // fetchCart
     builder
       .addCase(fetchCart.pending, createPendingHandler("fetch"))
       .addCase(fetchCart.fulfilled, (state, action) => {
+        // action.payload ở đây chính là response.data.data từ thunk fetchCart
         updateCartStateFromFulfilledAPI(state, action.payload);
-        // Nếu fetchCart không có couponDetails rõ ràng, reset thông tin coupon hiện tại
         if (!action.payload.couponDetails && state.couponAppliedDetails) {
           state.couponAppliedDetails = null;
           state.couponStatus = "idle";
-          state.couponError = null;
         }
       })
       .addCase(fetchCart.rejected, (state, action) => {
         createRejectedHandler("fetch")(state, action);
-        state.items = []; // Xóa items nếu fetch lỗi
+        state.items = [];
         state.total = 0;
         state.couponAppliedDetails = null;
       });
@@ -281,7 +293,10 @@ const cartSlice = createSlice({
     // addItemToCartAPI
     builder
       .addCase(addItemToCartAPI.pending, createPendingHandler("add"))
-      .addCase(addItemToCartAPI.fulfilled, updateCartStateFromFulfilledAPI)
+      .addCase(addItemToCartAPI.fulfilled, (state, action) => {
+        // action.payload là response.data.data từ thunk addItemToCartAPI
+        updateCartStateFromFulfilledAPI(state, action.payload);
+      })
       .addCase(addItemToCartAPI.rejected, createRejectedHandler("add"));
 
     // updateCartItemQuantityAPI
@@ -290,10 +305,14 @@ const cartSlice = createSlice({
         updateCartItemQuantityAPI.pending,
         createPendingHandler("update")
       )
-      .addCase(
-        updateCartItemQuantityAPI.fulfilled,
-        updateCartStateFromFulfilledAPI
-      )
+      .addCase(updateCartItemQuantityAPI.fulfilled, (state, action) => {
+        // action.payload là response.data.data từ thunk updateCartItemQuantityAPI
+        console.log(
+          "cartSlice: updateCartItemQuantityAPI.fulfilled in extraReducers. action.payload:",
+          action.payload
+        );
+        updateCartStateFromFulfilledAPI(state, action.payload);
+      })
       .addCase(
         updateCartItemQuantityAPI.rejected,
         createRejectedHandler("update")
@@ -302,7 +321,10 @@ const cartSlice = createSlice({
     // removeCartItemAPI
     builder
       .addCase(removeCartItemAPI.pending, createPendingHandler("remove"))
-      .addCase(removeCartItemAPI.fulfilled, updateCartStateFromFulfilledAPI)
+      .addCase(removeCartItemAPI.fulfilled, (state, action) => {
+        // action.payload là response.data.data từ thunk removeCartItemAPI
+        updateCartStateFromFulfilledAPI(state, action.payload);
+      })
       .addCase(removeCartItemAPI.rejected, createRejectedHandler("remove"));
 
     // applyCouponToCartAPI
@@ -310,10 +332,11 @@ const cartSlice = createSlice({
       .addCase(applyCouponToCartAPI.pending, (state) => {
         state.couponStatus = "loading";
         state.couponError = null;
-        state.couponAppliedDetails = null; // Reset khi thử áp dụng coupon mới
+        state.couponAppliedDetails = null;
       })
       .addCase(applyCouponToCartAPI.fulfilled, (state, action) => {
-        updateCartStateFromFulfilledAPI(state, action.payload); // Giỏ hàng đã được cập nhật với discount
+        // action.payload là response.data.data từ thunk applyCouponToCartAPI
+        updateCartStateFromFulfilledAPI(state, action.payload);
         state.couponAppliedDetails = action.payload.couponDetails || null;
         state.couponStatus = "succeeded";
       })
@@ -321,15 +344,16 @@ const cartSlice = createSlice({
         state.couponStatus = "failed";
         state.couponError = action.payload;
         state.couponAppliedDetails = null;
-        state.status = "succeeded"; // Giỏ hàng vẫn có thể thành công, chỉ coupon lỗi
+        state.status = "succeeded"; // Giỏ hàng có thể vẫn ok, chỉ coupon lỗi
       });
 
     // clearCartAPI
     builder
       .addCase(clearCartAPI.pending, createPendingHandler("clear"))
       .addCase(clearCartAPI.fulfilled, (state, action) => {
-        updateCartStateFromFulfilledAPI(state, action.payload); // Sẽ là giỏ hàng trống
-        state.couponAppliedDetails = null; // Xóa coupon khi xóa giỏ hàng
+        // action.payload là response.data.data từ thunk clearCartAPI
+        updateCartStateFromFulfilledAPI(state, action.payload);
+        state.couponAppliedDetails = null;
         state.couponStatus = "idle";
       })
       .addCase(clearCartAPI.rejected, createRejectedHandler("clear"));
