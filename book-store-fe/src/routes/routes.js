@@ -10,6 +10,7 @@ import ProductDetailPage from "../pages/products/ProductDetailPage";
 import ProductListingPage from "../pages/products/ProductListingPage";
 import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
+
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
@@ -22,6 +23,10 @@ import AdminReports from "../pages/admin/Reports";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+
+import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
+import AdminActivity from "../pages/admin/AdminActivity";
+import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
 
 export const routes = [
   {

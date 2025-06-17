@@ -7,7 +7,6 @@ module.exports = {
         A.UPDATE_USER,
         A.DELETE_USER,
         A.VIEW_ADMIN_ACTIVITY,
-        A.VIEW_SYSTEM_LOGS
     ],
     admindev: [
         A.CREATE_BOOK,
@@ -19,7 +18,6 @@ module.exports = {
         A.CREATE_BLOG,
         A.UPDATE_BLOG,
         A.DELETE_BLOG,
-        A.ACCESS_SYSTEM_LOGS
     ],
     adminbusiness: [
         A.CREATE_DISCOUNT,
@@ -28,7 +26,6 @@ module.exports = {
         A.CREATE_ORDER,
         A.UPDATE_ORDER,
         A.DELETE_ORDER,
-        A.APPROVE_REVIEW,
         A.VIEW_SALES_REPORT
     ]
 };

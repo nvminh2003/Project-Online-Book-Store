@@ -55,14 +55,22 @@ const Books = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa sách này?")) return;
-    try {
-      await axios.delete(`${API_URL}/books/${id}`);
-      fetchBooks();
-    } catch (error) {
-      console.error("Error deleting book:", error);
-    }
-  };
+
+  if (!window.confirm("Bạn có chắc chắn muốn xóa sách này?")) return;
+  try {
+    const token = localStorage.getItem("accessToken");
+    await axios.delete(`${API_URL}/books/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    fetchBooks();
+  } catch (error) {
+    console.error("Error deleting book:", error);
+    alert("Không xóa được sách. Vui lòng thử lại.");
+  }
+};
+
 
   return (
     <div className="p-4">
@@ -143,5 +151,6 @@ const Books = () => {
     </div>
   );
 };
+
 
 export default Books;

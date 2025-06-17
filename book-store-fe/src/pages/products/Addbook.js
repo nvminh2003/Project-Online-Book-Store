@@ -39,7 +39,9 @@ const AddBook = () => {
     try {
       const decoded = jwtDecode(token);
       const role = decoded.role;
-      if (role !== "admin" && role !== "superadmin") {
+
+      if (role !== "admindev" && role !== "superadmin") {
+
         alert("Bạn không có quyền truy cập.");
         return navigate("/");
       }

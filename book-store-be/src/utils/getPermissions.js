@@ -1,7 +1,7 @@
 // utils/getPermissions.js
 const rolePermissions = require("../utils/rolePermissions");
 
-function getPermissions(role, department) {
+function getPermissions(role) {
     if (role === "superadmin") {
         return rolePermissions.superadmin;
     }
