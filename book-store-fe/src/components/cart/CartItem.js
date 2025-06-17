@@ -4,7 +4,8 @@ const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
   if (!item || !item.book) return null;
 
   const { book, quantity } = item;
-  const { title, sellingPrice, thumbnail } = book;
+  const { title, sellingPrice, images } = book;
+  const thumbnail = images?.[0] || "/default-book.png";
 
   return (
     <div className="flex items-center gap-6">
