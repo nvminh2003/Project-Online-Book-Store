@@ -1,5 +1,6 @@
 const Book = require("../models/bookModel");
 const AdminActivityLog = require('../models/AdminActivityLog');
+const Category = require("../models/categoryModel");
 // Create a new book (Admin only)
 // Create a new book (Admin only)
 const createBook = async (req, res) => {
@@ -303,7 +304,123 @@ const deleteBook = async (req, res) => {
             status: "Error"
         });
     }
+}; 
+const uploadBooksFromExcel = async (req, res) => {
+  try {
+    const books = req.body.books;
+    if (!Array.isArray(books)) {
+      return res.status(400).json({ message: "Invalid books data", status: "Error" });
+    }
+
+    // Hàm tạo slug như bên createBook
+    function removeVietnameseTones(str) {
+      return str.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/Đ/g, "D");
+    }
+
+    const createdBooks = [];
+
+    for (const book of books) {
+      const {
+        title,
+        authors,
+        publisher,
+        publicationYear,
+        pageCount,
+        coverType,
+        description,
+        images,
+        isbn,
+        originalPrice,
+        sellingPrice,
+        stockQuantity,
+        isFeatured,
+        isNewArrival,
+        categories,
+      } = book;
+
+      if (!title || !authors || !publisher || !originalPrice || !sellingPrice || !stockQuantity) {
+        continue; // Bỏ qua nếu thiếu trường bắt buộc
+      }
+
+      const slug = removeVietnameseTones(title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+      // ✅ Xử lý images đảm bảo đúng kiểu mảng chuỗi
+      let imageArray = [];
+      if (typeof images === "string") {
+        imageArray = images.split(",").map((img) => img.trim()).filter(Boolean);
+      } else if (Array.isArray(images)) {
+        imageArray = images.map((img) => String(img).trim()).filter(Boolean);
+      }
+
+      if (!Array.isArray(imageArray)) {
+        console.warn(`⚠️ images for book "${title}" is not an array. Received:`, images);
+        imageArray = [];
+      }
+
+      // Log rõ ràng để debug
+      console.log(`📦 Đang xử lý sách: ${title}`);
+      console.log("🔗 images:", imageArray);
+
+      // Xử lý categories từ slug
+      let categoryIds = [];
+      if (categories) {
+        const categorySlugs = categories.split(",").map((c) => c.trim());
+        const foundCategories = await Category.find({ slug: { $in: categorySlugs } });
+        categoryIds = foundCategories.map((cat) => cat._id);
+      }
+
+      const newBook = new Book({
+        title,
+        slug,
+        authors: authors?.split(",").map((a) => a.trim()),
+        publisher,
+        publicationYear: publicationYear ? parseInt(publicationYear) : undefined,
+        pageCount: pageCount ? parseInt(pageCount) : undefined,
+        coverType,
+        description,
+        images: imageArray,
+        isbn,
+        originalPrice: parseFloat(originalPrice),
+        sellingPrice: parseFloat(sellingPrice),
+        stockQuantity: parseInt(stockQuantity),
+        isFeatured: isFeatured || false,
+        isNewArrival: isNewArrival || false,
+        categories: categoryIds,
+        createdBy: req.account._id,
+      });
+
+      await newBook.save();
+
+      await AdminActivityLog.create({
+        adminId: req.account._id,
+        action: "CREATE_BOOK",
+        details: `Admin ${req.account.email} imported book "${newBook.title}" (ID: ${newBook._id}) via Excel`
+      });
+
+      createdBooks.push(newBook);
+    }
+
+    res.status(201).json({
+      message: "Import sách thành công",
+      status: "Success",
+      data: createdBooks,
+    });
+  } catch (err) {
+    console.error("❌ Lỗi import Excel:", err);
+    res.status(500).json({
+      message: err.message,
+      status: "Error",
+    });
+  }
 };
+
+
+
 
 module.exports = {
     createBook,
@@ -311,5 +428,6 @@ module.exports = {
     searchBooks,
     getBookById,
     updateBook,
-    deleteBook
+    deleteBook,
+    uploadBooksFromExcel
 };

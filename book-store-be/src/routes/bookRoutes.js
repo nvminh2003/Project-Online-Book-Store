@@ -12,5 +12,7 @@ router.get('/:id', bookController.getBookById);
 router.post('/', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.createBook);
 router.put('/:id', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.updateBook);
 router.delete('/:id', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.deleteBook);
+router.post('/upload-excel', authorizeRole(['superadmin', 'admindev'], ['dev']), bookController.uploadBooksFromExcel);
+
 
 module.exports = router; 

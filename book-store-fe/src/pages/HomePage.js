@@ -11,7 +11,7 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 3;
+  const booksPerPage = 6;
 
   const navigate = useNavigate();
 

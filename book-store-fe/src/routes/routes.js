@@ -10,7 +10,7 @@ import ProductDetailPage from "../pages/products/ProductDetailPage";
 import ProductListingPage from "../pages/products/ProductListingPage";
 import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
-
+import UploadExcel from "../pages/products/UploadExcel";
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
@@ -209,6 +209,11 @@ export const routes = [
      {
         path: "/editbook/:id",
          page: EditBook,
+        isShowHeader: true,
+    },
+    {
+        path: "/autoadd",
+         page: UploadExcel,
         isShowHeader: true,
     },
 ];
