@@ -258,7 +258,7 @@ const updateBook = async (req, res) => {
         await AdminActivityLog.create({
                     adminId: req.account._id,
                     action: 'UPDATE_BOOK',
-                    details: `Admin ${req.account.email} updated account ${ updatedBook.tittle} (ID: ${updatedBook._id})`
+                    details: `Admin ${req.account.email} updated account ${ updatedBook.title} (ID: ${updatedBook._id})`
                 });
 
         res.status(200).json({
@@ -290,7 +290,7 @@ const deleteBook = async (req, res) => {
         await AdminActivityLog.create({
                     adminId: req.account._id,
                     action: 'DELETE_BOOK',
-                    details: `Admin ${req.account.email} updated account ${book.tittle} (ID: ${book._id})`
+                    details: `Admin ${req.account.email} updated account ${book.title} (ID: ${book._id})`
                 });
 
         res.status(200).json({
