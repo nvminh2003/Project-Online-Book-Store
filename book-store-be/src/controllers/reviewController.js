@@ -42,7 +42,7 @@ exports.getReviewsByBook = async (req, res) => {
         const reviews = await Review.find({
             book: req.params.bookId,
             visibility: "visible"
-        }).populate("user", "name");
+        }).populate("user", "email");
 
         res.json(reviews);
     } catch (err) {
@@ -83,7 +83,7 @@ exports.deleteReview = async (req, res) => {
 exports.getAllReviews = async (req, res) => {
     try {
         const reviews = await Review.find()
-          .populate("user", "name")
+          .populate("user", "email")
           .populate("book", "title");
 
         res.json(reviews);

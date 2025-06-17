@@ -3,12 +3,13 @@ const router = express.Router();
 const reviewController = require('../controllers/reviewController');
 const { checkAuthMiddleware, authorizeRole } = require('../middleware/authMiddleware');
 
+router.get("/book/:bookId", reviewController.getReviewsByBook);
+
 // All review routes require authentication
 router.use(checkAuthMiddleware);
 
 router.post("/", reviewController.addReview);
 router.put("/:id", reviewController.updateReview);
-router.get("/book/:bookId", reviewController.getReviewsByBook);
 router.put("/:id/report", reviewController.reportReview);
 router.delete("/:id", reviewController.deleteReview);
 
