@@ -69,9 +69,7 @@ export const routes = [
     path: "/admin",
     page: () => (
       <ProtectedRoute requiredRole={["admin", "superadmin"]}>
-        <AdminLayout>
-          <AdminDashboard />
-        </AdminLayout>
+        <AdminLayout></AdminLayout>
       </ProtectedRoute>
     ),
     isShowHeader: false,

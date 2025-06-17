@@ -10,14 +10,15 @@ import {
   removeCartItemAPI,
   applyCouponToCartAPI,
   resetCouponStatus,
-  resetCart, // Import resetCart
+  resetCart,
 } from "../../store/slices/cartSlice";
 import { useNavigate } from "react-router-dom";
-import MainLayout from "../../components/layout/MainLayout";
+// import MainLayout from "../../components/layout/MainLayout"; // KHÔNG IMPORT MAINLAYOUT Ở ĐÂY NỮA
 import Spinner from "../../components/common/Spinner";
 
-// --- Selectors ---
+// --- Selectors (Giữ nguyên) ---
 const selectCartItems = (state) => state.cart.items || [];
+// ... (các selectors khác giữ nguyên như bạn đã có) ...
 const selectCartUser = (state) => state.cart.user;
 const selectCartApiTotal = (state) => state.cart.total || 0;
 const selectCartStatus = (state) => state.cart.status;
@@ -42,19 +43,15 @@ const selectCartDiscountAmount = (state) => {
   ) {
     return couponDetails.discountAmountCalculated;
   }
-  // Nếu không có coupon hoặc apply không thành công, thử suy luận từ total và subtotal
-  // CẢNH BÁO: Logic này sẽ sai nếu `total` từ backend đã bao gồm phí ship.
-  // Tốt nhất là backend trả về `discountAmount` rõ ràng hoặc `couponDetails` đầy đủ.
   const subtotal = selectCartSubtotal(state);
   const totalFromApi = selectCartApiTotal(state);
-  // Giả sử totalFromApi chưa tính shipping, hoặc shipping = 0
   if (selectShippingFee(state) === 0 && totalFromApi < subtotal) {
     return subtotal - totalFromApi;
   }
   return 0;
 };
 
-const selectShippingFee = (state) => state.cart.shippingFee || 0; // Hiện tại đang là 0
+const selectShippingFee = (state) => state.cart.shippingFee || 0;
 
 const selectDisplayTotal = (state) => {
   const subtotal = selectCartSubtotal(state);
@@ -82,22 +79,19 @@ const CartPage = () => {
 
   const [couponCode, setCouponCode] = useState("");
 
-  // Callback để fetch cart, dùng trong useEffect và nút thử lại
   const loadCart = useCallback(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
       dispatch(fetchCart());
     } else {
-      // Nếu không có token, có thể dispatch action để clear local cart state
-      // hoặc để UI hiển thị thông báo yêu cầu đăng nhập.
-      dispatch(resetCart()); // Xóa dữ liệu giỏ hàng ở client nếu không có token
+      dispatch(resetCart());
       console.log("CartPage: User not logged in. Cart state reset.");
     }
   }, [dispatch]);
 
   useEffect(() => {
-    loadCart(); // Gọi khi component mount
-  }, [loadCart]); // loadCart chỉ thay đổi nếu dispatch thay đổi (hiếm)
+    loadCart();
+  }, [loadCart]);
 
   const handleQuantityChange = (bookId, newQuantity) => {
     const quantityNum = Number(newQuantity);
@@ -105,7 +99,14 @@ const CartPage = () => {
       dispatch(updateCartItemQuantityAPI({ bookId, quantity: quantityNum }))
         .unwrap()
         .then(() => {
-          dispatch(fetchCart()); // Fetch lại giỏ hàng sau khi update thành công
+          // Không cần dispatch(fetchCart()) ở đây nữa vì extraReducer của updateCartItemQuantityAPI.fulfilled
+          // đã cập nhật state với response từ backend (là toàn bộ giỏ hàng mới)
+          console.log(
+            "Quantity updated, cart state should be fresh from API response."
+          );
+        })
+        .catch((err) => {
+          console.error("Failed to update quantity:", err);
         });
     }
   };
@@ -114,9 +115,16 @@ const CartPage = () => {
     dispatch(removeCartItemAPI(bookId))
       .unwrap()
       .then(() => {
-        dispatch(fetchCart());
+        // Tương tự, không cần dispatch(fetchCart())
+        console.log(
+          "Item removed, cart state should be fresh from API response."
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to remove item:", err);
       });
   };
+
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       dispatch(resetCouponStatus());
@@ -124,15 +132,13 @@ const CartPage = () => {
       return;
     }
     dispatch(applyCouponToCartAPI(couponCode))
-      .unwrap() // unwrap để vào .then/.catch
+      .unwrap()
       .then(() => {
-        setCouponCode(""); // Xóa mã coupon khỏi input nếu thành công
+        setCouponCode("");
         alert("Áp dụng mã giảm giá thành công!");
       })
       .catch((errorPayload) => {
-        // Lỗi đã được set vào couponErrorMessageFromStore bởi extraReducer trong slice
-        // alert(errorPayload || "Mã giảm giá không hợp lệ hoặc có lỗi xảy ra.");
-        // Không cần alert ở đây nữa vì UI sẽ hiển thị couponErrorMessageFromStore
+        // Lỗi đã được hiển thị thông qua couponErrorMessageFromStore
       });
   };
 
@@ -147,46 +153,47 @@ const CartPage = () => {
   // --- Render Logic ---
   const token = localStorage.getItem("accessToken");
   if (!token) {
+    // Component này giờ sẽ không render MainLayout nữa, App.js sẽ làm điều đó (hoặc không, nếu route này isShowHeader=false)
     return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8">
-          <EmptyItem message="Vui lòng đăng nhập để xem giỏ hàng của bạn." />
-          <div className="text-center mt-4">
-            <button
-              onClick={() => navigate("/auth/login")}
-              className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Đăng nhập
-            </button>
-          </div>
+      // <MainLayout>  // XÓA DÒNG NÀY
+      <div className="container mx-auto px-4 py-8">
+        <EmptyItem message="Vui lòng đăng nhập để xem giỏ hàng của bạn." />
+        <div className="text-center mt-4">
+          <button
+            onClick={() => navigate("/auth/login")}
+            className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Đăng nhập
+          </button>
         </div>
-      </MainLayout>
+      </div>
+      // </MainLayout> // XÓA DÒNG NÀY
     );
   }
 
   if (cartStatus === "loading_fetch" && cartItems.length === 0) {
     return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
-          <Spinner />
-        </div>
-      </MainLayout>
+      // <MainLayout> // XÓA DÒNG NÀY
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
+        <Spinner />
+      </div>
+      // </MainLayout> // XÓA DÒNG NÀY
     );
   }
 
   if (cartStatus === "failed" && cartError && cartItems.length === 0) {
     return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8 text-center text-red-500">
-          <p>Lỗi khi tải giỏ hàng: {String(cartError)}</p>
-          <button
-            onClick={loadCart}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Thử lại
-          </button>
-        </div>
-      </MainLayout>
+      // <MainLayout> // XÓA DÒNG NÀY
+      <div className="container mx-auto px-4 py-8 text-center text-red-500">
+        <p>Lỗi khi tải giỏ hàng: {String(cartError)}</p>
+        <button
+          onClick={loadCart}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Thử lại
+        </button>
+      </div>
+      // </MainLayout> // XÓA DÒNG NÀY
     );
   }
 
@@ -195,100 +202,101 @@ const CartPage = () => {
     (cartStatus === "succeeded" || cartStatus === "idle")
   ) {
     return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-8">
-          <EmptyItem />
-        </div>
-      </MainLayout>
+      // <MainLayout> // XÓA DÒNG NÀY
+      <div className="container mx-auto px-4 py-8">
+        <EmptyItem />
+      </div>
+      // </MainLayout> // XÓA DÒNG NÀY
     );
   }
 
+  // --- BỎ MAINLAYOUT BAO QUANH PHẦN RETURN CHÍNH ---
   return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-semibold text-center text-gray-800 mb-8">
-          Giỏ hàng của bạn
-        </h1>
-        {cartStatus.startsWith("loading_") &&
-          cartStatus !== "loading_fetch" &&
-          cartStatus !== "idle" &&
-          cartStatus !== "succeeded" && (
-            <div className="text-center py-2 my-2 bg-blue-100 text-blue-700 rounded flex items-center justify-center">
-              <Spinner size="sm" className="mr-2" /> Đang cập nhật giỏ hàng...
-            </div>
-          )}
-        {cartStatus === "failed" && cartError && cartItems.length > 0 && (
-          <div className="text-center py-2 my-2 bg-red-100 text-red-700 rounded">
-            Lỗi cập nhật: {String(cartError)}
+    // <MainLayout>  // XÓA DÒNG NÀY
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-semibold text-center text-gray-800 mb-8">
+        Giỏ hàng của bạn
+      </h1>
+      {cartStatus.startsWith("loading_") &&
+        cartStatus !== "loading_fetch" &&
+        cartStatus !== "idle" &&
+        cartStatus !== "succeeded" && (
+          <div className="text-center py-2 my-2 bg-blue-100 text-blue-700 rounded flex items-center justify-center">
+            <Spinner size="sm" className="mr-2" /> Đang cập nhật giỏ hàng...
           </div>
         )}
-
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
-          <section
-            aria-labelledby="cart-heading"
-            className="lg:col-span-8 bg-white shadow-md rounded-lg p-6"
-          >
-            <h2 id="cart-heading" className="sr-only">
-              Sản phẩm trong giỏ hàng
-            </h2>
-            {cartItems.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {cartItems.map((item) => {
-                  if (!item.book || !item.book._id) {
-                    console.warn(
-                      "Cart item is missing book data or book._id:",
-                      item
-                    );
-                    return null;
-                  }
-                  return (
-                    <li key={item.book._id} className="py-6">
-                      <CartItem
-                        item={item}
-                        onQuantityChange={(newQuantity) =>
-                          handleQuantityChange(item.book._id, newQuantity)
-                        }
-                        onRemoveItem={() => handleRemoveItem(item.book._id)}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              cartStatus !== "loading_fetch" &&
-              !cartError && (
-                <EmptyItem message="Giỏ hàng của bạn hiện đang trống." />
-              )
-            )}
-          </section>
-
-          {cartItems.length > 0 && (
-            <section
-              aria-labelledby="summary-heading"
-              className="lg:col-span-4 mt-8 lg:mt-0 sticky top-20"
-            >
-              <CartSummary
-                subtotal={subtotal}
-                discountAmount={discountAmount}
-                shippingFee={shippingFee}
-                total={displayTotal}
-                couponCode={couponCode}
-                onCouponCodeChange={(e) => {
-                  setCouponCode(e.target.value);
-                  if (couponErrorMessageFromStore) {
-                    dispatch(resetCouponStatus());
-                  }
-                }}
-                onApplyCoupon={handleApplyCoupon}
-                onProceedToCheckout={handleProceedToCheckout}
-                couponError={couponErrorMessageFromStore}
-                applyingCoupon={couponStatus === "loading"}
-              />
-            </section>
-          )}
+      {cartStatus === "failed" && cartError && cartItems.length > 0 && (
+        <div className="text-center py-2 my-2 bg-red-100 text-red-700 rounded">
+          Lỗi cập nhật: {String(cartError)}
         </div>
+      )}
+
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+        <section
+          aria-labelledby="cart-heading"
+          className="lg:col-span-8 bg-white shadow-md rounded-lg p-6"
+        >
+          <h2 id="cart-heading" className="sr-only">
+            Sản phẩm trong giỏ hàng
+          </h2>
+          {cartItems.length > 0 ? (
+            <ul className="divide-y divide-gray-200">
+              {cartItems.map((item) => {
+                if (!item.book || !item.book._id) {
+                  console.warn(
+                    "Cart item is missing book data or book._id:",
+                    item
+                  );
+                  return null;
+                }
+                return (
+                  <li key={item.book._id} className="py-6">
+                    <CartItem
+                      item={item}
+                      onQuantityChange={(newQuantity) =>
+                        handleQuantityChange(item.book._id, newQuantity)
+                      }
+                      onRemoveItem={() => handleRemoveItem(item.book._id)}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            cartStatus !== "loading_fetch" &&
+            !cartError && (
+              <EmptyItem message="Giỏ hàng của bạn hiện đang trống." />
+            )
+          )}
+        </section>
+
+        {cartItems.length > 0 && (
+          <section
+            aria-labelledby="summary-heading"
+            className="lg:col-span-4 mt-8 lg:mt-0 sticky top-20"
+          >
+            <CartSummary
+              subtotal={subtotal}
+              discountAmount={discountAmount}
+              shippingFee={shippingFee}
+              total={displayTotal}
+              couponCode={couponCode}
+              onCouponCodeChange={(e) => {
+                setCouponCode(e.target.value);
+                if (couponErrorMessageFromStore) {
+                  dispatch(resetCouponStatus());
+                }
+              }}
+              onApplyCoupon={handleApplyCoupon}
+              onProceedToCheckout={handleProceedToCheckout}
+              couponError={couponErrorMessageFromStore}
+              applyingCoupon={couponStatus === "loading"}
+            />
+          </section>
+        )}
       </div>
-    </MainLayout>
+    </div>
+    // </MainLayout> // XÓA DÒNG NÀY
   );
 };
 
