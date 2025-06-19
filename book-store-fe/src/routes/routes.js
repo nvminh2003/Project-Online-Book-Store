@@ -22,6 +22,13 @@ import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import AdminActivity from "../pages/admin/AdminActivity";
 import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
+import AboutUs from "../pages/AboutUs";
+import PaymentInfo from "../pages/PaymentInfo";
+import SalesPolicy from "../pages/SalesPolicy";
+
+// Blog Pages
+import BlogListingPage from "../pages/blog/BlogListingPage";
+import BlogDetailPage from "../pages/blog/BlogDetailPage";
 
 export const routes = [
     {
@@ -63,6 +70,31 @@ export const routes = [
         path: "/reset-password",
         page: ResetPasswordPage,
         isShowHeader: true
+    },
+    {
+        path: "/about",
+        page: AboutUs,
+        isShowHeader: true,
+    },
+    {
+        path: "/payment-info",
+        page: PaymentInfo,
+        isShowHeader: true,
+    },
+    {
+        path: "/sales-policy",
+        page: SalesPolicy,
+        isShowHeader: true,
+    },
+    {
+        path: "/blogs",
+        page: BlogListingPage,
+        isShowHeader: true,
+    },
+    {
+        path: "/blogs/:id",
+        page: BlogDetailPage,
+        isShowHeader: true,
     },
     // Admin Routes
     {

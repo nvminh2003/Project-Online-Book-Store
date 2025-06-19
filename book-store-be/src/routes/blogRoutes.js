@@ -7,8 +7,8 @@ const A = require('../utils/actionTypes');
 
 // Public routes
 router.get('/', blogController.getAllBlogs);
-router.get('/:id', blogController.getBlogById);
 router.get('/search', blogController.searchBlogs);
+router.get('/:id', blogController.getBlogById);
 
 // Admin only routes
 router.post('/',

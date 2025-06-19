@@ -45,17 +45,78 @@ const createBlog = async (req, res) => {
 };
 
 // Get all blog posts with pagination
+// const getAllBlogs = async (req, res) => {
+//     try {
+//         const page = parseInt(req.query.page) || 1;
+//         const limit = parseInt(req.query.limit) || 10;
+//         const skip = (page - 1) * limit;
+//         const status = req.query.status || "published";
+
+//         const query = { status };
+//         // Only admindev can see all posts including drafts
+//         if (req.account?.role === "admindev") {
+//             delete query.status;
+//         }
+
+//         const blogs = await Blog.find(query)
+//             .populate('author', 'email info.fullName')
+//             .sort({ createdAt: -1 })
+//             .skip(skip)
+//             .limit(limit);
+
+//         const total = await Blog.countDocuments(query);
+
+//         res.status(200).json({
+//             message: "Get blogs successfully",
+//             status: "Success",
+//             data: {
+//                 blogs,
+//                 pagination: {
+//                     page,
+//                     limit,
+//                     total,
+//                     totalPages: Math.ceil(total / limit)
+//                 }
+//             }
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             message: error.message,
+//             status: "Error"
+//         });
+//     }
+// };
 const getAllBlogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
         const status = req.query.status || "published";
+        const { createdAt, from, to } = req.query;
 
-        const query = { status };
+        const query = {};
+        if (status) query.status = status;
+        // Lọc theo ngày tạo
+        if (createdAt) {
+            // Lọc đúng ngày (YYYY-MM-DD)
+            const start = new Date(createdAt);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(createdAt);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: start, $lte: end };
+        } else if (from || to) {
+            query.createdAt = {};
+            if (from) query.createdAt.$gte = new Date(from);
+            if (to) {
+                const toDate = new Date(to);
+                toDate.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = toDate;
+            }
+        }
+
         // Only admindev can see all posts including drafts
         if (req.account?.role === "admindev") {
-            delete query.status;
+            // Không ép status nếu là admindev
         }
 
         const blogs = await Blog.find(query)
