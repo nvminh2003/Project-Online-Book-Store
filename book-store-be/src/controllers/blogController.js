@@ -43,16 +43,24 @@ const createBlog = async (req, res) => {
     }
 };
 
-// Get all blog posts with pagination
 const getAllBlogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-        const { createdAt, from, to } = req.query;
+        const { createdAt, from, to, searchTerm } = req.query;
 
         const query = {};
-        // Lọc theo ngày tạo
+
+        // 🔍 Tìm kiếm theo tiêu đề hoặc nội dung
+        if (searchTerm) {
+            query.$or = [
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { content: { $regex: searchTerm, $options: 'i' } }
+            ];
+        }
+
+        // 📆 Lọc theo ngày tạo
         if (createdAt) {
             const start = new Date(createdAt);
             start.setHours(0, 0, 0, 0);
@@ -97,6 +105,7 @@ const getAllBlogs = async (req, res) => {
         });
     }
 };
+
 
 // Get blog by ID
 const getBlogById = async (req, res) => {

@@ -8,9 +8,36 @@ const BlogPostCard = ({ blog }) => {
     return moment(date).format('DD/MM/YYYY');
   };
 
-  const truncateContent = (content, maxLength = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+  const truncateHtml = (html, maxLength = 150) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    let text = '';
+    let len = 0;
+    function walk(node) {
+      if (len >= maxLength) return;
+      if (node.nodeType === 3) { // text node
+        let remain = maxLength - len;
+        text += node.nodeValue.slice(0, remain);
+        len += node.nodeValue.slice(0, remain).length;
+      } else if (node.nodeType === 1) { // element
+        text += `<${node.nodeName.toLowerCase()}`;
+        for (let attr of node.attributes) {
+          text += ` ${attr.name}="${attr.value}"`;
+        }
+        text += '>';
+        for (let child of node.childNodes) {
+          walk(child);
+          if (len >= maxLength) break;
+        }
+        text += `</${node.nodeName.toLowerCase()}>`;
+      }
+    }
+    for (let child of div.childNodes) {
+      walk(child);
+      if (len >= maxLength) break;
+    }
+    if (div.textContent.length > maxLength) text += '...';
+    return text;
   };
 
   return (
@@ -24,9 +51,9 @@ const BlogPostCard = ({ blog }) => {
         </Link>
 
         {/* Content Preview */}
-        <p className="text-gray-600 mb-4 line-clamp-3">
-          {truncateContent(blog.content)}
-        </p>
+        <div className="text-gray-600 mb-4 line-clamp-3 prose prose-sm max-w-none">
+          <div dangerouslySetInnerHTML={{ __html: truncateHtml(blog.content, 150) }} />
+        </div>
 
         {/* Meta Information */}
         <div className="flex items-center justify-between text-sm text-gray-500">

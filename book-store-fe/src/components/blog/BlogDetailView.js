@@ -4,7 +4,7 @@ import moment from 'moment';
 
 const BlogDetailView = ({ blog }) => {
   const formatDate = (date) => {
-    return moment(date).format('DD/MM/YYYY HH:mm');
+    return moment(date).format('DD/MM/YYYY');
   };
 
   if (!blog) {
@@ -52,8 +52,8 @@ const BlogDetailView = ({ blog }) => {
 
       {/* Content */}
       <div className="prose prose-lg max-w-none">
-        <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-          {blog.content}
+        <div className="text-gray-700 leading-relaxed">
+          <div dangerouslySetInnerHTML={{ __html: blog.content }} />
         </div>
       </div>
 

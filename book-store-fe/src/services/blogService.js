@@ -26,10 +26,26 @@ const blogService = {
     },
 
     // Search blogs
-    searchBlogs: async (query, page = 1, limit = 10, status = 'published') => {
+    searchBlogs: async (searchTerm, page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${API_URL}/blogs/search`, {
-                params: { query, page, limit, status }
+                params: { searchTerm, page, limit }
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Lấy blog theo khoảng ngày tạo (dành cho admin)
+    getBlogsByDateRange: async (params = {}) => {
+        try {
+            const token = getToken();
+            const response = await axios.get(`${API_URL}/blogs/date-range`, {
+                params,
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
             });
             return response.data;
         } catch (error) {
@@ -80,7 +96,7 @@ const blogService = {
         } catch (error) {
             throw error.response?.data || error.message;
         }
-    }
+    },
 };
 
 export default blogService; 
