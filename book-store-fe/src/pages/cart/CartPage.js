@@ -144,7 +144,7 @@ const CartPage = () => {
 
   const handleProceedToCheckout = () => {
     if (cartItems.length > 0) {
-      navigate("/checkout/shipping");
+      navigate("/auth/checkout/shipping");
     } else {
       alert("Giỏ hàng của bạn đang trống!");
     }

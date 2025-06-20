@@ -10,7 +10,11 @@ import ProductDetailPage from "../pages/products/ProductDetailPage";
 import ProductListingPage from "../pages/products/ProductListingPage";
 import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
-
+//check out pages
+import ShippingPage from "../pages/checkout/ShippingPage";
+import PaymentPage from "../pages/checkout/PaymentPage";
+import OrderReviewPage from "../pages/checkout/OrderReviewPage";
+import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
@@ -64,6 +68,28 @@ export const routes = [
     page: ChangePasswordPage,
     isShowHeader: true,
   },
+  // --- THÊM CÁC ROUTE CHO CHECKOUT (VỚI PREFIX /auth) ---
+  {
+    path: "/auth/checkout/shipping",
+    page: ShippingPage, // Render trực tiếp component ShippingPage
+    isShowHeader: true, // Hoặc false nếu bạn có layout riêng cho checkout
+  },
+  {
+    path: "/auth/checkout/payment",
+    page: PaymentPage, // Render trực tiếp component PaymentPage
+    isShowHeader: true,
+  },
+  {
+    Đpath: "/auth/checkout/review",
+    page: OrderReviewPage, // Render trực tiếp component OrderReviewPage
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/checkout/success/:orderId", // Thêmã hiểu, bạn muốn đoạn code **chỉ riêng cho phần checkout routes** trong file :orderId để hiển thị chi tiết đơn hàng thành công
+    page: OrderSuccessPage, // Render trực tiếp component OrderSuccessPage
+    isShowHeader: true,
+  },
+  // --- KẾT THÚC ĐOẠN CODE CHO `routes.js` mà **không sử dụng `ProtectedRoute`** (hoặc `UserProtectedRoute`).
   // Admin Routes
   {
     path: "/admin",
