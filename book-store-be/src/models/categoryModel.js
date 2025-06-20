@@ -7,4 +7,4 @@ const CategorySchema = new mongoose.Schema({
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Account" }
 }, { timestamps: true });
 
-module.exports = mongoose.model("Category", CategorySchema);
+module.exports = mongoose.models.Category || mongoose.model("Category", CategorySchema);

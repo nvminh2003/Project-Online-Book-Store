@@ -15,6 +15,7 @@ import ShippingPage from "../pages/checkout/ShippingPage";
 import PaymentPage from "../pages/checkout/PaymentPage";
 import OrderReviewPage from "../pages/checkout/OrderReviewPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
+import UploadExcel from "../pages/products/UploadExcel";
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
@@ -229,5 +230,210 @@ export const routes = [
   {
     path: "*",
     page: NotFoundPage,
+  },
+  {
+    path: "/",
+    page: HomePage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/register",
+    page: RegisterPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/login",
+    page: LoginPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/cart",
+    page: CartPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/forgot-password",
+    page: ForgotPasswordPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/profile",
+    page: ProfilePage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/change-password",
+    page: ChangePasswordPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/reset-password",
+    page: ResetPasswordPage,
+    isShowHeader: true,
+  },
+  // Admin Routes
+  {
+    path: "/admin",
+    page: () => (
+      <ProtectedRoute
+        requiredRole={["admindev", "adminbusiness", "superadmin"]}
+      >
+        <AdminLayout>
+          <RoleBasedDashboard />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/books",
+    page: () => (
+      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_BOOK">
+        <AdminLayout>
+          <AdminBooks />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/categories",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="admindev"
+        requiredPermission="VIEW_CATEGORY"
+      >
+        <AdminLayout>
+          <AdminCategories />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/discounts",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_DISCOUNT"
+      >
+        <AdminLayout>
+          <AdminDiscounts />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/users",
+    page: () => (
+      <ProtectedRoute requiredRole="superadmin" requiredPermission="VIEW_USER">
+        <AdminLayout>
+          <AdminUsers />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/view-admin-activity",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="superadmin"
+        requiredPermission="VIEW_ADMIN_ACTIVITY"
+      >
+        <AdminLayout>
+          <AdminActivity />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/orders",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_ORDER"
+      >
+        <AdminLayout>
+          <AdminOrders />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/reviews",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_REVIEW"
+      >
+        <AdminLayout>
+          <AdminReviews />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/blog",
+    page: () => (
+      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_BLOG">
+        <AdminLayout>
+          <AdminBlog />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/reports",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_SALES_REPORT"
+      >
+        <AdminLayout>
+          <AdminReports />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/auth/google/success",
+    page: GoogleSuccess,
+    isShowHeader: false,
+  },
+  {
+    path: "*",
+    page: NotFoundPage,
+  },
+  {
+    path: "/getbook",
+    page: ProductListingPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/detailbook/:bookId",
+    page: ProductDetailPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/addbook",
+    page: AddBook,
+    isShowHeader: true,
+  },
+  {
+    path: "/editbook/:id",
+    page: EditBook,
+    isShowHeader: true,
+  },
+  {
+    path: "/autoadd",
+    page: UploadExcel,
+    isShowHeader: true,
   },
 ];

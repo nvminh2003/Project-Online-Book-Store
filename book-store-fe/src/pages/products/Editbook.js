@@ -146,22 +146,14 @@ const EditBook = () => {
       const { _id, images, ...dataToUpdate } = bookData;
 
       const updatePayload = {
-        ...dataToUpdate,
-        images: finalImageUrls, // Sử dụng mảng ảnh đã cập nhật
-        // Đảm bảo các trường số được gửi đi là số
-        publicationYear: bookData.publicationYear
-          ? Number(bookData.publicationYear)
-          : undefined,
-        pageCount: bookData.pageCount ? Number(bookData.pageCount) : undefined,
-        originalPrice: bookData.originalPrice
-          ? Number(bookData.originalPrice)
-          : undefined,
-        sellingPrice: bookData.sellingPrice
-          ? Number(bookData.sellingPrice)
-          : undefined,
-        stockQuantity: bookData.stockQuantity
-          ? Number(bookData.stockQuantity)
-          : undefined,
+        ...bookData,
+        images:
+          uploadedImageUrls.length > 0 ? uploadedImageUrls : bookData.images, // ✅ merge
+        publicationYear: Number(bookData.publicationYear),
+        pageCount: Number(bookData.pageCount),
+        originalPrice: Number(bookData.originalPrice),
+        sellingPrice: Number(bookData.sellingPrice),
+        stockQuantity: Number(bookData.stockQuantity),
       };
 
       await axios.put(

@@ -18,7 +18,7 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 3; // Bạn có thể thay đổi số lượng sách mỗi trang
+  const booksPerPage = 6;
 
   const navigate = useNavigate();
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
