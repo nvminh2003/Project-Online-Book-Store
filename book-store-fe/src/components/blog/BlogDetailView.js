@@ -47,13 +47,6 @@ const BlogDetailView = ({ blog }) => {
               <span>{blog.viewCount || 0} lượt xem</span>
             </div>
           </div>
-
-          {/* Status Badge (for admin) */}
-          {blog.status === 'draft' && (
-            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
-              Bản nháp
-            </span>
-          )}
         </div>
       </div>
 

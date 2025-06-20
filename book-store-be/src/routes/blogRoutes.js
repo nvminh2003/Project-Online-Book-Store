@@ -6,8 +6,14 @@ const checkPermission = require('../middleware/checkPermission');
 const A = require('../utils/actionTypes');
 
 // Public routes
-router.get('/', blogController.getAllBlogs);
+router.get('/date-range',
+    checkAuthMiddleware,
+    authorizeRole(['admindev']),
+    blogController.getBlogsByDateRange
+);
+
 router.get('/search', blogController.searchBlogs);
+router.get('/', blogController.getAllBlogs);
 router.get('/:id', blogController.getBlogById);
 
 // Admin only routes
