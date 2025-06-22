@@ -112,7 +112,7 @@ const OrderReviewPage = () => {
   useEffect(() => {
     if (
       orderCreationStatus === "succeeded_create" &&
-      currentCreatedOrder?._id
+      currentCreatedOrder?.orderId
     ) {
       if (
         currentCreatedOrder.paymentMethod === "PAYOS" &&

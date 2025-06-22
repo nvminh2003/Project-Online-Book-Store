@@ -962,8 +962,23 @@ const ShippingPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      console.log("Shipping Info:", formData);
-      navigate("/auth/checkout/payment", { state: { shippingInfo: formData } });
+      // Get city and district labels
+      const cityLabel =
+        cities.find((c) => c.value === formData.city)?.label || formData.city;
+      const districtLabel =
+        (districts[formData.city] || []).find(
+          (d) => d.value === formData.district
+        )?.label || formData.district;
+      const address = [formData.houseName, districtLabel, cityLabel]
+        .filter(Boolean)
+        .join(", ");
+      const shippingInfo = {
+        ...formData,
+        cityLabel,
+        districtLabel,
+        address,
+      };
+      navigate("/auth/checkout/payment", { state: { shippingInfo } });
     }
   };
 

@@ -362,3 +362,5 @@ const cartSlice = createSlice({
 
 export const { resetCart, resetCouponStatus } = cartSlice.actions;
 export default cartSlice.reducer;
+export const selectCartItems = (state) => state.cart.items;
+export const selectCartSubtotal = (state) => state.cart.total;

@@ -15,6 +15,7 @@ import ShippingPage from "../pages/checkout/ShippingPage";
 import PaymentPage from "../pages/checkout/PaymentPage";
 import OrderReviewPage from "../pages/checkout/OrderReviewPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
+import OrderCancelPage from "../pages/checkout/OrderCancelPage";
 import UploadExcel from "../pages/products/UploadExcel";
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
@@ -81,13 +82,18 @@ export const routes = [
     isShowHeader: true,
   },
   {
-    Đpath: "/auth/checkout/review",
+    path: "/auth/checkout/review",
     page: OrderReviewPage, // Render trực tiếp component OrderReviewPage
     isShowHeader: true,
   },
   {
     path: "/auth/checkout/success/:orderId", // Thêmã hiểu, bạn muốn đoạn code **chỉ riêng cho phần checkout routes** trong file :orderId để hiển thị chi tiết đơn hàng thành công
     page: OrderSuccessPage, // Render trực tiếp component OrderSuccessPage
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/checkout/cancel/:orderId",
+    page: OrderCancelPage,
     isShowHeader: true,
   },
   // --- KẾT THÚC ĐOẠN CODE CHO `routes.js` mà **không sử dụng `ProtectedRoute`** (hoặc `UserProtectedRoute`).

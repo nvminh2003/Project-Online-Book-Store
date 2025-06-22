@@ -48,42 +48,13 @@ const PaymentPage = () => {
       return;
     }
     setError("");
-
-    if (selectedPaymentMethod === "PAYOS") {
-      try {
-        const response = await fetch(
-          "http://localhost:9999/api/create-payment-link",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderCode: "ORDER_" + Date.now(), // Example, generate unique order code
-              amount: 100000, // Replace with actual amount from cart
-              description: "Thanh toan don hang",
-              returnUrl: "http://localhost:3000/auth/checkout/success",
-              cancelUrl: "http://localhost:3000/auth/checkout/cancel",
-              buyerName: shippingInfo.fullName,
-              buyerPhone: shippingInfo.phone,
-            }),
-          }
-        );
-        const data = await response.json();
-        if (data.paymentLink) {
-          window.location.href = data.paymentLink;
-        } else {
-          setError("Không thể tạo liên kết thanh toán.");
-        }
-      } catch (error) {
-        setError("Lỗi khi tạo liên kết thanh toán: " + error.message);
-      }
-    } else {
-      navigate("/auth/checkout/review", {
-        state: {
-          shippingInfo: shippingInfo,
-          paymentMethodInfo: { paymentMethod: selectedPaymentMethod },
-        },
-      });
-    }
+    // Only navigate to review page, do not call any payment API here
+    navigate("/auth/checkout/review", {
+      state: {
+        shippingInfo: shippingInfo,
+        paymentMethodInfo: { paymentMethod: selectedPaymentMethod },
+      },
+    });
   };
 
   if (authLoading || pageLoading) {
@@ -116,8 +87,13 @@ const PaymentPage = () => {
           </p>
           <p className="text-sm text-gray-600">
             <strong>Địa chỉ:</strong>{" "}
-            {shippingInfo?.address ||
-              `${shippingInfo?.houseName}, ${shippingInfo?.district}, ${shippingInfo?.city}`}
+            {[
+              shippingInfo?.houseName,
+              shippingInfo?.districtLabel,
+              shippingInfo?.cityLabel,
+            ]
+              .filter(Boolean)
+              .join(", ")}
           </p>
           <Button
             variant="link"

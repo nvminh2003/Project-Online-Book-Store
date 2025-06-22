@@ -13,11 +13,10 @@ const payos = new PayOS(
 
 // Generate unique order code
 const generateOrderCode = () => {
-  const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `ORD${timestamp}${random}`;
+  // Use a safe positive integer, e.g. last 9 digits of timestamp + random
+  const base = Number(Date.now().toString().slice(-9));
+  const random = Math.floor(Math.random() * 1000);
+  return base * 1000 + random; // Always a positive integer, < 9007199254740991
 };
 
 // Create PayOS payment link
