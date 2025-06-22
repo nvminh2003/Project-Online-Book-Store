@@ -11,7 +11,8 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 6;
+  const booksPerPage = 5;
+  const [showCategory, setShowCategory] = useState(false);
 
   const navigate = useNavigate();
 
@@ -147,42 +148,46 @@ const HomePage = () => {
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
           />
-          
         </div>
       </div>
 
-      <div className="flex">
-        <div className="w-1/4 pr-4 border-r">
-          <h2 className="text-xl font-bold mb-4">Danh mục</h2>
-          <ul>
+      {/* Danh mục dạng dropdown/collapsible */}
+      <div className="mb-4 relative">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
+          onClick={() => setShowCategory((prev) => !prev)}
+        >
+          Danh mục {showCategory ? "▲" : "▼"}
+        </button>
+        {showCategory && (
+          <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-2 w-60 shadow-lg">
             <li
-              className={`cursor-pointer mb-2 ${
-                selectedCategory === null ? "font-semibold text-blue-600" : ""
-              }`}
-              onClick={() => handleCategoryClick(null)}
+              className={`cursor-pointer px-4 py-2 hover:bg-blue-50 rounded-t-lg ${selectedCategory === null ? "font-semibold text-blue-600" : ""}`}
+              onClick={() => { setShowCategory(false); handleCategoryClick(null); }}
             >
               Tất cả
             </li>
-            {categories.map((cat) => (
+            {categories.map((cat, idx) => (
               <li
                 key={cat._id}
-                className={`cursor-pointer mb-2 ${
-                  selectedCategory === cat._id ? "font-semibold text-blue-600" : ""
-                }`}
-                onClick={() => handleCategoryClick(cat._id)}
+                className={`cursor-pointer px-4 py-2 hover:bg-blue-50 ${selectedCategory === cat._id ? "font-semibold text-blue-600" : ""} ${idx === categories.length - 1 ? "rounded-b-lg" : ""}`}
+                onClick={() => { setShowCategory(false); handleCategoryClick(cat._id); }}
               >
                 {cat.name}
               </li>
             ))}
           </ul>
-        </div>
+        )}
+      </div>
 
-        <div className="w-3/4 pl-4">
+      <div className="flex">
+        {/* Bỏ sidebar danh mục cũ, chỉ còn phần sản phẩm */}
+        <div className="w-full">
           {paginatedBooks.length === 0 ? (
             <p>Không có sách nào.</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 justify-items-center">
                 {paginatedBooks.map((book) => {
                   const hasDiscount =
                     book.sellingPrice > 0 &&
@@ -198,74 +203,46 @@ const HomePage = () => {
                   return (
                     <div
                       key={book._id}
-                      className="bg-white rounded-2xl shadow-md p-4 flex flex-col hover:shadow-lg transition-shadow"
+                      className="relative bg-white rounded-lg shadow-md border border-gray-200 p-3 flex flex-col items-center w-[180px] min-h-[320px]"
                     >
-                      <div className="mb-2 relative">
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                          {book.images?.length > 0 ? (
-                            book.images.map((imgUrl, idx) => (
-                              <img
-                                key={idx}
-                                src={imgUrl}
-                                alt={`Ảnh ${idx + 1}`}
-                                className="h-40 w-32 object-cover rounded-lg shadow-sm flex-shrink-0"
-                              />
-                            ))
-                          ) : (
-                            <img
-                              src="/default-book.jpg"
-                              alt="default"
-                              className="h-40 w-32 object-cover rounded-lg shadow-sm flex-shrink-0"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      <h3 className="text-lg font-semibold truncate">{book.title}</h3>
-                      <p className="text-sm text-gray-600 truncate">{book.authors}</p>
-
-                      <div className="mb-2">
-                        {hasDiscount ? (
-                          <>
-                            <div className="text-sm text-gray-500">
-                              <span className="line-through mr-2">
-                                {book.originalPrice.toLocaleString()} đ
-                              </span>
-                              <span className="text-red-500 font-medium">
-                                -{discountPercent}%
-                              </span>
-                            </div>
-                            <p className="text-red-500 font-bold">
-                              {book.sellingPrice.toLocaleString()} đ
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-red-500 font-bold">
-                            {(book.originalPrice || book.sellingPrice).toLocaleString()} đ
-                          </p>
+                      {hasDiscount && (
+                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded">-{discountPercent}%</span>
+                      )}
+                      <img
+                        src={book.images?.[0] || '/default-book.jpg'}
+                        alt={book.title}
+                        className="w-[120px] h-[170px] object-cover mx-auto mb-2 rounded"
+                      />
+                      <h3 className="font-bold text-center text-base mb-1 line-clamp-2">{book.title}</h3>
+                      <p className="text-xs text-gray-500 text-center mb-1">{book.authors}</p>
+                      <div className="mb-2 text-center">
+                        {hasDiscount && (
+                          <span className="text-xs text-gray-400 line-through mr-1">
+                            {book.originalPrice.toLocaleString()} đ
+                          </span>
                         )}
+                        <span className="text-lg text-red-600 font-bold">
+                          {(book.sellingPrice || book.originalPrice).toLocaleString()} đ
+                        </span>
                       </div>
-
-                      <div className="mt-auto flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleAddToCart(book._id)}
-                          className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 text-sm"
-                        >
-                          Thêm vào giỏ
-                        </button>
-                        <button
-                          onClick={() => handleAddToWishlist(book._id)}
-                          className="bg-pink-500 text-white px-2 py-1 rounded hover:bg-pink-600 text-sm"
-                        >
-                          Yêu thích
-                        </button>
-                        <button
-                          onClick={() => handleViewDetail(book._id)}
-                          className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 text-sm"
-                        >
-                          Xem chi tiết
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleAddToCart(book._id)}
+                        className="w-full bg-green-600 text-white py-1 text-xs rounded mb-1 hover:bg-green-700"
+                      >
+                        Thêm vào giỏ
+                      </button>
+                      <button
+                        onClick={() => handleAddToWishlist(book._id)}
+                        className="w-full bg-pink-500 text-white py-1 text-xs rounded mb-1 hover:bg-pink-600"
+                      >
+                        Yêu thích
+                      </button>
+                      <button
+                        onClick={() => handleViewDetail(book._id)}
+                        className="w-full bg-blue-600 text-white py-1 text-xs rounded hover:bg-blue-700"
+                      >
+                        Xem chi tiết
+                      </button>
                     </div>
                   );
                 })}
