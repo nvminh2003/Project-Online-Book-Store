@@ -24,7 +24,7 @@ const OrderCancelPage = () => {
   }, [orderId]);
 
   return (
-    <MainLayout>
+    
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-3xl font-bold text-red-600 mb-6">
           Thanh toán thất bại hoặc bị hủy
@@ -41,7 +41,7 @@ const OrderCancelPage = () => {
           Về trang chủ
         </Button>
       </div>
-    </MainLayout>
+ 
   );
 };
 

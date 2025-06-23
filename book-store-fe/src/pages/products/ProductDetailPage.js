@@ -13,6 +13,8 @@ const API_URL =
 const ProductDetailPage = () => {
   const {bookId} = useParams();
   const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null)
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState({rating: 0, comment: ""});
   const [quantity, setQuantity] = useState(1);
