@@ -137,24 +137,23 @@ export const routes = [
         isShowHeader: true,
     },
     // Admin Routes
-    {
-        path: "/admin",
-        page: () => (
-            <ProtectedRoute requiredRole={["admindev", "adminbusiness", "superadmin"]}>
-                <AdminLayout>
-                    <RoleBasedDashboard />
-                </AdminLayout>
-            </ProtectedRoute>
-        ),
-        isShowHeader: false,
-    },
-    {
-    path: "/admin/books",
+  {
+    path: "/admin",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admindev", "superadmin"]}
-        requiredDepartment="dev"
+        requiredRole={["admindev", "adminbusiness", "superadmin"]}
       >
+        <AdminLayout>
+          <RoleBasedDashboard />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/books",
+    page: () => (
+      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_BOOK">
         <AdminLayout>
           <AdminBooks />
         </AdminLayout>
@@ -162,12 +161,12 @@ export const routes = [
     ),
     isShowHeader: false,
   },
-    {
+  {
     path: "/admin/categories",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admindev", "superadmin"]}
-        requiredDepartment="dev"
+        requiredRole="admindev"
+        requiredPermission="VIEW_CATEGORY"
       >
         <AdminLayout>
           <AdminCategories />
@@ -180,8 +179,8 @@ export const routes = [
     path: "/admin/discounts",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
-        requiredDepartment="business"
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_DISCOUNT"
       >
         <AdminLayout>
           <AdminDiscounts />
@@ -193,9 +192,23 @@ export const routes = [
   {
     path: "/admin/users",
     page: () => (
-      <ProtectedRoute requiredRole="superadmin">
+      <ProtectedRoute requiredRole="superadmin" requiredPermission="VIEW_USER">
         <AdminLayout>
           <AdminUsers />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/view-admin-activity",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="superadmin"
+        requiredPermission="VIEW_ADMIN_ACTIVITY"
+      >
+        <AdminLayout>
+          <AdminActivity />
         </AdminLayout>
       </ProtectedRoute>
     ),
@@ -205,8 +218,8 @@ export const routes = [
     path: "/admin/orders",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
-        requiredDepartment="business"
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_ORDER"
       >
         <AdminLayout>
           <AdminOrders />
@@ -219,8 +232,8 @@ export const routes = [
     path: "/admin/reviews",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
-        requiredDepartment="business"
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_REVIEW"
       >
         <AdminLayout>
           <AdminReviews />
@@ -232,10 +245,7 @@ export const routes = [
   {
     path: "/admin/blog",
     page: () => (
-      <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
-        requiredDepartment="dev"
-      >
+      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_BLOG">
         <AdminLayout>
           <AdminBlog />
         </AdminLayout>
@@ -247,8 +257,8 @@ export const routes = [
     path: "/admin/reports",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
-        requiredDepartment="business"
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_SALES_REPORT"
       >
         <AdminLayout>
           <AdminReports />
