@@ -14,8 +14,8 @@ const ProductDetailPage = () => {
   const { bookId } = useParams();
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const navigate = useNavigate();
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
 
@@ -195,30 +195,85 @@ const ProductDetailPage = () => {
     : 0;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto bg-white shadow-lg rounded-lg my-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="w-full md:w-2/5">
-          <img
-            src={book.images?.[0] || "/default-book.jpg"} // Ảnh chính
-            alt={book.title}
-            className="w-full h-auto object-contain rounded-lg shadow-md max-h-[500px]"
-          />
-          {book.images && book.images.length > 1 && (
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* Modal xem ảnh to */}
+      {showImageModal && book.images?.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="relative bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl font-bold"
+              onClick={() => setShowImageModal(false)}
+            >
+              ×
+            </button>
+            <img
+              src={book.images[currentImageIdx]}
+              alt={`Ảnh ${currentImageIdx + 1}`}
+              className="max-w-[80vw] max-h-[70vh] object-contain rounded mb-4"
+            />
+            <div className="flex gap-4 items-center">
+              <button
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
+                onClick={() =>
+                  setCurrentImageIdx(
+                    (prev) =>
+                      (prev - 1 + book.images.length) % book.images.length
+                  )
+                }
+                disabled={book.images.length <= 1}
+              >
+                &#8592;
+              </button>
+              <span className="text-sm text-gray-600">
+                {currentImageIdx + 1} / {book.images.length}
+              </span>
+              <button
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
+                onClick={() =>
+                  setCurrentImageIdx((prev) => (prev + 1) % book.images.length)
+                }
+                disabled={book.images.length <= 1}
+              >
+                &#8594;
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="w-full md:w-1/3">
+          <div
+            className="relative cursor-pointer"
+            onClick={() => {
+              setShowImageModal(true);
+              setCurrentImageIdx(0);
+            }}
+          >
+            <img
+              src={book.images?.[0] || "/default-book.jpg"}
+              alt={book.title}
+              className="w-full h-auto object-cover rounded-2xl shadow"
+            />
+            {book.images?.length > 1 && (
+              <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
+                Xem tất cả ảnh
+              </span>
+            )}
+          </div>
+          {book.images?.length > 1 && (
             <div className="mt-4 grid grid-cols-4 gap-2">
-              {book.images.slice(0, 4).map(
-                (
-                  img,
-                  idx // Hiển thị tối đa 4 ảnh nhỏ
-                ) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={`Ảnh xem trước ${idx + 1}`}
-                    className="w-full h-20 object-cover rounded-md border cursor-pointer hover:opacity-75"
-                    // onClick={() => { /* Logic thay đổi ảnh chính nếu cần */ }}
-                  />
-                )
-              )}
+              {book.images.slice(1).map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`Ảnh ${idx + 2}`}
+                  className="w-full h-20 object-cover rounded-md border cursor-pointer"
+                  onClick={() => {
+                    setShowImageModal(true);
+                    setCurrentImageIdx(idx + 1);
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>

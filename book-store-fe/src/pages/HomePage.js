@@ -18,7 +18,8 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 6;
+  const booksPerPage = 5;
+  const [showCategory, setShowCategory] = useState(false);
 
   const navigate = useNavigate();
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
@@ -194,49 +195,57 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-full md:w-1/5 pr-4">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">
-            Danh mục
-          </h2>
-          <ul className="space-y-1">
-            <li>
-              <button
-                className={`w-full text-left px-3 py-2 rounded hover:bg-blue-100 transition-colors ${
-                  selectedCategory === null
-                    ? "font-bold text-blue-600 bg-blue-50"
-                    : "text-gray-600"
-                }`}
-                onClick={() => handleCategoryClick(null)}
-              >
-                Tất cả sách
-              </button>
+      {/* Danh mục dạng dropdown/collapsible */}
+      <div className="mb-4 relative">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
+          onClick={() => setShowCategory((prev) => !prev)}
+        >
+          Danh mục {showCategory ? "▲" : "▼"}
+        </button>
+        {showCategory && (
+          <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-2 w-60 shadow-lg">
+            <li
+              className={`cursor-pointer px-4 py-2 hover:bg-blue-50 rounded-t-lg ${
+                selectedCategory === null ? "font-semibold text-blue-600" : ""
+              }`}
+              onClick={() => {
+                setShowCategory(false);
+                handleCategoryClick(null);
+              }}
+            >
+              Tất cả
             </li>
-            {categories.map((cat) => (
-              <li key={cat._id}>
-                <button
-                  className={`w-full text-left px-3 py-2 rounded hover:bg-blue-100 transition-colors ${
-                    selectedCategory === cat._id
-                      ? "font-bold text-blue-600 bg-blue-50"
-                      : "text-gray-600"
-                  }`}
-                  onClick={() => handleCategoryClick(cat._id)}
-                >
-                  {cat.name}
-                </button>
+            {categories.map((cat, idx) => (
+              <li
+                key={cat._id}
+                className={`cursor-pointer px-4 py-2 hover:bg-blue-50 ${
+                  selectedCategory === cat._id
+                    ? "font-semibold text-blue-600"
+                    : ""
+                } ${idx === categories.length - 1 ? "rounded-b-lg" : ""}`}
+                onClick={() => {
+                  setShowCategory(false);
+                  handleCategoryClick(cat._id);
+                }}
+              >
+                {cat.name}
               </li>
             ))}
           </ul>
-        </div>
+        )}
+      </div>
 
-        <div className="w-full md:w-4/5">
+      <div className="flex">
+        {/* Bỏ sidebar danh mục cũ, chỉ còn phần sản phẩm */}
+        <div className="w-full">
           {paginatedBooks.length === 0 ? (
             <p className="text-center text-gray-500 py-10">
               Không tìm thấy sách nào phù hợp.
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 justify-items-center">
                 {paginatedBooks.map((book) => {
                   const hasDiscount =
                     typeof book.sellingPrice === "number" &&
@@ -254,80 +263,52 @@ const HomePage = () => {
                   return (
                     <div
                       key={book._id}
-                      className="bg-white rounded-lg shadow-md p-4 flex flex-col hover:shadow-xl transition-shadow duration-300"
+                      className="relative bg-white rounded-lg shadow-md border border-gray-200 p-3 flex flex-col items-center w-[180px] min-h-[320px]"
                     >
-                      <div className="w-full h-56 mb-3 overflow-hidden rounded-md">
-                        <img
-                          src={book.images?.[0] || "/default-book.jpg"} // Lấy ảnh đầu tiên
-                          alt={book.title}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                        />
-                      </div>
-
-                      <h3
-                        className="text-lg font-semibold text-gray-800 truncate mb-1"
-                        title={book.title}
-                      >
+                      {hasDiscount && (
+                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded">
+                          -{discountPercent}%
+                        </span>
+                      )}
+                      <img
+                        src={book.images?.[0] || "/default-book.jpg"}
+                        alt={book.title}
+                        className="w-[120px] h-[170px] object-cover mx-auto mb-2 rounded"
+                      />
+                      <h3 className="font-bold text-center text-base mb-1 line-clamp-2">
                         {book.title}
                       </h3>
-                      <p
-                        className="text-sm text-gray-600 truncate mb-2"
-                        title={
-                          Array.isArray(book.authors)
-                            ? book.authors.join(", ")
-                            : book.authors
-                        }
-                      >
-                        Tác giả:{" "}
-                        {Array.isArray(book.authors)
-                          ? book.authors.join(", ")
-                          : book.authors}
+                      <p className="text-xs text-gray-500 text-center mb-1">
+                        {book.authors}
                       </p>
-
-                      <div className="mb-3">
-                        {hasDiscount ? (
-                          <>
-                            <p className="text-red-500 text-xl font-bold">
-                              {book.sellingPrice.toLocaleString("vi-VN")} đ
-                            </p>
-                            <div className="text-sm text-gray-500">
-                              <span className="line-through mr-2">
-                                {book.originalPrice.toLocaleString("vi-VN")} đ
-                              </span>
-                              <span className="text-green-600 font-medium">
-                                (-{discountPercent}%)
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-red-500 text-xl font-bold">
-                            {(
-                              book.sellingPrice ||
-                              book.originalPrice ||
-                              0
-                            ).toLocaleString("vi-VN")}{" "}
-                            đ
-                          </p>
+                      <div className="mb-2 text-center">
+                        {hasDiscount && (
+                          <span className="text-xs text-gray-400 line-through mr-1">
+                            {book.originalPrice.toLocaleString()} đ
+                          </span>
                         )}
-                      </div>
-
-                      <div className="mt-auto flex flex-col sm:flex-row gap-2">
-                        <button
-                          onClick={() => handleAddToCart(book._id)}
-                          className="flex-1 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition text-sm"
-                        >
-                          Thêm vào giỏ
-                        </button>
-                        <button
-                          onClick={() => handleAddToWishlist(book._id)}
-                          className="flex-1 bg-pink-500 text-white px-3 py-2 rounded hover:bg-pink-600 transition text-sm"
-                        >
-                          Yêu thích
-                        </button>
+                        <span className="text-lg text-red-600 font-bold">
+                          {(
+                            book.sellingPrice || book.originalPrice
+                          ).toLocaleString()}{" "}
+                          đ
+                        </span>
                       </div>
                       <button
+                        onClick={() => handleAddToCart(book._id)}
+                        className="w-full bg-green-600 text-white py-1 text-xs rounded mb-1 hover:bg-green-700"
+                      >
+                        Thêm vào giỏ
+                      </button>
+                      <button
+                        onClick={() => handleAddToWishlist(book._id)}
+                        className="w-full bg-pink-500 text-white py-1 text-xs rounded mb-1 hover:bg-pink-600"
+                      >
+                        Yêu thích
+                      </button>
+                      <button
                         onClick={() => handleViewDetail(book._id)}
-                        className="mt-2 w-full bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 transition text-sm"
+                        className="w-full bg-blue-600 text-white py-1 text-xs rounded hover:bg-blue-700"
                       >
                         Xem chi tiết
                       </button>
