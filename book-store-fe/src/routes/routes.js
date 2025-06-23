@@ -152,7 +152,7 @@ export const routes = [
     path: "/admin/books",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
+        requiredRole={["admindev", "superadmin"]}
         requiredDepartment="dev"
       >
         <AdminLayout>
@@ -166,7 +166,7 @@ export const routes = [
     path: "/admin/categories",
     page: () => (
       <ProtectedRoute
-        requiredRole={["admin", "superadmin"]}
+        requiredRole={["admindev", "superadmin"]}
         requiredDepartment="dev"
       >
         <AdminLayout>
