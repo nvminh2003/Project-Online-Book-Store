@@ -12,6 +12,7 @@ import {
   selectOrderError,
 } from "../../store/slices/orderSlice";
 import { resetCart } from "../../store/slices/cartSlice";
+import { payosCheckoutSuccess } from "../../services/orderService";
 
 const OrderSuccessPage = () => {
   const { orderId } = useParams();
@@ -24,30 +25,25 @@ const OrderSuccessPage = () => {
 
   useEffect(() => {
     if (orderId) {
-      if (
-        !currentOrder ||
-        currentOrder._id !== orderId ||
-        orderApiStatus === "idle" ||
-        orderApiStatus === "failed_detail"
-      ) {
-        console.log(
-          `OrderSuccessPage: Fetching order detail for ID: ${orderId}`
-        );
-        dispatch(fetchOrderDetailAPI(orderId));
-      }
+      payosCheckoutSuccess(orderId)
+        .then(() => {
+          if (
+            !currentOrder ||
+            currentOrder._id !== orderId ||
+            orderApiStatus === "idle" ||
+            orderApiStatus === "failed_detail"
+          ) {
+            dispatch(fetchOrderDetailAPI(orderId));
+          }
+        })
+        .catch(() => {
+          dispatch(fetchOrderDetailAPI(orderId));
+        });
     } else {
-      console.warn(
-        "OrderSuccessPage: No orderId found in URL, redirecting to home."
-      );
       navigate("/");
     }
-
     dispatch(resetCart());
-
     return () => {
-      console.log(
-        "OrderSuccessPage: Unmounting, clearing current order from Redux state."
-      );
       dispatch(clearCurrentOrder());
     };
   }, [dispatch, orderId, currentOrder, navigate, orderApiStatus]);

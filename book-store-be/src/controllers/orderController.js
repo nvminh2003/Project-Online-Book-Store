@@ -27,8 +27,8 @@ const createPaymentLink = async (paymentData) => {
     amount: totalAmount,
     description: `Book order for ${fullName}`,
     orderCode: orderCode,
-    returnUrl: `${process.env.CLIENT_URL}/payment-success?orderId=${orderId}`,
-    cancelUrl: `${process.env.CLIENT_URL}/payment-cancel?orderId=${orderId}`,
+    returnUrl: `${process.env.FRONTEND_URL}/auth/checkout/success/${orderId}`,
+    cancelUrl: `${process.env.FRONTEND_URL}/auth/checkout/cancel/${orderId}`,
     buyerName: fullName,
     buyerPhone: phone,
   };
@@ -351,9 +351,149 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
+// --- PAYOS API CONTROLLERS ---
+// Get PayOS payment status
+const getPayosPaymentStatus = async (req, res) => {
+  try {
+    const { payosOrderCode } = req.query;
+    if (!payosOrderCode) {
+      return res
+        .status(400)
+        .json({ message: "Missing payosOrderCode", status: "Error" });
+    }
+    const status = await payos.getPaymentStatus(payosOrderCode);
+    res.status(200).json({
+      message: "PayOS payment status fetched",
+      status: "Success",
+      data: status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+// Get PayOS order status
+const getPayosOrderStatus = async (req, res) => {
+  try {
+    const { payosOrderCode } = req.query;
+    if (!payosOrderCode) {
+      return res
+        .status(400)
+        .json({ message: "Missing payosOrderCode", status: "Error" });
+    }
+    const status = await payos.getOrderStatus(payosOrderCode);
+    res.status(200).json({
+      message: "PayOS order status fetched",
+      status: "Success",
+      data: status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+// PayOS webhook handler
+const payosWebhook = async (req, res) => {
+  try {
+    // TODO: Verify signature and update order/payment status accordingly
+    // const signature = req.headers['x-payos-signature'];
+    // const body = req.body;
+    // Implement signature verification and order update logic here
+    res.status(200).json({ message: "Webhook received", status: "Success" });
+  } catch (error) {
+    res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+
+// Handle PayOS checkout success
+const handlePayosSuccess = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res
+        .status(404)
+        .json({ message: "Order not found", status: "Error" });
+    }
+    if (order.paymentStatus === "paid") {
+      return res.status(200).json({
+        message: "Order already paid",
+        status: "Success",
+        data: order,
+      });
+    }
+    // Optionally, verify with PayOS API
+    // const payosStatus = await payos.getOrderStatus(order.orderCode);
+    // if (payosStatus.status !== 'PAID') { ... }
+    order.paymentStatus = "paid";
+    order.orderStatus = "pending";
+    await order.save();
+    // Reduce stock
+    for (const item of order.items) {
+      await Book.findByIdAndUpdate(item.book, {
+        $inc: { stockQuantity: -item.quantity },
+      });
+    }
+    return res.status(200).json({
+      message: "Order payment successful",
+      status: "Success",
+      data: order,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+// Handle PayOS checkout cancel
+const handlePayosCancel = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    console.log("[PayOS Cancel] Cancel request for orderId:", orderId);
+    const order = await Order.findById(orderId);
+    if (!order) {
+      console.error("[PayOS Cancel] Order not found:", orderId);
+      return res
+        .status(404)
+        .json({ message: "Order not found", status: "Error" });
+    }
+    if (
+      order.paymentStatus === "failed" ||
+      order.paymentStatus === "cancelled"
+    ) {
+      console.log("[PayOS Cancel] Order already cancelled:", orderId);
+      return res.status(200).json({
+        message: "Order already cancelled",
+        status: "Success",
+        data: order,
+      });
+    }
+    order.paymentStatus = "failed";
+    order.orderStatus = "cancelled";
+    await order.save();
+    // Optionally, restore stock
+    for (const item of order.items) {
+      await Book.findByIdAndUpdate(item.book, {
+        $inc: { stockQuantity: item.quantity },
+      });
+    }
+    console.log("[PayOS Cancel] Order cancelled and stock restored:", orderId);
+    return res.status(200).json({
+      message: "Order payment cancelled",
+      status: "Success",
+      data: order,
+    });
+  } catch (error) {
+    console.error("[PayOS Cancel] Error:", error);
+    return res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  getPayosPaymentStatus,
+  getPayosOrderStatus,
+  payosWebhook,
+  handlePayosSuccess,
+  handlePayosCancel,
 };

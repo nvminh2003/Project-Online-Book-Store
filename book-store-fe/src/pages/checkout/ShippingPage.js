@@ -983,101 +983,99 @@ const ShippingPage = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-12 max-w-lg">
-        <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">
-          Thông tin giao hàng
-        </h1>
-        <div className="bg-white p-8 rounded-xl shadow-lg space-y-6">
-          {/* Họ tên */}
-          <div>
-            <Input
-              label="Họ và tên người nhận"
-              type="text"
-              name="fullName"
-              id="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              placeholder="Nguyễn Văn A"
-              error={errors.fullName}
-              isRequired
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-
-          {/* Số điện thoại */}
-          <div>
-            <Input
-              label="Số điện thoại"
-              type="tel"
-              name="phone"
-              id="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="09xxxxxxxx"
-              error={errors.phone}
-              isRequired
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-
-          {/* Số nhà và tên đường */}
-          <div>
-            <Input
-              label="Số nhà và tên đường"
-              type="text"
-              name="houseName"
-              id="houseName"
-              value={formData.houseName}
-              onChange={handleChange}
-              placeholder="123 Đường ABC"
-              error={errors.houseName}
-              isRequired
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-
-          {/* Thành phố/Tỉnh */}
-          <div>
-            <Select
-              label="Thành phố/Tỉnh"
-              name="city"
-              id="city"
-              value={formData.city}
-              onChange={(e) => handleSelectChange("city", e.target.value)}
-              options={cityOptions}
-              error={errors.city}
-              isRequired
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-
-          {/* Quận/Huyện */}
-          <div>
-            <Select
-              label="Quận/Huyện"
-              name="district"
-              id="district"
-              value={formData.district}
-              onChange={(e) => handleSelectChange("district", e.target.value)}
-              options={districtOptions}
-              error={errors.district}
-              isRequired
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-
-          {/* Nút tiếp tục */}
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            Tiếp tục đến thanh toán
-          </Button>
+    <div className="container mx-auto px-4 py-12 max-w-lg">
+      <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">
+        Thông tin giao hàng
+      </h1>
+      <div className="bg-white p-8 rounded-xl shadow-lg space-y-6">
+        {/* Họ tên */}
+        <div>
+          <Input
+            label="Họ và tên người nhận"
+            type="text"
+            name="fullName"
+            id="fullName"
+            value={formData.fullName}
+            onChange={handleChange}
+            placeholder="Nguyễn Văn A"
+            error={errors.fullName}
+            isRequired
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          />
         </div>
+
+        {/* Số điện thoại */}
+        <div>
+          <Input
+            label="Số điện thoại"
+            type="tel"
+            name="phone"
+            id="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="09xxxxxxxx"
+            error={errors.phone}
+            isRequired
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+
+        {/* Số nhà và tên đường */}
+        <div>
+          <Input
+            label="Số nhà và tên đường"
+            type="text"
+            name="houseName"
+            id="houseName"
+            value={formData.houseName}
+            onChange={handleChange}
+            placeholder="123 Đường ABC"
+            error={errors.houseName}
+            isRequired
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+
+        {/* Thành phố/Tỉnh */}
+        <div>
+          <Select
+            label="Thành phố/Tỉnh"
+            name="city"
+            id="city"
+            value={formData.city}
+            onChange={(e) => handleSelectChange("city", e.target.value)}
+            options={cityOptions}
+            error={errors.city}
+            isRequired
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+
+        {/* Quận/Huyện */}
+        <div>
+          <Select
+            label="Quận/Huyện"
+            name="district"
+            id="district"
+            value={formData.district}
+            onChange={(e) => handleSelectChange("district", e.target.value)}
+            options={districtOptions}
+            error={errors.district}
+            isRequired
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          />
+        </div>
+
+        {/* Nút tiếp tục */}
+        <Button
+          type="submit"
+          onClick={handleSubmit}
+          className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+        >
+          Tiếp tục đến thanh toán
+        </Button>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 
