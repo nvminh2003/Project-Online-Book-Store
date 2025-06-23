@@ -1,13 +1,12 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import Input from "../common/Input";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from "../common/Icon";
 import logo from "../../assets/image.png";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSelector } from "react-redux";
 import { fetchCart } from "../../store/slices/cartSlice";
 const Header = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   // --- SỬA SELECTOR CHO ĐÚNG ---
   const cartItemsFromStore = useSelector((state) => state.cart.items || []); // Lấy trực tiếp mảng items
@@ -18,13 +17,9 @@ const Header = () => {
 
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/search?query=${encodeURIComponent(searchQuery)}`;
-    }
-  };
+  const isActivePath = (path) => location.pathname === path;
 
   const handleLogout = async () => {
     await logout();
@@ -124,27 +119,57 @@ const Header = () => {
             <Link to="/" className="flex items-center">
               <img
                 src={logo}
-                alt="SÁCH TAO ĐÀN"
+                alt="SÁCH MKMN"
                 className="h-12 w-auto cursor-pointer hover:opacity-80 transition-opacity"
               />
             </Link>
           </div>
 
-          {/* Search Bar */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden md:flex flex-1 mx-8 max-w-2xl mt-4"
-          >
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="Tìm kiếm sách, tác giả..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-4 pr-12 py-2 rounded-full border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-              />
-            </div>
-          </form>
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
+            <Link
+              to="/products?filter=mkmn"
+              className={`no-underline transition-colors ${location.search === "?filter=mkmn" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              Sách MKMN
+            </Link>
+            <Link
+              to="/products?filter=new-arrivals"
+              className={`no-underline transition-colors ${location.search === "?filter=new-arrivals" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              Sách mới sách hay
+            </Link>
+            <Link
+              to="/blogs"
+              className={`no-underline transition-colors ${isActivePath('/blogs') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              Blogs
+            </Link>
+            <Link
+              to="/payment-info"
+              className={`no-underline transition-colors ${isActivePath('/payment-info') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              Thông tin thanh toán
+            </Link>
+            <Link
+              to="/sales-policy"
+              className={`no-underline transition-colors ${isActivePath('/sales-policy') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              Chính sách bán hàng
+            </Link>
+            <Link
+              to="/about"
+              className={`no-underline transition-colors ${isActivePath('/about') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                }`}
+            >
+              About Us
+            </Link>
+          </div>
 
           {/* User & Cart Area */}
           <div className="flex items-center space-x-6">
@@ -152,13 +177,17 @@ const Header = () => {
               <div className="hidden md:flex items-center space-x-4">
                 <Link
                   to="/auth/login"
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline"
+                  className={`font-medium no-underline transition-colors ${isActivePath('/auth/login') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                    }`}
                 >
                   Đăng nhập
                 </Link>
                 <Link
                   to="/auth/register"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors no-underline"
+                  className={`px-4 py-2 rounded-full font-medium no-underline transition-colors ${isActivePath('/auth/register')
+                      ? 'bg-blue-700 text-white'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                 >
                   Đăng ký
                 </Link>
@@ -167,28 +196,41 @@ const Header = () => {
               <div className="hidden md:flex items-center space-x-4">
                 <Link
                   to="/auth/profile"
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline"
+                  className={`font-medium no-underline transition-colors ${isActivePath('/auth/profile') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                    }`}
                 >
-                  {user?.info?.fullName || user?.email}
+                  Tài khoản
                 </Link>
                 {(user?.role === "superadmin" ||
                   user?.role === "admindev" ||
                   user?.role === "adminbusiness") && (
                   <button
                     onClick={handleAdminClick}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                    className="text-black hover:text-blue-600 font-medium transition-colors"
                   >
                     Quản trị
                   </button>
                 )}
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 hover:text-red-600 font-medium transition-colors"
+                  className="text-black hover:text-red-600 font-medium transition-colors"
                 >
                   Đăng xuất
                 </button>
               </div>
             )}
+
+            {/* Wishlist */}
+            <Link
+              to="/wishlist"
+              className={`relative transition-colors ${isActivePath('/wishlist') ? 'text-blue-600' : 'text-black hover:text-red-500'
+                }`}
+            >
+              <Icon icon="mdi:heart-outline" className="w-6 h-6" />
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                0
+              </span>
+            </Link>
 
             {/* Cart */}
             {isAuthenticated && (
