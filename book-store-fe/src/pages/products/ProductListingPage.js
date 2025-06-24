@@ -59,7 +59,9 @@ const ProductListingPage = () => {
         );
       }
 
-      fetchedBooks.sort((a, b) => (b.publicationYear || 0) - (a.publicationYear || 0));
+      fetchedBooks.sort(
+        (a, b) => (b.publicationYear || 0) - (a.publicationYear || 0)
+      );
       setBooks(fetchedBooks);
       setCurrentPage(1); // Reset về trang đầu sau khi lọc
     } catch (err) {
@@ -79,7 +81,10 @@ const ProductListingPage = () => {
   // Pagination logic
   const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
   const startIndex = (currentPage - 1) * booksPerPage;
-  const paginatedBooks = filteredBooks.slice(startIndex, startIndex + booksPerPage);
+  const paginatedBooks = filteredBooks.slice(
+    startIndex,
+    startIndex + booksPerPage
+  );
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
@@ -108,7 +113,10 @@ const ProductListingPage = () => {
 
       alert("Đã thêm vào giỏ hàng!");
     } catch (err) {
-      console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
+      console.error(
+        "Lỗi khi thêm vào giỏ hàng:",
+        err.response?.data || err.message
+      );
       alert("Không thể thêm vào giỏ hàng.");
     }
   };
@@ -176,7 +184,9 @@ const ProductListingPage = () => {
               <li
                 key={cat._id}
                 className={`cursor-pointer mb-2 ${
-                  selectedCategory === cat._id ? "font-semibold text-blue-600" : ""
+                  selectedCategory === cat._id
+                    ? "font-semibold text-blue-600"
+                    : ""
                 }`}
                 onClick={() => handleCategoryClick(cat._id)}
               >
@@ -200,7 +210,9 @@ const ProductListingPage = () => {
 
                   const discountPercent = hasDiscount
                     ? Math.round(
-                        ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
+                        ((book.originalPrice - book.sellingPrice) /
+                          book.originalPrice) *
+                          100
                       )
                     : 0;
 
@@ -230,8 +242,12 @@ const ProductListingPage = () => {
                         </div>
                       </div>
 
-                      <h3 className="text-lg font-semibold truncate">{book.title}</h3>
-                      <p className="text-sm text-gray-600 truncate">{book.authors}</p>
+                      <h3 className="text-lg font-semibold truncate">
+                        {book.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 truncate">
+                        {book.authors}
+                      </p>
 
                       <div className="mb-2">
                         {hasDiscount ? (
@@ -250,7 +266,10 @@ const ProductListingPage = () => {
                           </>
                         ) : (
                           <p className="text-red-500 font-bold">
-                            {(book.originalPrice || book.sellingPrice).toLocaleString()} đ
+                            {(
+                              book.originalPrice || book.sellingPrice
+                            ).toLocaleString()}{" "}
+                            đ
                           </p>
                         )}
                       </div>
