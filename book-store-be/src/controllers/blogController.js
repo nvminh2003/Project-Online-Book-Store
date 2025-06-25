@@ -4,7 +4,7 @@ const AdminActivityLog = require("../models/AdminActivityLog");
 // Create a new blog post (Admin only)
 const createBlog = async (req, res) => {
     try {
-        const { title, content, status } = req.body;
+        const { title, content } = req.body;
 
         // Validate required fields
         if (!title || !content) {
@@ -18,7 +18,6 @@ const createBlog = async (req, res) => {
         const newBlog = new Blog({
             title,
             content,
-            status: status || "draft",
             author: req.account._id
         });
 
@@ -44,18 +43,53 @@ const createBlog = async (req, res) => {
     }
 };
 
-// Get all blog posts with pagination
 const getAllBlogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-        const status = req.query.status || "published";
+        const { createdAt, from, to, searchTerm } = req.query;
 
-        const query = { status };
-        // Only admindev can see all posts including drafts
-        if (req.account?.role === "admindev") {
-            delete query.status;
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        const query = {};
+
+        // 🔍 Tìm kiếm theo tiêu đề hoặc nội dung
+        if (searchTerm) {
+            query.$or = [
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { content: { $regex: searchTerm, $options: 'i' } }
+            ];
+        }
+
+        // 📆 Lọc theo ngày tạo
+        if (createdAt) {
+            const start = new Date(createdAt);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(createdAt);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: start, $lte: end };
+        } else if (from || to) {
+            query.createdAt = {};
+            if (from) query.createdAt.$gte = new Date(from);
+            if (to) {
+                const toDate = new Date(to);
+                toDate.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = toDate;
+            }
         }
 
         const blogs = await Blog.find(query)
@@ -87,15 +121,11 @@ const getAllBlogs = async (req, res) => {
     }
 };
 
+
 // Get blog by ID
 const getBlogById = async (req, res) => {
     try {
         const query = { _id: req.params.id };
-        // Only admindev can see draft posts
-        if (req.account?.role !== "admindev") {
-            query.status = "published";
-        }
-
         const blog = await Blog.findOne(query)
             .populate('author', 'email info.fullName');
 
@@ -126,7 +156,7 @@ const getBlogById = async (req, res) => {
 // Update blog (Admin only)
 const updateBlog = async (req, res) => {
     try {
-        const { title, content, status } = req.body;
+        const { title, content } = req.body;
 
         const blog = await Blog.findById(req.params.id);
 
@@ -140,8 +170,7 @@ const updateBlog = async (req, res) => {
         // Update blog fields
         const updatedFields = {
             title: title || blog.title,
-            content: content || blog.content,
-            status: status || blog.status
+            content: content || blog.content
         };
 
         const updatedBlog = await Blog.findByIdAndUpdate(
@@ -203,46 +232,109 @@ const deleteBlog = async (req, res) => {
     }
 };
 
-// Search blogs
+// Search blogs by title or content
 const searchBlogs = async (req, res) => {
     try {
-        const { query } = req.query;
+        const { searchTerm } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-        const status = req.query.status || "published";
 
-        if (!query) {
+        if (!searchTerm) {
             return res.status(400).json({
-                message: "Search query is required",
+                message: "Search term is required",
                 status: "Error"
             });
         }
 
-        const searchQuery = {
+        const query = {
             $or: [
-                { title: { $regex: query, $options: 'i' } },
-                { content: { $regex: query, $options: 'i' } }
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { content: { $regex: searchTerm, $options: 'i' } }
             ]
         };
 
-        // Only admindev can search in draft posts
-        if (req.account?.role !== "admindev") {
-            searchQuery.status = "published";
-        } else if (status) {
-            searchQuery.status = status;
-        }
-
-        const blogs = await Blog.find(searchQuery)
-            .populate('author', 'email info.fullName')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Blog.countDocuments(searchQuery);
+        const [blogs, total] = await Promise.all([
+            Blog.find(query)
+                .populate('author', 'email info.fullName')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Blog.countDocuments(query)
+        ]);
 
         res.status(200).json({
             message: "Search blogs successfully",
+            status: "Success",
+            data: {
+                blogs,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+            status: "Error"
+        });
+    }
+};
+
+// Get blogs by date range
+const getBlogsByDateRange = async (req, res) => {
+    try {
+        const { from, to } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        const query = {};
+        if (from && to) {
+            const fromDate = new Date(from);
+            fromDate.setHours(0, 0, 0, 0);
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: fromDate, $lte: toDate };
+        } else if (from) {
+            const fromDate = new Date(from);
+            fromDate.setHours(0, 0, 0, 0);
+            query.createdAt = { $gte: fromDate };
+        } else if (to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            query.createdAt = { $lte: toDate };
+        }
+
+        const [blogs, total] = await Promise.all([
+            Blog.find(query)
+                .populate('author', 'email info.fullName')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Blog.countDocuments(query)
+        ]);
+
+        res.status(200).json({
+            message: "Get blogs by date range successfully",
             status: "Success",
             data: {
                 blogs,
@@ -268,5 +360,6 @@ module.exports = {
     getBlogById,
     updateBlog,
     deleteBlog,
-    searchBlogs
+    searchBlogs,
+    getBlogsByDateRange
 };
