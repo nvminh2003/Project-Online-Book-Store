@@ -1,48 +1,33 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const bookController = require("../controllers/bookController");
-const { authorizeRole } = require("../middleware/authMiddleware");
+const bookController = require('../controllers/bookController');
+const { authorizeRole, checkAuthMiddleware } = require('../middleware/authMiddleware');
+const checkPermission = require('../middleware/checkPermission');
+const A = require('../utils/actionTypes');
 
 // Public routes
-router.get("/", bookController.getAllBooks);
-router.get("/search", bookController.searchBooks);
-router.get("/:id", bookController.getBookById);
+router.get('/', bookController.getAllBooks);
+router.get('/search', bookController.searchBooks);
+router.get('/:id', bookController.getBookById);
 
 // Admin only routes
-router.post(
-  "/",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.createBook
-);
-router.put(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.updateBook
-);
-router.delete(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.deleteBook
-);
-router.post(
-  "/",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.createBook
-);
-router.put(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.updateBook
-);
-router.delete(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.deleteBook
-);
-router.post(
-  "/upload-excel",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.uploadBooksFromExcel
+router.post('/',
+    checkAuthMiddleware,
+    authorizeRole(['admindev']),
+    checkPermission(A.CREATE_BOOK),
+    bookController.createBook
 );
 
-module.exports = router;
+router.put('/:id',
+    checkAuthMiddleware,
+    authorizeRole(['admindev']),
+    checkPermission(A.UPDATE_BOOK),
+    bookController.updateBook);
+
+router.delete('/:id',
+    checkAuthMiddleware,
+    authorizeRole(['admindev']),
+    checkPermission(A.DELETE_BOOK_BY_ID),
+    bookController.deleteBook);
+
+module.exports = router; 

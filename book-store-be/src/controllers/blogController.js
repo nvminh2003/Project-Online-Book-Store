@@ -50,6 +50,21 @@ const getAllBlogs = async (req, res) => {
         const skip = (page - 1) * limit;
         const { createdAt, from, to, searchTerm } = req.query;
 
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
         const query = {};
 
         // 🔍 Tìm kiếm theo tiêu đề hoặc nội dung
@@ -276,6 +291,21 @@ const getBlogsByDateRange = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
 
         const query = {};
         if (from && to) {

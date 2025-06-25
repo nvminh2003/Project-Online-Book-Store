@@ -113,7 +113,7 @@ const login = async (req, res) => {
         const accessToken = jwt.sign(
             { id: account._id, role: account.role },
             process.env.ACCESS_TOKEN,
-            { expiresIn: "1h" }
+            { expiresIn: "24h" }
         );
 
         const refreshToken = jwt.sign(

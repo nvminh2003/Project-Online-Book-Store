@@ -1,349 +1,180 @@
-// src/pages/HomePage.js
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-// import { jwtDecode } from "jwt-decode"; // Có vẻ không được sử dụng
-
-// --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
-// import { useDispatch } from "react-redux";
-// import { addItemToCartAPI } from "../store/slices/cartSlice"; // Đường dẫn tới slice của bạn
-// --- KẾT THÚC IMPORT REDUX ---
-
-const API_URL =
-  process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import Icon from '../components/common/Icon';
+import logo from '../../src/assets/sction.webp';
+import sachmoi from '../../src/assets/sachmoi.jpg';
+import logo1 from '../../src/assets/section.jpg';
+import logo2 from '../../src/assets/logo3.webp';
+const images = [logo, logo1, logo2];
 
 const HomePage = () => {
-  const [categories, setCategories] = useState([]);
-  const [books, setBooks] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 5;
-  const [showCategory, setShowCategory] = useState(false);
 
-  const navigate = useNavigate();
-  // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
+    const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    fetchCategories();
-    fetchBooks(); // Fetch tất cả sách ban đầu
-  }, []);
+    // Tự động chuyển ảnh mỗi 5 giây
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIndex((prevIndex) => (prevIndex + 1) % images.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, []);
 
-  const fetchCategories = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/categories`);
-      setCategories(res.data.data || []);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      setCategories([]); // Đặt là mảng rỗng nếu lỗi
-    }
-  };
+    // Dữ liệu mẫu
+    const featuredBooks = [
+        { id: 1, title: 'Sách Tâm Lý Học', imageUrl: 'https://bizweb.dktcdn.net/thumb/large/100/488/330/products/2-4c0bab5a-9034-4817-a5e7-857fe79fb818.png?v=1743401428910', price: '150.000đ' },
+        { id: 2, title: 'Tiểu Thuyết Lịch Sử', imageUrl: 'https://binhbanbook.com/wp-content/uploads/2024/05/z5474847723128_73f4c2e7c20e91d5d233d789218024b7.jpg', price: '250.000đ' },
+        { id: 3, title: 'Khoa Học Viễn Tưởng', imageUrl: 'https://baodanang.vn/dataimages/202306/original/images1702941_1.gif', price: '180.000đ' },
+        { id: 4, title: 'Sách Kinh Tế', imageUrl: 'https://ims.baoyenbai.com.vn/NewsImg/10_2023/302753_23-10-cuon-sach.jpg', price: '320.000đ' },
+    ];
 
-  const fetchBooks = async (categoryId = null) => {
-    try {
-      // Lấy tất cả sách trước, sau đó lọc ở client nếu cần
-      // Hoặc tốt hơn là backend hỗ trợ filter theo categoryId: params: { category: categoryId }
-      const res = await axios.get(`${API_URL}/books`, {
-        // params: { page: 1, limit: 100 }, // Lấy một lượng lớn sách để demo client-side filtering
-      });
+    const benefits = [
+        { icon: 'mdi:truck-fast-outline', title: 'Giao hàng nhanh', description: 'Giao hàng toàn quốc, nhanh chóng và tin cậy.' },
+        { icon: 'mdi:book-open-page-variant-outline', title: 'Đa dạng thể loại', description: 'Hàng ngàn đầu sách từ kinh tế, văn học đến khoa học.' },
+        { icon: 'mdi:shield-check-outline', title: 'Chất lượng đảm bảo', description: 'Tất cả sách đều được chọn lọc kỹ lưỡng, chất lượng cao.' },
+        { icon: 'mdi:tag-heart-outline', title: 'Ưu đãi hấp dẫn', description: 'Nhiều chương trình khuyến mãi, giảm giá đặc biệt.' },
+    ];
 
-      let fetchedBooks = res.data.data?.books || []; // Đảm bảo books là mảng
+    const testimonials = [
+        { quote: 'Trang web có rất nhiều sách hay và hiếm. Giao hàng cũng rất nhanh. Tôi rất hài lòng!', author: 'Nguyễn Văn A' },
+        { quote: 'Nhờ có những cuốn sách ở đây, tôi đã học hỏi được nhiều điều và phát triển bản thân. Cảm ơn!', author: 'Trần Thị B' },
+    ];
 
-      if (categoryId) {
-        fetchedBooks = fetchedBooks.filter((book) =>
-          (book.categories || []).some((cat) => (cat._id || cat) === categoryId)
-        );
-      }
-
-      // Sắp xếp theo năm xuất bản mới nhất (có thể bỏ nếu backend đã sắp xếp)
-      fetchedBooks.sort(
-        (a, b) => (b.publicationYear || 0) - (a.publicationYear || 0)
-      );
-      setBooks(fetchedBooks);
-      setCurrentPage(1); // Reset về trang đầu sau khi lọc
-    } catch (err) {
-      console.error("Error fetching books:", err);
-      setBooks([]); // Đặt là mảng rỗng nếu lỗi
-    }
-  };
-
-  const handleCategoryClick = (categoryId) => {
-    setSelectedCategory(categoryId);
-    fetchBooks(categoryId); // Fetch sách theo category mới
-  };
-
-  // Lọc theo từ khóa tìm kiếm ở client-side
-  const filteredBooksByKeyword = books.filter((book) =>
-    (book.title || "").toLowerCase().includes(searchKeyword.toLowerCase())
-  );
-
-  // Logic phân trang
-  const totalPages = Math.ceil(filteredBooksByKeyword.length / booksPerPage);
-  const startIndex = (currentPage - 1) * booksPerPage;
-  const paginatedBooks = filteredBooksByKeyword.slice(
-    startIndex,
-    startIndex + booksPerPage
-  );
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
-  };
-
-  const handleAddToCart = async (bookId) => {
-    const token = localStorage.getItem("accessToken");
-    console.log("HomePage - Add to cart clicked for bookId:", bookId);
-    console.log("HomePage - Token:", token);
-
-    if (!token) {
-      alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-      navigate("/auth/login");
-      return;
-    }
-
-    // --- SỬA LẠI PAYLOAD CHO ĐÚNG ---
-    const payload = {
-      bookId: bookId,
-      quantity: 1, // Mặc định thêm 1 sản phẩm
-    };
-    // --- KẾT THÚC SỬA PAYLOAD ---
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/cart/add`,
-        payload, // Sử dụng payload đã sửa
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      console.log("HomePage - Add to cart response:", response.data);
-      if (response.data && response.data.status === "Success") {
-        alert("Đã thêm vào giỏ hàng thành công!");
-        // Khi dùng Redux:
-        // dispatch(addItemToCartAPI(payload)); // Hoặc
-        // dispatch(fetchCart()); // để cập nhật trạng thái giỏ hàng trên header chẳng hạn
-      } else {
-        alert(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-      }
-    } catch (err) {
-      console.error(
-        "HomePage - Lỗi khi thêm vào giỏ hàng:",
-        err.response?.data || err.message
-      );
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Không thể thêm sản phẩm vào giỏ hàng.";
-      alert(errorMessage);
-      if (err.response?.status === 401) {
-        // Xử lý khi token không hợp lệ (ví dụ: điều hướng login)
-        // localStorage.removeItem("accessToken");
-        // navigate("/auth/login");
-      }
-    }
-  };
-
-  const handleAddToWishlist = async (bookId) => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      alert("Bạn cần đăng nhập để thêm vào yêu thích.");
-      navigate("/auth/login");
-      return;
-    }
-    try {
-      await axios.post(
-        `${API_URL}/wishlist/add`, // Đảm bảo endpoint này đúng
-        { bookId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Đã thêm vào mục yêu thích!");
-    } catch (err) {
-      console.error(
-        "Lỗi khi thêm vào yêu thích:",
-        err.response?.data || err.message
-      );
-      alert(err.response?.data?.message || "Không thể thêm vào yêu thích.");
-    }
-  };
-
-  const handleViewDetail = (bookId) => {
-    // Việc kiểm tra token ở đây là tùy chọn, trang chi tiết có thể public hoặc private
-    // Nếu private, ProductDetailPage sẽ tự xử lý redirect
-    navigate(`/detailbook/${bookId}`);
-  };
-
-  return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Sách Mới Nhất</h1>
-        <div className="w-1/3">
-          <input
-            type="text"
-            placeholder="Tìm kiếm sách theo tên..."
-            className="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-            value={searchKeyword}
-            onChange={(e) => {
-              setSearchKeyword(e.target.value);
-              setCurrentPage(1); // Reset trang khi tìm kiếm
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Danh mục dạng dropdown/collapsible */}
-      <div className="mb-4 relative">
-        <button
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
-          onClick={() => setShowCategory((prev) => !prev)}
-        >
-          Danh mục {showCategory ? "▲" : "▼"}
-        </button>
-        {showCategory && (
-          <ul className="absolute z-10 bg-white border border-gray-200 rounded-lg mt-2 w-60 shadow-lg">
-            <li
-              className={`cursor-pointer px-4 py-2 hover:bg-blue-50 rounded-t-lg ${
-                selectedCategory === null ? "font-semibold text-blue-600" : ""
-              }`}
-              onClick={() => {
-                setShowCategory(false);
-                handleCategoryClick(null);
-              }}
-            >
-              Tất cả
-            </li>
-            {categories.map((cat, idx) => (
-              <li
-                key={cat._id}
-                className={`cursor-pointer px-4 py-2 hover:bg-blue-50 ${
-                  selectedCategory === cat._id
-                    ? "font-semibold text-blue-600"
-                    : ""
-                } ${idx === categories.length - 1 ? "rounded-b-lg" : ""}`}
-                onClick={() => {
-                  setShowCategory(false);
-                  handleCategoryClick(cat._id);
-                }}
-              >
-                {cat.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="flex">
-        {/* Bỏ sidebar danh mục cũ, chỉ còn phần sản phẩm */}
-        <div className="w-full">
-          {paginatedBooks.length === 0 ? (
-            <p className="text-center text-gray-500 py-10">
-              Không tìm thấy sách nào phù hợp.
-            </p>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 justify-items-center">
-                {paginatedBooks.map((book) => {
-                  const hasDiscount =
-                    typeof book.sellingPrice === "number" &&
-                    typeof book.originalPrice === "number" &&
-                    book.originalPrice > book.sellingPrice;
-
-                  const discountPercent = hasDiscount
-                    ? Math.round(
-                        ((book.originalPrice - book.sellingPrice) /
-                          book.originalPrice) *
-                          100
-                      )
-                    : 0;
-
-                  return (
+    return (
+        <div className="bg-white">
+            {/* Hero Section */}
+            <section className="relative h-[500px] overflow-hidden text-white">
+                {/* Các ảnh xếp chồng lên nhau */}
+                {images.map((url, i) => (
                     <div
-                      key={book._id}
-                      className="relative bg-white rounded-lg shadow-md border border-gray-200 p-3 flex flex-col items-center w-[180px] min-h-[320px]"
-                    >
-                      {hasDiscount && (
-                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded">
-                          -{discountPercent}%
-                        </span>
-                      )}
-                      <img
-                        src={book.images?.[0] || "/default-book.jpg"}
-                        alt={book.title}
-                        className="w-[120px] h-[170px] object-cover mx-auto mb-2 rounded"
-                      />
-                      <h3 className="font-bold text-center text-base mb-1 line-clamp-2">
-                        {book.title}
-                      </h3>
-                      <p className="text-xs text-gray-500 text-center mb-1">
-                        {book.authors}
-                      </p>
-                      <div className="mb-2 text-center">
-                        {hasDiscount && (
-                          <span className="text-xs text-gray-400 line-through mr-1">
-                            {book.originalPrice.toLocaleString()} đ
-                          </span>
-                        )}
-                        <span className="text-lg text-red-600 font-bold">
-                          {(
-                            book.sellingPrice || book.originalPrice
-                          ).toLocaleString()}{" "}
-                          đ
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => handleAddToCart(book._id)}
-                        className="w-full bg-green-600 text-white py-1 text-xs rounded mb-1 hover:bg-green-700"
-                      >
-                        Thêm vào giỏ
-                      </button>
-                      <button
-                        onClick={() => handleAddToWishlist(book._id)}
-                        className="w-full bg-pink-500 text-white py-1 text-xs rounded mb-1 hover:bg-pink-600"
-                      >
-                        Yêu thích
-                      </button>
-                      <button
-                        onClick={() => handleViewDetail(book._id)}
-                        className="w-full bg-blue-600 text-white py-1 text-xs rounded hover:bg-blue-700"
-                      >
-                        Xem chi tiết
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+                        key={i}
+                        className={`absolute inset-0 bg-center bg-cover transition-opacity duration-1000 ${i === index ? "opacity-100 z-10" : "opacity-0 z-0"}`}
+                        style={{ backgroundImage: `url(${url})` }}
+                    />
+                ))}
 
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center mt-8 gap-3">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={handlePrevPage}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Trang trước
-                  </button>
-                  <span className="text-gray-700">
-                    Trang {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={handleNextPage}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Trang sau
-                  </button>
+                {/* Lớp phủ đen */}
+                <div className="absolute inset-0 bg-black bg-opacity-50 z-20" />
+
+                {/* Nội dung */}
+                <div className="relative z-30 flex flex-col justify-center items-center h-full text-center px-4">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4">Khám Phá Thế Giới Tri Thức</h1>
+                    <p className="text-lg md:text-xl mb-8">Nơi mỗi trang sách mở ra một chân trời mới.</p>
+                    <a
+                        href="/products"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition no-underline"
+                    >
+                        Xem Sách Ngay
+                    </a>
                 </div>
-              )}
-            </>
-          )}
+            </section>
+
+            {/* Benefits Section */}
+            <section className="py-16 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-12">Tại sao chọn chúng tôi?</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                        {benefits.map((item, index) => (
+                            <div key={index} className="flex flex-col items-center">
+                                <div className="bg-blue-100 text-blue-600 rounded-full p-4 mb-4">
+                                    <Icon icon={item.icon} className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">{item.title}</h3>
+                                <p className="text-gray-600">{item.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Featured Section */}
+            <section className="py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row items-center gap-12">
+                        <div className="md:w-1/2">
+                            <img src={sachmoi} alt="Đọc sách" className="rounded-lg shadow-lg w-full" />
+                        </div>
+                        <div className="md:w-1/2">
+                            <h3 className="text-xl font-semibold text-blue-600 uppercase">Sách Mới Về</h3>
+                            <h2 className="text-3xl font-bold text-gray-800 mt-2 mb-4">Món quà từ những trang sách</h2>
+                            <p className="text-gray-600 mb-6">
+                                Khám phá những đầu sách mới nhất vừa được cập nhật. Từ những tác phẩm kinh điển đến các bestseller hiện đại, chúng tôi luôn mang đến những lựa chọn tuyệt vời nhất cho bạn.
+                            </p>
+                            <Link
+                                to="/products?filter=new-arrivals"
+                                className="bg-black text-white font-bold text-lg py-2 px-6 inline-block text-center no-underline hover:bg-blue-600 transition-colors duration-300"
+                            >
+                                Xem Thêm
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Featured Products */}
+            <section className="bg-white py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">Sách nổi bật</h2>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {featuredBooks.map(book => (
+                            <div key={book.id} className="border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
+                                <div className="aspect-[3/4] w-full overflow-hidden mb-3">
+                                    <img
+                                        src={book.imageUrl}
+                                        alt={book.title}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <h3 className="font-semibold text-base text-gray-900">{book.title}</h3>
+                                <p className="text-sm text-gray-500 mt-1">{book.author || "Tác giả không rõ"}</p>
+                                <p className="text-gray-800 font-medium mt-2">{book.price}</p>
+                                <button
+                                    className="mt-2 inline-flex items-center justify-center px-4 py-2 border border-yellow-600 text-yellow-600 rounded-md hover:bg-yellow-600 hover:text-white transition-colors duration-200"
+                                >
+                                    <svg
+                                        className="w-4 h-4 mr-2"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-1.2 6M17 13l1.2 6M6 19a1 1 0 100 2 1 1 0 000-2zm12 0a1 1 0 100 2 1 1 0 000-2z" />
+                                    </svg>
+                                    Thêm vào giỏ
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Link "Xem thêm" */}
+                    <div className="text-center mt-10">
+                        <Link
+                            to="/products"
+                            className="bg-black text-white font-bold text-lg py-2 px-6 inline-block text-center no-underline hover:bg-blue-600 transition-colors duration-300"
+                        >
+                            Xem thêm
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* Testimonials Section */}
+            <section className="py-16">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-12">Độc giả nói gì về chúng tôi</h2>
+                    <div className="space-y-10">
+                        {testimonials.map((item, index) => (
+                            <blockquote key={index} className="p-6 bg-gray-50 rounded-lg">
+                                <p className="text-lg text-gray-700 italic">"{item.quote}"</p>
+                                <footer className="mt-4 font-semibold text-gray-600">- {item.author}</footer>
+                            </blockquote>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
         </div>
-      </div>
-    </div>
-  );
-};
+    );
+}
 
 export default HomePage;

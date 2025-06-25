@@ -445,6 +445,7 @@ const Users = () => {
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     title={selectedUser ? 'Cập nhật thông tin người dùng' : 'Thêm người dùng'}
+                    size='lg'
                 >
                     <form onSubmit={handleSubmit}>
                         {generalError && (
