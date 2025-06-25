@@ -1,3 +1,4 @@
+const AdminActivityLog = require("../models/AdminActivityLog");
 const Book = require("../models/bookModel");
 
 // Create a new book (Admin only)
@@ -65,6 +66,13 @@ const createBook = async (req, res) => {
 
         await newBook.save();
 
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'CREATE_BOOK',
+            details: `Admin ${req.account.email} created new book post: ${title}`
+        });
+
         res.status(201).json({
             message: "Book created successfully",
             status: "Success",
@@ -78,20 +86,58 @@ const createBook = async (req, res) => {
     }
 };
 
-// Get all books with pagination
+// Get all books with pagination, filtering, and sorting
 const getAllBooks = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const books = await Book.find()
+        const {
+            sort,
+            category,
+            isFeatured,
+            isNewArrival,
+            minPrice,
+            maxPrice
+        } = req.query;
+
+        const query = {};
+
+        // Filtering
+        if (category) {
+            query.categories = category;
+        }
+        if (isFeatured) {
+            query.isFeatured = isFeatured === 'true';
+        }
+        if (isNewArrival) {
+            query.isNewArrival = isNewArrival === 'true';
+        }
+
+        // Price range filter
+        if (minPrice || maxPrice) {
+            query.sellingPrice = {};
+            if (minPrice) query.sellingPrice.$gte = parseInt(minPrice);
+            if (maxPrice) query.sellingPrice.$lte = parseInt(maxPrice);
+        }
+
+        // Sorting
+        let sortOption = { createdAt: -1 }; // default sort
+        if (sort) {
+            const parts = sort.split(':'); // e.g., 'sellingPrice:asc'
+            if (parts.length === 2) {
+                sortOption = { [parts[0]]: parts[1] === 'desc' ? -1 : 1 };
+            }
+        }
+
+        const books = await Book.find(query)
             .populate('categories')
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit);
 
-        const total = await Book.countDocuments();
+        const total = await Book.countDocuments(query);
 
         res.status(200).json({
             message: "Get books successfully",
@@ -114,30 +160,123 @@ const getAllBooks = async (req, res) => {
     }
 };
 
-// Search books
+// Get a single book by ID
+const getBookById = async (req, res) => {
+    try {
+        const book = await Book.findById(req.params.id)
+            .populate('categories', 'name slug')
+            .populate('createdBy', 'info.fullName email');
+
+        if (!book) {
+            return res.status(404).json({ message: "Book not found", status: "Error" });
+        }
+        res.status(200).json({
+            message: "Get book successfully",
+            status: "Success",
+            data: book
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Update a book (Admin only)
+const updateBook = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bookData = req.body;
+
+        const book = await Book.findById(id);
+        if (!book) {
+            return res.status(404).json({ message: "Book not found", status: "Error" });
+        }
+
+        // if title is updated, regenerate slug
+        if (bookData.title && bookData.title !== book.title) {
+            function removeVietnameseTones(str) {
+                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+            }
+            bookData.slug = removeVietnameseTones(bookData.title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        }
+
+        const updatedBook = await Book.findByIdAndUpdate(
+            id,
+            { ...bookData, updatedBy: req.account._id },
+            { new: true, runValidators: true }
+        ).populate('categories');
+
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'UPDATE_BOOK',
+            details: `Admin ${req.account.email} updated book: ${updatedBook.title}`
+        });
+
+        res.status(200).json({
+            message: "Book updated successfully",
+            status: "Success",
+            data: updatedBook
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Delete a book (Admin only)
+const deleteBook = async (req, res) => {
+    try {
+        const book = await Book.findById(req.params.id);
+        if (!book) {
+            return res.status(404).json({ message: "Book not found", status: "Error" });
+        }
+
+        await Book.findByIdAndDelete(req.params.id);
+
+        // Log admin activity
+        await AdminActivityLog.create({
+            adminId: req.account._id,
+            action: 'DELETE_BOOK',
+            details: `Admin ${req.account.email} deleted book: ${book.title}`
+        });
+
+        res.status(200).json({ message: "Book deleted successfully", status: "Success" });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Search books by a search term
 const searchBooks = async (req, res) => {
     try {
-        const { query } = req.query;
+        const { searchTerm } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const searchQuery = {
+        if (!searchTerm) {
+            return res.status(400).json({
+                message: "Search term is required",
+                status: "Error"
+            });
+        }
+
+        const query = {
             $or: [
-                { title: { $regex: query, $options: 'i' } },
-                { authors: { $regex: query, $options: 'i' } },
-                { description: { $regex: query, $options: 'i' } },
-                { publisher: { $regex: query, $options: 'i' } }
+                { title: { $regex: searchTerm, $options: 'i' } },
+                { authors: { $in: [new RegExp(searchTerm, 'i')] } },
+                { description: { $regex: searchTerm, $options: 'i' } },
+                { isbn: { $regex: searchTerm, $options: 'i' } }
             ]
         };
 
-        const books = await Book.find(searchQuery)
-            .populate('categories')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Book.countDocuments(searchQuery);
+        const [books, total] = await Promise.all([
+            Book.find(query)
+                .populate('categories')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Book.countDocuments(query)
+        ]);
 
         res.status(200).json({
             message: "Search books successfully",
@@ -160,140 +299,11 @@ const searchBooks = async (req, res) => {
     }
 };
 
-// Get book by ID
-const getBookById = async (req, res) => {
-    try {
-        const book = await Book.findById(req.params.id)
-            .populate('categories');
-
-        if (!book) {
-            return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
-            });
-        }
-
-        res.status(200).json({
-            message: "Get book successfully",
-            status: "Success",
-            data: book
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
-// Update book (Admin only)
-const updateBook = async (req, res) => {
-    try {
-        const {
-            title,
-            authors,
-            publisher,
-            publicationYear,
-            pageCount,
-            coverType,
-            description,
-            images,
-            isbn,
-            originalPrice,
-            sellingPrice,
-            stockQuantity,
-            isFeatured,
-            isNewArrival,
-            categories
-        } = req.body;
-
-        const book = await Book.findById(req.params.id);
-
-        if (!book) {
-            return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
-            });
-        }
-
-        // Generate new slug if title is changed
-        const slug = title !== book.title
-            ? title.toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/(^-|-$)/g, '')
-            : book.slug;
-
-        // Update book fields
-        const updatedFields = {
-            title: title || book.title,
-            slug,
-            authors: authors || book.authors,
-            publisher: publisher || book.publisher,
-            publicationYear: publicationYear || book.publicationYear,
-            pageCount: pageCount || book.pageCount,
-            coverType: coverType || book.coverType,
-            description: description || book.description,
-            images: images || book.images,
-            isbn: isbn || book.isbn,
-            originalPrice: originalPrice || book.originalPrice,
-            sellingPrice: sellingPrice || book.sellingPrice,
-            stockQuantity: stockQuantity || book.stockQuantity,
-            isFeatured: isFeatured !== undefined ? isFeatured : book.isFeatured,
-            isNewArrival: isNewArrival !== undefined ? isNewArrival : book.isNewArrival,
-            categories: categories || book.categories,
-            updatedBy: req.account._id
-        };
-
-        const updatedBook = await Book.findByIdAndUpdate(
-            req.params.id,
-            updatedFields,
-            { new: true }
-        ).populate('categories');
-
-        res.status(200).json({
-            message: "Book updated successfully",
-            status: "Success",
-            data: updatedBook
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
-// Delete book (Admin only)
-const deleteBook = async (req, res) => {
-    try {
-        const book = await Book.findById(req.params.id);
-
-        if (!book) {
-            return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
-            });
-        }
-
-        await Book.findByIdAndDelete(req.params.id);
-
-        res.status(200).json({
-            message: "Book deleted successfully",
-            status: "Success"
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
 module.exports = {
     createBook,
     getAllBooks,
-    searchBooks,
     getBookById,
     updateBook,
-    deleteBook
+    deleteBook,
+    searchBooks
 };

@@ -118,11 +118,11 @@ const Header = () => {
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link
-              to="/products?filter=mkmn"
+              to="/"
               className={`no-underline transition-colors ${location.search === "?filter=mkmn" ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Sách MKMN
+              Trang chủ
             </Link>
             <Link
               to="/products?filter=new-arrivals"
@@ -175,8 +175,8 @@ const Header = () => {
                 <Link
                   to="/auth/register"
                   className={`px-4 py-2 rounded-full font-medium no-underline transition-colors ${isActivePath('/auth/register')
-                      ? 'bg-blue-700 text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-blue-700 text-white'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                 >
                   Đăng ký
