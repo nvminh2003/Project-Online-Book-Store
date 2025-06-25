@@ -210,7 +210,6 @@ const CartPage = () => {
     );
   }
 
-  // --- BỎ MAINLAYOUT BAO QUANH PHẦN RETURN CHÍNH ---
   return (
     // <MainLayout>  // XÓA DÒNG NÀY
     <div className="container mx-auto px-4 py-8">

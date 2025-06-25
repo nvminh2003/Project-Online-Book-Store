@@ -86,6 +86,7 @@ const PaymentPage = () => {
           <strong>Địa chỉ:</strong>{" "}
           {[
             shippingInfo?.houseName,
+            shippingInfo?.wardLabel,
             shippingInfo?.districtLabel,
             shippingInfo?.cityLabel,
           ]

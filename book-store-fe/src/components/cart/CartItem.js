@@ -1,14 +1,41 @@
-import React from "react";
+import React, { useState } from "react";
 
 const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
+  const [inputValue, setInputValue] = useState(item?.quantity || 1);
+  const [warning, setWarning] = useState("");
+
   if (!item || !item.book) return null;
 
   const { book, quantity } = item;
-  const { title, sellingPrice, images } = book;
+  const { title, sellingPrice, images, stockQuantity } = book;
   const thumbnail = images?.[0] || "/default-book.png";
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    if (!/^[0-9]*$/.test(value)) return;
+    setInputValue(value);
+    setWarning("");
+  };
+
+  const handleInputBlur = () => {
+    let num = Number(inputValue);
+    if (num > stockQuantity) {
+      setInputValue(stockQuantity);
+      setWarning(`Chỉ còn ${stockQuantity} sản phẩm trong kho.`);
+      onQuantityChange(stockQuantity);
+    } else if (num < 1 || !num) {
+      setInputValue(1);
+      setWarning("Số lượng tối thiểu là 1.");
+      onQuantityChange(1);
+    } else {
+      setWarning("");
+      if (num !== quantity) onQuantityChange(num);
+    }
+  };
 
   return (
     <div className="flex items-center gap-6">
+      {console.log("CartItem book:", book)}
       {/* Hình ảnh sách */}
       <div className="w-24 h-32 bg-gray-100 flex-shrink-0 rounded overflow-hidden">
         <img
@@ -22,25 +49,22 @@ const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
       <div className="flex-grow">
         <h2 className="text-lg font-medium">{title}</h2>
         <p className="text-gray-500">Giá: {sellingPrice.toLocaleString()}đ</p>
-
-        {/* Bộ điều khiển số lượng */}
-        <div className="flex items-center mt-2">
-          <button
-            onClick={() => onQuantityChange(quantity - 1)}
-            disabled={quantity <= 1}
-            className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            -
-          </button>
-          <span className="mx-3">{quantity}</span>
-          <button
-            onClick={() => onQuantityChange(quantity + 1)}
-            className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-          >
-            +
-          </button>
+        <div className="flex items-center mt-2 gap-2">
+          <label className="text-sm text-gray-700">Số lượng:</label>
+          <input
+            type="number"
+            min={1}
+            max={stockQuantity}
+            value={inputValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            className="w-16 p-1 border rounded text-center"
+          />
+          <span className="text-xs text-gray-500">
+            / Kho: {stockQuantity ?? "?"}
+          </span>
         </div>
-
+        {warning && <div className="text-xs text-red-500 mt-1">{warning}</div>}
         {/* Nút xoá */}
         <div className="mt-2">
           <button

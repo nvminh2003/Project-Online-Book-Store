@@ -4,7 +4,10 @@ const Book = require("../models/bookModel");
 // Helper function to populate cart with book and user details
 const populateCart = async (cartId) => {
   return await Cart.findById(cartId)
-    .populate("items.book", "title sellingPrice images authors publisher")
+    .populate(
+      "items.book",
+      "title sellingPrice images authors publisher stockQuantity"
+    )
     .populate("user", "email customerInfo.fullName");
 };
 
@@ -118,7 +121,10 @@ const addToCart = async (req, res) => {
 
     // Populate book details and calculate total
     cart = await Cart.findById(cart._id)
-      .populate("items.book", "title sellingPrice images authors publisher")
+      .populate(
+        "items.book",
+        "title sellingPrice images authors publisher stockQuantity"
+      )
       .populate("user", "email customerInfo.fullName");
 
     const total = calculateTotal(cart.items);

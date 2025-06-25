@@ -266,7 +266,15 @@ const OrderReviewPage = () => {
             <strong>Điện thoại:</strong> {shippingInfoFromState?.phone}
           </p>
           <p>
-            <strong>Địa chỉ:</strong> {shippingInfoFromState?.address}
+            <strong>Địa chỉ:</strong>{" "}
+            {[
+              shippingInfoFromState?.houseName,
+              shippingInfoFromState?.wardLabel,
+              shippingInfoFromState?.districtLabel,
+              shippingInfoFromState?.cityLabel,
+            ]
+              .filter(Boolean)
+              .join(", ")}
           </p>
           <Button
             variant="link"
