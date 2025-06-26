@@ -1,7 +1,9 @@
 // src/pages/products/ProductDetailPage.js
-import React, { useEffect, useState, useCallback } from "react"; // Thêm useCallback
+import React, { useEffect, useState, useCallback, useRef } from "react"; // Thêm useCallback
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Icon } from '@iconify/react';
+
 // --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
 // import { useDispatch } from "react-redux";
 // import { addItemToCartAPI } from "../../store/slices/cartSlice"; // Đường dẫn đúng
@@ -12,22 +14,25 @@ const API_URL =
 
 const ProductDetailPage = () => {
   const { bookId } = useParams();
+  const [error, setError]= useState(false);
+  const [loading, setLoading]= useState(false);
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
+  const imageIntervalRef = useRef();
   const navigate = useNavigate();
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("success"); // 'success' | 'error'
 
   const fetchBookDetail = useCallback(async () => {
     setLoading(true);
     setError(null);
     const token = localStorage.getItem("accessToken");
-    // Nếu API xem chi tiết sách không cần token, có thể bỏ config này
     const config = token
       ? { headers: { Authorization: `Bearer ${token}` } }
       : {};
-
     try {
       const res = await axios.get(`${API_URL}/books/${bookId}`, config);
       if (res.data && res.data.status === "Success" && res.data.data) {
@@ -41,10 +46,9 @@ const ProductDetailPage = () => {
         err.response?.data || err.message
       );
       if (err.response?.status === 401) {
-        alert(
-          "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại."
-        );
-        navigate("/auth/login"); // Hoặc dispatch action logout
+        setToastMsg("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
+        setToastType("error");
+        setTimeout(() => navigate("/auth/login"), 1500);
       } else {
         setError(
           err.response?.data?.message ||
@@ -66,62 +70,58 @@ const ProductDetailPage = () => {
     fetchBookDetail();
   }, [fetchBookDetail]); // Gọi fetchBookDetail khi nó thay đổi (chỉ 1 lần khi bookId thay đổi)
 
+  // Tự động chuyển ảnh chính sau vài giây
+  useEffect(() => {
+    if (book?.images?.length > 1) {
+      imageIntervalRef.current = setInterval(() => {
+        setCurrentImageIdx((prev) => (prev + 1) % book.images.length);
+      }, 4000); // 4 giây đổi ảnh
+      return () => clearInterval(imageIntervalRef.current);
+    }
+    return () => {};
+  }, [book]);
+
   const handleAddToCart = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-      navigate("/auth/login");
+      setToastMsg("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      setToastType("error");
+      setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
-
     if (!book || !book._id) {
-      alert(
-        "Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại."
-      );
+      setToastMsg("Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
       return;
     }
-
     const currentQuantity = Number(quantity);
     if (isNaN(currentQuantity) || currentQuantity < 1) {
-      alert("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
-      setQuantity(1); // Reset về 1
+      setToastMsg("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
+      setToastType("error");
+      setQuantity(1);
+      setTimeout(() => setToastMsg(""), 1500);
       return;
     }
-
     const payload = {
       bookId: book._id,
       quantity: currentQuantity,
     };
-
-    console.log("ProductDetailPage - Add to cart payload:", payload); // Để debug
-
     try {
-      // --- NẾU DÙNG REDUX ---
-      // const resultAction = await dispatch(addItemToCartAPI(payload));
-      // if (addItemToCartAPI.fulfilled.match(resultAction)) {
-      //   alert("Đã thêm vào giỏ hàng thành công!");
-      // } else if (addItemToCartAPI.rejected.match(resultAction)) {
-      //   const errorMessage = resultAction.payload || "Không thể thêm vào giỏ hàng.";
-      //   alert(errorMessage);
-      //   if (String(errorMessage).toLowerCase().includes('invalid token') || String(errorMessage).toLowerCase().includes('unauthorized')) {
-      //     // Xử lý khi token không hợp lệ
-      //   }
-      // }
-      // --- KẾT THÚC REDUX ---
-
-      // --- HOẶC DÙNG AXIOS TRỰC TIẾP (NHƯ HIỆN TẠI) ---
       const response = await axios.post(`${API_URL}/cart/add`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (response.data && response.data.status === "Success") {
-        alert("Đã thêm vào giỏ hàng thành công!");
+        setToastMsg("Đã thêm vào giỏ hàng thành công!");
+        setToastType("success");
+        setTimeout(() => setToastMsg(""), 1500);
       } else {
-        alert(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        setToastMsg(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 1500);
       }
-      // --- KẾT THÚC AXIOS TRỰC TIẾP ---
     } catch (err) {
       console.error(
         "Lỗi khi thêm vào giỏ hàng:",
@@ -131,23 +131,28 @@ const ProductDetailPage = () => {
         err.response?.data?.message ||
         err.message ||
         "Không thể thêm sản phẩm vào giỏ hàng.";
-      alert(errorMessage);
-      if (err.response?.status === 401) {
-        // localStorage.removeItem("accessToken");
-        // navigate("/auth/login");
-      }
+      setToastMsg(errorMessage);
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
+      // if (err.response?.status === 401) {
+      //   localStorage.removeItem("accessToken");
+      //   navigate("/auth/login");
+      // }
     }
   };
 
   const handleAddToWishlist = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập để thêm vào yêu thích.");
-      navigate("/auth/login");
+      setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
+      setToastType("error");
+      setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
     if (!book || !book._id) {
-      alert("Thông tin sách chưa được tải xong.");
+      setToastMsg("Thông tin sách chưa được tải xong.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
       return;
     }
     try {
@@ -160,13 +165,17 @@ const ProductDetailPage = () => {
           },
         }
       );
-      alert("Đã thêm vào mục yêu thích!");
+      setToastMsg("Đã thêm vào mục yêu thích!");
+      setToastType("success");
+      setTimeout(() => setToastMsg(""), 1500);
     } catch (err) {
       console.error(
         "Lỗi khi thêm vào yêu thích:",
         err.response?.data || err.message
       );
-      alert(err.response?.data?.message || "Không thể thêm vào yêu thích.");
+      setToastMsg(err.response?.data?.message || "Không thể thêm vào yêu thích.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
     }
   };
 
@@ -196,6 +205,11 @@ const ProductDetailPage = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      {toastMsg && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
+          {toastMsg}
+        </div>
+      )}
       {/* Modal xem ảnh to */}
       {showImageModal && book.images?.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
@@ -240,19 +254,20 @@ const ProductDetailPage = () => {
           </div>
         </div>
       )}
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-full md:w-1/3">
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full md:w-1/4 flex flex-col items-center">
           <div
-            className="relative cursor-pointer"
+            className="relative cursor-pointer flex flex-col items-center justify-center bg-transparent"
             onClick={() => {
               setShowImageModal(true);
-              setCurrentImageIdx(0);
+              setCurrentImageIdx(currentImageIdx);
             }}
           >
             <img
-              src={book.images?.[0] || "/default-book.jpg"}
+              src={book.images?.[currentImageIdx] || "/default-book.jpg"}
               alt={book.title}
-              className="w-full h-auto object-cover rounded-2xl shadow"
+              className="w-full h-auto object-cover rounded-2xl shadow mx-auto bg-transparent"
+              style={{ maxHeight: 220, background: 'transparent' }}
             />
             {book.images?.length > 1 && (
               <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
@@ -261,28 +276,28 @@ const ProductDetailPage = () => {
             )}
           </div>
           {book.images?.length > 1 && (
-            <div className="mt-4 grid grid-cols-4 gap-2">
-              {book.images.slice(1).map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`Ảnh ${idx + 2}`}
-                  className="w-full h-20 object-cover rounded-md border cursor-pointer"
-                  onClick={() => {
-                    setShowImageModal(true);
-                    setCurrentImageIdx(idx + 1);
-                  }}
-                />
+            <div className="mt-3 grid grid-cols-4 gap-1 w-full min-h-14">
+              {book.images.map((img, idx) => (
+                idx !== currentImageIdx && (
+                  <img
+                    key={idx}
+                    src={img}
+                    alt={`Ảnh ${idx + 1}`}
+                    className="w-full h-14 object-cover rounded-md border cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-lg"
+                    onClick={() => setCurrentImageIdx(idx)}
+                    style={{ visibility: 'visible' }}
+                  />
+                )
               ))}
             </div>
           )}
         </div>
 
-        <div className="flex-1 md:w-3/5">
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-3">
+        <div className="flex-1 md:w-3/4">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
             {book.title}
           </h1>
-          <p className="text-gray-600 mb-2 text-base">
+          <p className="text-gray-600 mb-1 text-sm">
             Tác giả:{" "}
             <span className="font-medium text-blue-600">
               {Array.isArray(book.authors)
@@ -291,29 +306,29 @@ const ProductDetailPage = () => {
             </span>
           </p>
           {book.publisher && (
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-xs text-gray-500 mb-2">
               Nhà xuất bản: {book.publisher}
             </p>
           )}
 
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
             {hasDiscount ? (
               <>
-                <div className="text-md text-gray-500">
+                <div className="text-sm text-gray-500">
                   Giá gốc:{" "}
                   <span className="line-through mr-2">
                     {(book.originalPrice || 0).toLocaleString("vi-VN")} đ
                   </span>
                 </div>
-                <p className="text-red-600 text-3xl font-bold mb-1">
+                <p className="text-red-600 text-2xl font-bold mb-1">
                   {(book.sellingPrice || 0).toLocaleString("vi-VN")} đ
                 </p>
-                <span className="text-sm bg-red-100 text-red-600 font-semibold px-2 py-1 rounded">
+                <span className="text-xs bg-red-100 text-red-600 font-semibold px-2 py-1 rounded">
                   Tiết kiệm {discountPercent}%
                 </span>
               </>
             ) : (
-              <p className="text-red-600 text-3xl font-bold">
+              <p className="text-red-600 text-2xl font-bold">
                 {(book.sellingPrice || book.originalPrice || 0).toLocaleString(
                   "vi-VN"
                 )}{" "}
@@ -322,10 +337,10 @@ const ProductDetailPage = () => {
             )}
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label
               htmlFor="quantityInput"
-              className="block text-sm font-semibold text-gray-700 mb-1"
+              className="block text-xs font-semibold text-gray-700 mb-1"
             >
               Số lượng:
             </label>
@@ -338,27 +353,30 @@ const ProductDetailPage = () => {
                 const val = parseInt(e.target.value, 10);
                 setQuantity(isNaN(val) || val < 1 ? 1 : val);
               }}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-16 px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             <button
               onClick={handleAddToCart}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105"
+              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
             >
+              <Icon icon="mdi:cart" width="18" height="18" color="#2563eb" />
               Thêm vào giỏ hàng
             </button>
             <button
               onClick={handleAddToWishlist}
-              className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
+              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
             >
+              <Icon icon="mdi:heart" width="18" height="18" color="#2563eb" />
               Yêu thích
             </button>
             <button
-              onClick={() => navigate(-1)} // Quay lại trang trước
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
+              onClick={() => navigate(-1)}
+              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
             >
+              <Icon icon="mdi:arrow-left" width="18" height="18" color="#2563eb" />
               Quay lại
             </button>
           </div>
