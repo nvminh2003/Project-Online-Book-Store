@@ -44,11 +44,14 @@ const createPaymentLink = async (paymentData) => {
 
 // Create Order
 const createOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // IMPORTANT: Transactions are disabled for standalone MongoDB instances.
+  // For production, use a replica set and re-enable transactions.
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
-    const { fullName, phone, address, discountCode, paymentMethod } = req.body;
+    const { fullName, phone, address, discountCode, paymentMethod, note } =
+      req.body;
 
     if (!fullName || !phone || !address || !paymentMethod) {
       return res.status(400).json({
@@ -57,17 +60,15 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!["COD", "VNPAY", "MOMO", "PAYOS"].includes(paymentMethod)) {
+    if (!["COD", "PAYOS"].includes(paymentMethod)) {
       return res.status(400).json({
         message: "Invalid payment method",
         status: "Error",
       });
     }
 
-    const cart = await Cart.findOne({ user: req.account._id }).session(session);
+    const cart = await Cart.findOne({ user: req.account._id });
     if (!cart || cart.items.length === 0) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         message: "Cart is empty",
         status: "Error",
@@ -75,7 +76,7 @@ const createOrder = async (req, res) => {
     }
 
     const bookIds = cart.items.map((item) => item.book);
-    const books = await Book.find({ _id: { $in: bookIds } }).session(session);
+    const books = await Book.find({ _id: { $in: bookIds } });
     const bookMap = new Map(books.map((book) => [book._id.toString(), book]));
 
     let totalAmount = 0;
@@ -84,8 +85,6 @@ const createOrder = async (req, res) => {
     for (const item of cart.items) {
       const book = bookMap.get(item.book.toString());
       if (!book || book.isDeleted || !book.isPublished) {
-        await session.abortTransaction();
-        session.endSession();
         return res.status(400).json({
           message: `Book with id ${item.book} is not available.`,
           status: "Error",
@@ -93,8 +92,6 @@ const createOrder = async (req, res) => {
       }
 
       if (book.stockQuantity < item.quantity) {
-        await session.abortTransaction();
-        session.endSession();
         return res.status(400).json({
           message: `Not enough stock for book: ${book.title}`,
           status: "Error",
@@ -104,7 +101,7 @@ const createOrder = async (req, res) => {
       orderItems.push({
         book: book._id,
         quantity: item.quantity,
-        price: book.sellingPrice,
+        price: book.sellingPrice, // Use sellingPrice for order item price
       });
 
       totalAmount += book.sellingPrice * item.quantity;
@@ -118,44 +115,26 @@ const createOrder = async (req, res) => {
         isActive: true,
         startDate: { $lte: new Date() },
         endDate: { $gte: new Date() },
-      }).session(session);
+      });
 
       if (discount) {
         if (discount.maxUses && discount.usesCount >= discount.maxUses) {
-          await session.abortTransaction();
-          session.endSession();
           return res.status(400).json({
             message: "Discount code has reached maximum uses",
             status: "Error",
           });
         }
 
-        // Further validation for discount applicability can be added here
         appliedDiscount = discount;
 
-        if (discount.books.length > 0) {
-          const eligibleItems = orderItems.filter((item) =>
-            discount.books.includes(item.book.toString())
-          );
-
-          if (eligibleItems.length > 0) {
-            if (discount.type === "percent") {
-              discountAmount = eligibleItems.reduce(
-                (sum, item) =>
-                  sum + (item.price * item.quantity * discount.value) / 100,
-                0
-              );
-            } else {
-              discountAmount = discount.value * eligibleItems.length;
-            }
-          }
+        if (discount.type === "percent") {
+          discountAmount = (totalAmount * discount.value) / 100;
         } else {
-          if (discount.type === "percent") {
-            discountAmount = (totalAmount * discount.value) / 100;
-          } else {
-            discountAmount = discount.value;
-          }
+          discountAmount = discount.value;
         }
+
+        // Ensure discount doesn't exceed total amount
+        discountAmount = Math.min(discountAmount, totalAmount);
       }
     }
 
@@ -169,6 +148,7 @@ const createOrder = async (req, res) => {
       fullName,
       phone,
       address,
+      note,
       discountCode: appliedDiscount ? appliedDiscount.code : null,
       discountAmount,
       shippingFee,
@@ -179,65 +159,86 @@ const createOrder = async (req, res) => {
       items: orderItems,
     });
 
-    await newOrder.save({ session });
+    // await newOrder.save({ session });
+    await newOrder.save();
 
-    const bulkOps = orderItems.map((item) => ({
-      updateOne: {
-        filter: { _id: item.book },
-        update: { $inc: { stockQuantity: -item.quantity } },
-      },
-    }));
-
-    await Book.bulkWrite(bulkOps, { session });
+    // Atomically update stock for each book
+    for (const item of orderItems) {
+      await Book.updateOne(
+        { _id: item.book },
+        { $inc: { stockQuantity: -item.quantity } }
+        // { session }
+      );
+    }
 
     if (appliedDiscount) {
       appliedDiscount.usesCount += 1;
-      await appliedDiscount.save({ session });
+      // await appliedDiscount.save({ session });
+      await appliedDiscount.save();
     }
 
+    // Clear the user's cart
     cart.items = [];
-    await cart.save({ session });
+    cart.coupon = null;
+    cart.subtotal = 0;
+    // await cart.save({ session });
+    await cart.save();
 
-    await session.commitTransaction();
-    session.endSession();
+    // await session.commitTransaction();
+    // session.endSession();
 
     if (paymentMethod === "PAYOS") {
-      const checkoutUrl = await createPaymentLink({
-        orderCode,
-        totalAmount: finalTotal,
-        fullName,
-        phone,
-        orderId: newOrder._id.toString(),
-      });
+      try {
+        const checkoutUrl = await createPaymentLink({
+          orderCode,
+          totalAmount: finalTotal,
+          fullName,
+          phone,
+          orderId: newOrder._id.toString(),
+        });
 
-      return res.status(200).json({
-        message: "PayOS payment link created",
+        return res.status(200).json({
+          message: "PayOS payment link created",
+          status: "Success",
+          data: {
+            checkoutUrl,
+            orderId: newOrder._id,
+          },
+        });
+      } catch (error) {
+        // If PayOS fails, we should ideally roll back the order creation.
+        // Since transactions are disabled, this part is tricky.
+        // For now, we log the error and inform the user.
+        console.error(
+          "PayOS link creation failed after order creation:",
+          error
+        );
+        return res.status(500).json({
+          message:
+            "Order created, but failed to generate payment link. Please contact support.",
+          status: "Error",
+        });
+      }
+    } else {
+      return res.status(201).json({
+        message: "Order created successfully with COD",
         status: "Success",
-        data: {
-          checkoutUrl,
-          orderId: newOrder._id,
-        },
+        data: { orderId: newOrder._id },
       });
     }
-
-    const populatedOrder = await Order.findById(newOrder._id)
-      .populate("items.book", "title sellingPrice images")
-      .populate("user", "email customerInfo.fullName");
-
-    return res.status(201).json({
-      message: "Order created successfully",
-      status: "Success",
-      data: populatedOrder,
-    });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    // if (session) {
+    //   await session.abortTransaction();
+    //   session.endSession();
+    // }
+    console.error("Order creation failed:", error);
     return res.status(500).json({
       message: `Order creation failed: ${error.message}`,
       status: "Error",
     });
   }
 };
+
 // Get all orders (admin only)
 const getAllOrders = async (req, res) => {
   try {

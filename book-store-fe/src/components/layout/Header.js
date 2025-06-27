@@ -1,20 +1,14 @@
 import React, { useState } from "react";
-import Input from "../common/Input";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import Icon from "../common/Icon";
 import logo from "../../assets/image.png";
 import { useAuth } from "../../contexts/AuthContext";
-import { useSelector } from "react-redux";
+import { useCart } from "../../contexts/CartContext"; // Import useCart
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  // --- SỬA SELECTOR CHO ĐÚNG ---
-  const cartItemsFromStore = useSelector((state) => state.cart.items || []); // Lấy trực tiếp mảng items
-  const cartItemCount = cartItemsFromStore.reduce(
-    (total, item) => total + (item.quantity || 0),
-    0
-  );
-
   const { user, isAuthenticated, logout } = useAuth();
+  const { cartItemCount } = useCart(); // Sử dụng useCart để lấy số lượng sản phẩm
   const navigate = useNavigate();
   const location = useLocation();
 

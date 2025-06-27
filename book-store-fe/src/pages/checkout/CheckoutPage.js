@@ -5,19 +5,28 @@ import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
 import Modal from "../../components/common/Modal";
 import { useAuth } from "../../contexts/AuthContext";
-import { fetchCartAPI, applyCouponToCartAPI } from "../../services/cartService";
+import { useCart } from "../../contexts/CartContext"; // Use CartContext
 import { createOrderAPI } from "../../services/orderService";
 import accountService from "../../services/accountService";
+
+const PROVINCE_API = "https://open.oapi.vn/location/provinces?page=0&size=100";
+const DISTRICT_API = (provinceId) =>
+  `https://open.oapi.vn/location/districts/${provinceId}?page=0&size=100`;
+const WARD_API = (districtId) =>
+  `https://open.oapi.vn/location/wards/${districtId}?page=0&size=100`;
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    cart,
+    loading: cartLoading,
+    error: cartError,
+    applyCoupon,
+  } = useCart();
 
-  const [cartItems, setCartItems] = useState([]);
-  const [cartSubtotal, setCartSubtotal] = useState(0);
-  const [cartCoupon, setCartCoupon] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true); // For profile/location fetching
+  const [error, setError] = useState(null); // For profile/location errors
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: "",
@@ -29,12 +38,22 @@ const CheckoutPage = () => {
     note: "",
   });
 
+  const [cityOptions, setCityOptions] = useState([]);
+  const [districtOptions, setDistrictOptions] = useState([]);
+  const [wardOptions, setWardOptions] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState({
+    cities: false,
+    districts: false,
+    wards: false,
+  });
+
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [couponCode, setCouponCode] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({ title: "", body: "" });
+  const [formErrors, setFormErrors] = useState({});
 
   const openModal = (title, body) => {
     setModalContent({ title, body });
@@ -48,93 +67,282 @@ const CheckoutPage = () => {
   const shippingFee = 30000;
 
   const discountAmount = useMemo(() => {
-    if (cartCoupon) {
-      if (cartCoupon.type === "percent") {
-        return (cartSubtotal * cartCoupon.value) / 100;
-      } else {
-        return cartCoupon.value;
-      }
-    }
-    return 0;
-  }, [cartCoupon, cartSubtotal]);
+    return cart?.couponDetails?.discountAmountCalculated || 0;
+  }, [cart]);
 
   const finalTotal = useMemo(() => {
-    return Math.max(0, cartSubtotal - discountAmount + shippingFee);
-  }, [cartSubtotal, discountAmount, shippingFee]);
+    const subtotal = cart?.subtotal || 0;
+    return Math.max(0, subtotal - discountAmount + shippingFee);
+  }, [cart, discountAmount, shippingFee]);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate("/auth/login");
-    }
-  }, [authLoading, isAuthenticated, navigate]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchDataAndLocation = async () => {
+      if (!isAuthenticated) {
+        navigate("/auth/login");
+        return;
+      }
       try {
         setLoading(true);
-        const [cartData, accountData] = await Promise.all([
-          fetchCartAPI(),
-          accountService.getProfile(),
-        ]);
+        setError(null);
 
-        setCartItems(cartData.data.items || []);
-        setCartSubtotal(cartData.data.subtotal || 0);
-        setCartCoupon(cartData.data.couponAppliedDetails || null);
+        const accountRes = await accountService.getProfile();
+        const customerInfo = accountRes.data.data;
+        const userAddress = customerInfo?.address;
 
-        if (accountData.data.customerInfo) {
-          const { fullName, phone, address } = accountData.data.customerInfo;
+        if (customerInfo) {
           setShippingInfo((prev) => ({
             ...prev,
-            fullName: fullName || "",
-            phone: phone || "",
-            address: address?.address || "",
-            city: address?.city || "",
-            district: address?.district || "",
-            ward: address?.ward || "",
+            fullName: customerInfo.fullName || "",
+            phone: customerInfo.phone || "",
+            address: userAddress?.address || "",
           }));
         }
+
+        setLoadingLocations((prev) => ({ ...prev, cities: true }));
+        const provinceResponse = await fetch(PROVINCE_API);
+        const provinceData = await provinceResponse.json();
+        if (!provinceData || !Array.isArray(provinceData.data)) {
+          throw new Error("Could not fetch provinces.");
+        }
+        const fetchedCityOptions = provinceData.data.map((item) => ({
+          value: item.id?.toString(),
+          label: item.name,
+        }));
+        setCityOptions(fetchedCityOptions);
+        setLoadingLocations((prev) => ({ ...prev, cities: false }));
+
+        if (userAddress?.city && fetchedCityOptions.length > 0) {
+          const matchedCity = fetchedCityOptions.find(
+            (c) => c.label.toLowerCase() === userAddress.city.toLowerCase()
+          );
+
+          if (matchedCity) {
+            const cityId = matchedCity.value;
+            setShippingInfo((prev) => ({ ...prev, city: cityId }));
+
+            setLoadingLocations((prev) => ({ ...prev, districts: true }));
+            const districtResponse = await fetch(DISTRICT_API(cityId));
+            const districtData = await districtResponse.json();
+            if (!districtData || !Array.isArray(districtData.data)) {
+              throw new Error("Could not fetch districts.");
+            }
+            const fetchedDistrictOptions = districtData.data.map((item) => ({
+              value: item.id?.toString(),
+              label: item.name,
+            }));
+            setDistrictOptions(fetchedDistrictOptions);
+            setLoadingLocations((prev) => ({ ...prev, districts: false }));
+
+            if (userAddress?.district && fetchedDistrictOptions.length > 0) {
+              const matchedDistrict = fetchedDistrictOptions.find(
+                (d) =>
+                  d.label.toLowerCase() === userAddress.district.toLowerCase()
+              );
+
+              if (matchedDistrict) {
+                const districtId = matchedDistrict.value;
+                setShippingInfo((prev) => ({ ...prev, district: districtId }));
+
+                setLoadingLocations((prev) => ({ ...prev, wards: true }));
+                const wardResponse = await fetch(WARD_API(districtId));
+                const wardData = await wardResponse.json();
+                if (!wardData || !Array.isArray(wardData.data)) {
+                  throw new Error("Could not fetch wards.");
+                }
+                const fetchedWardOptions = wardData.data.map((item) => ({
+                  value: item.id?.toString(),
+                  label: item.name,
+                }));
+                setWardOptions(fetchedWardOptions);
+                setLoadingLocations((prev) => ({ ...prev, wards: false }));
+
+                if (userAddress?.ward && fetchedWardOptions.length > 0) {
+                  const matchedWard = fetchedWardOptions.find(
+                    (w) =>
+                      w.label.toLowerCase() === userAddress.ward.toLowerCase()
+                  );
+                  if (matchedWard) {
+                    setShippingInfo((prev) => ({
+                      ...prev,
+                      ward: matchedWard.value,
+                    }));
+                  }
+                }
+              }
+            }
+          }
+        }
       } catch (err) {
-        setError("Failed to load data. Please try again.");
+        console.error("Checkout page error:", err);
+        setError(
+          err.message || "Failed to load checkout data. Please try again."
+        );
       } finally {
         setLoading(false);
       }
     };
 
     if (isAuthenticated) {
-      fetchData();
+      fetchDataAndLocation();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
-  const handleShippingChange = (e) => {
-    setShippingInfo({ ...shippingInfo, [e.target.name]: e.target.value });
+  const validateField = (name, value) => {
+    let error = "";
+    switch (name) {
+      case "fullName":
+        if (!value.trim()) error = "Họ và tên là bắt buộc.";
+        break;
+      case "phone":
+        const phoneRegex = /^0[35789][0-9]{8}$/;
+        if (!value.trim()) {
+          error = "Số điện thoại là bắt buộc.";
+        } else if (!phoneRegex.test(value)) {
+          error = "Số điện thoại không hợp lệ. Ví dụ: 0912345678";
+        }
+        break;
+      case "address":
+        if (!value.trim()) error = "Địa chỉ là bắt buộc.";
+        break;
+      case "city":
+        if (!value) error = "Vui lòng chọn Tỉnh/Thành phố.";
+        break;
+      case "district":
+        if (!value) error = "Vui lòng chọn Quận/Huyện.";
+        break;
+      case "ward":
+        if (!value) error = "Vui lòng chọn Phường/Xã.";
+        break;
+      default:
+        break;
+    }
+    return error;
+  };
+
+  const handleShippingChange = async (e) => {
+    const { name, value } = e.target;
+
+    setShippingInfo((prev) => ({ ...prev, [name]: value }));
+
+    const error = validateField(name, value);
+    setFormErrors((prev) => ({ ...prev, [name]: error }));
+
+    if (name === "city") {
+      setShippingInfo((prev) => ({ ...prev, district: "", ward: "" }));
+      setDistrictOptions([]);
+      setWardOptions([]);
+      if (value) {
+        setLoadingLocations((prev) => ({ ...prev, districts: true }));
+        try {
+          const response = await fetch(DISTRICT_API(value));
+          const data = await response.json();
+          setDistrictOptions(
+            data.data.map((item) => ({
+              value: item.id?.toString(),
+              label: item.name,
+            }))
+          );
+        } catch (err) {
+          setError("Failed to load districts.");
+        } finally {
+          setLoadingLocations((prev) => ({ ...prev, districts: false }));
+        }
+      }
+    }
+
+    if (name === "district") {
+      setShippingInfo((prev) => ({ ...prev, ward: "" }));
+      setWardOptions([]);
+      if (value) {
+        setLoadingLocations((prev) => ({ ...prev, wards: true }));
+        try {
+          const response = await fetch(WARD_API(value));
+          const data = await response.json();
+          setWardOptions(
+            data.data.map((item) => ({
+              value: item.id?.toString(),
+              label: item.name,
+            }))
+          );
+        } catch (err) {
+          setError("Failed to load wards.");
+        } finally {
+          setLoadingLocations((prev) => ({ ...prev, wards: false }));
+        }
+      }
+    }
   };
 
   const handleApplyCoupon = async () => {
     if (!couponCode) {
-      openModal("Info", "Please enter a coupon code.");
+      openModal("Thông báo", "Vui lòng nhập mã giảm giá.");
       return;
     }
-    try {
-      const res = await applyCouponToCartAPI(couponCode);
-      setCartCoupon(res.data.couponAppliedDetails);
-      openModal("Success", "Coupon applied successfully!");
-    } catch (err) {
-      openModal(
-        "Error Applying Coupon",
-        err.response?.data?.message || "Invalid coupon code"
-      );
+    const result = await applyCoupon(couponCode);
+    if (result.success) {
+      openModal("Thành công", "Áp dụng mã giảm giá thành công!");
+      setCouponCode("");
+    } else {
+      openModal("Lỗi", result.message || "Mã giảm giá không hợp lệ.");
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    const fieldsToValidate = [
+      "fullName",
+      "phone",
+      "address",
+      "city",
+      "district",
+      "ward",
+    ];
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, shippingInfo[field]);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handlePlaceOrder = async () => {
+    if (!validateForm()) {
+      openModal(
+        "Lỗi",
+        "Vui lòng điền đầy đủ và chính xác các thông tin bắt buộc."
+      );
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
+      const cityLabel =
+        cityOptions.find((c) => c.value === shippingInfo.city)?.label || "";
+      const districtLabel =
+        districtOptions.find((d) => d.value === shippingInfo.district)?.label ||
+        "";
+      const wardLabel =
+        wardOptions.find((w) => w.value === shippingInfo.ward)?.label || "";
+
+      const fullAddress = [
+        shippingInfo.address,
+        wardLabel,
+        districtLabel,
+        cityLabel,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
       const orderData = {
         fullName: shippingInfo.fullName,
         phone: shippingInfo.phone,
-        address: `${shippingInfo.address}, ${shippingInfo.ward}, ${shippingInfo.district}, ${shippingInfo.city}`,
+        address: fullAddress,
         paymentMethod,
-        discountCode: cartCoupon?.code,
+        discountCode: cart?.couponDetails?.code,
+        note: shippingInfo.note,
       };
       const res = await createOrderAPI(orderData);
       if (paymentMethod === "PAYOS" && res.data.checkoutUrl) {
@@ -147,11 +355,12 @@ const CheckoutPage = () => {
         "Order Failed",
         err.response?.data?.message || "Failed to create order"
       );
+    } finally {
       setIsPlacingOrder(false);
     }
   };
 
-  if (loading || authLoading) {
+  if (loading || authLoading || cartLoading) {
     return (
       <MainLayout>
         <div className="flex justify-center items-center h-64">
@@ -161,79 +370,227 @@ const CheckoutPage = () => {
     );
   }
 
-  if (error) {
+  if (error || cartError) {
     return (
       <MainLayout>
-        <div className="text-center text-red-500">{error}</div>
+        <div className="text-center text-red-500">{error || cartError}</div>
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Thanh toán</h1>
+      <div className="container mx-auto mt-10 p-4 md:p-8">
+        <h1 className="text-3xl font-bold mb-8 text-center">Thanh toán</h1>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <strong className="font-bold">Lỗi!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <h2 className="text-xl font-semibold mb-4">Thông tin mua hàng</h2>
             <div className="bg-white p-6 rounded-lg shadow-md">
               {/* Shipping Info Form */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="fullName"
-                  value={shippingInfo.fullName}
-                  onChange={handleShippingChange}
-                  placeholder="Họ và tên"
-                  className="p-2 border rounded"
-                />
-                <input
-                  type="text"
-                  name="phone"
-                  value={shippingInfo.phone}
-                  onChange={handleShippingChange}
-                  placeholder="Số điện thoại"
-                  className="p-2 border rounded"
-                />
-                <input
-                  type="text"
-                  name="address"
-                  value={shippingInfo.address}
-                  onChange={handleShippingChange}
-                  placeholder="Địa chỉ"
-                  className="p-2 border rounded md:col-span-2"
-                />
-                <input
-                  type="text"
-                  name="city"
-                  value={shippingInfo.city}
-                  onChange={handleShippingChange}
-                  placeholder="Tỉnh/Thành phố"
-                  className="p-2 border rounded"
-                />
-                <input
-                  type="text"
-                  name="district"
-                  value={shippingInfo.district}
-                  onChange={handleShippingChange}
-                  placeholder="Quận/Huyện"
-                  className="p-2 border rounded"
-                />
-                <input
-                  type="text"
-                  name="ward"
-                  value={shippingInfo.ward}
-                  onChange={handleShippingChange}
-                  placeholder="Phường/Xã"
-                  className="p-2 border rounded"
-                />
-                <textarea
-                  name="note"
-                  value={shippingInfo.note}
-                  onChange={handleShippingChange}
-                  placeholder="Ghi chú (tùy chọn)"
-                  className="p-2 border rounded md:col-span-2"
-                ></textarea>
+                <div>
+                  <label
+                    htmlFor="fullName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    value={shippingInfo.fullName}
+                    onChange={handleShippingChange}
+                    placeholder="Họ và tên"
+                    className={`p-2 border rounded w-full ${
+                      formErrors.fullName ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {formErrors.fullName && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.fullName}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Số điện thoại <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={shippingInfo.phone}
+                    onChange={handleShippingChange}
+                    placeholder="Số điện thoại"
+                    className={`p-2 border rounded w-full ${
+                      formErrors.phone ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {formErrors.phone && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.phone}
+                    </p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="address"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Địa chỉ (số nhà, tên đường){" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={shippingInfo.address}
+                    onChange={handleShippingChange}
+                    placeholder="Địa chỉ (số nhà, tên đường)"
+                    className={`p-2 border rounded w-full ${
+                      formErrors.address ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  {formErrors.address && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.address}
+                    </p>
+                  )}
+                </div>
+
+                {/* City Dropdown */}
+                <div>
+                  <label
+                    htmlFor="city"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Tỉnh/Thành phố <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="city"
+                    name="city"
+                    value={shippingInfo.city}
+                    onChange={handleShippingChange}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.city ? "border-red-500" : "border-gray-300"
+                    }`}
+                    disabled={loadingLocations.cities}
+                  >
+                    <option value="">
+                      {loadingLocations.cities
+                        ? "Đang tải..."
+                        : "-- Chọn Tỉnh/Thành phố --"}
+                    </option>
+                    {cityOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.city && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.city}
+                    </p>
+                  )}
+                </div>
+
+                {/* District Dropdown */}
+                <div>
+                  <label
+                    htmlFor="district"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Quận/Huyện <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="district"
+                    name="district"
+                    value={shippingInfo.district}
+                    onChange={handleShippingChange}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.district ? "border-red-500" : "border-gray-300"
+                    }`}
+                    disabled={loadingLocations.districts || !shippingInfo.city}
+                  >
+                    <option value="">
+                      {loadingLocations.districts
+                        ? "Đang tải..."
+                        : "-- Chọn Quận/Huyện --"}
+                    </option>
+                    {districtOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.district && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.district}
+                    </p>
+                  )}
+                </div>
+
+                {/* Ward Dropdown */}
+                <div>
+                  <label
+                    htmlFor="ward"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Phường/Xã <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="ward"
+                    name="ward"
+                    value={shippingInfo.ward}
+                    onChange={handleShippingChange}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.ward ? "border-red-500" : "border-gray-300"
+                    }`}
+                    disabled={loadingLocations.wards || !shippingInfo.district}
+                  >
+                    <option value="">
+                      {loadingLocations.wards
+                        ? "Đang tải..."
+                        : "-- Chọn Phường/Xã --"}
+                    </option>
+                    {wardOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.ward && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {formErrors.ward}
+                    </p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="note"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Ghi chú
+                  </label>
+                  <textarea
+                    id="note"
+                    name="note"
+                    value={shippingInfo.note}
+                    onChange={handleShippingChange}
+                    placeholder="Ghi chú (tùy chọn)"
+                    className="p-2 border rounded w-full border-gray-300"
+                  ></textarea>
+                </div>
               </div>
             </div>
 
@@ -271,10 +628,10 @@ const CheckoutPage = () => {
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">
-                Đơn hàng ({cartItems.length} sản phẩm)
+                Đơn hàng ({cart?.items?.length || 0} sản phẩm)
               </h2>
               <div className="space-y-4">
-                {cartItems.map((item) => (
+                {cart?.items?.map((item) => (
                   <div
                     key={item.book._id}
                     className="flex items-center justify-between"
@@ -292,7 +649,12 @@ const CheckoutPage = () => {
                         </p>
                       </div>
                     </div>
-                    <p>{(item.price * item.quantity).toLocaleString()}đ</p>
+                    <p>
+                      {(
+                        (item.book.sellingPrice || 0) * (item.quantity || 0)
+                      ).toLocaleString()}
+                      đ
+                    </p>
                   </div>
                 ))}
               </div>
@@ -311,15 +673,15 @@ const CheckoutPage = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <p>Tạm tính</p>
-                  <p>{cartSubtotal.toLocaleString()}đ</p>
+                  <p>{(cart?.subtotal || 0).toLocaleString()}đ</p>
                 </div>
                 <div className="flex justify-between">
                   <p>Phí vận chuyển</p>
                   <p>{shippingFee.toLocaleString()}đ</p>
                 </div>
-                {cartCoupon && (
+                {cart?.couponDetails && (
                   <div className="flex justify-between text-green-600">
-                    <p>Giảm giá ({cartCoupon.code})</p>
+                    <p>Giảm giá ({cart.couponDetails.code})</p>
                     <p>-{discountAmount.toLocaleString()}đ</p>
                   </div>
                 )}
@@ -330,7 +692,7 @@ const CheckoutPage = () => {
               </div>
               <Button
                 onClick={handlePlaceOrder}
-                disabled={isPlacingOrder}
+                disabled={isPlacingOrder || !cart?.items?.length}
                 className="w-full mt-6"
               >
                 {isPlacingOrder ? <Spinner /> : "ĐẶT HÀNG"}
