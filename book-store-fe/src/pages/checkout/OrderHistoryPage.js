@@ -1,28 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+// Removed Redux
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
 import Pagination from "../../components/common/Pagination";
-import {
-  fetchOrderHistoryAPI,
-  selectOrderHistory,
-  selectOrderPagination,
-  selectOrderStatus,
-  selectOrderError,
-} from "../../store/slices/orderSlice";
+import { fetchOrderHistoryAPI as fetchOrderHistoryServiceAPI } from "../../services/orderService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const OrderHistoryPage = () => {
-  const dispatch = useDispatch();
+  // Removed Redux dispatch
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  const orders = useSelector(selectOrderHistory);
-  const pagination = useSelector(selectOrderPagination);
-  const orderStatus = useSelector(selectOrderStatus);
-  const orderError = useSelector(selectOrderError);
+  const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [orderStatus, setOrderStatus] = useState("idle");
+  const [orderError, setOrderError] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const limitPerPage = 10;
@@ -31,20 +25,26 @@ const OrderHistoryPage = () => {
     if (!authLoading) {
       if (!isAuthenticated) {
         navigate("/auth/login", { state: { from: { pathname: "/orders" } } });
-      } else if (orderStatus !== "loading_history") {
-        dispatch(
-          fetchOrderHistoryAPI({ page: currentPage, limit: limitPerPage })
-        );
+      } else {
+        setOrderStatus("loading_history");
+        setOrderError(null);
+        fetchOrderHistoryServiceAPI({ page: currentPage, limit: limitPerPage })
+          .then((res) => {
+            setOrders(res.data.orders || []);
+            setPagination(res.data.pagination || null);
+            setOrderStatus("succeeded_history");
+          })
+          .catch((err) => {
+            setOrders([]);
+            setPagination(null);
+            setOrderStatus("failed_history");
+            setOrderError(
+              err?.response?.data?.message || "Lỗi khi tải lịch sử đơn hàng"
+            );
+          });
       }
     }
-  }, [
-    dispatch,
-    isAuthenticated,
-    authLoading,
-    navigate,
-    currentPage,
-    orderStatus,
-  ]);
+  }, [isAuthenticated, authLoading, navigate, currentPage]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
@@ -71,14 +71,7 @@ const OrderHistoryPage = () => {
       <MainLayout>
         <div className="container mx-auto p-6 text-center text-red-500">
           <p>Lỗi khi tải lịch sử đơn hàng: {String(orderError)}</p>
-          <Button
-            onClick={() =>
-              dispatch(
-                fetchOrderHistoryAPI({ page: currentPage, limit: limitPerPage })
-              )
-            }
-            className="mt-4"
-          >
+          <Button onClick={() => setCurrentPage(currentPage)} className="mt-4">
             Thử lại
           </Button>
         </div>

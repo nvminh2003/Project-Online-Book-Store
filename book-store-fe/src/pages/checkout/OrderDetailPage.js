@@ -1,59 +1,56 @@
 import React, { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+// Removed Redux
 import MainLayout from "../../components/layout/MainLayout";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
-import {
-  fetchOrderDetailAPI,
-  clearCurrentOrder,
-  selectCurrentOrder,
-  selectOrderStatus,
-  selectOrderError,
-} from "../../store/slices/orderSlice";
+import { fetchOrderDetailAPI as fetchOrderDetailServiceAPI } from "../../services/orderService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
-  const dispatch = useDispatch();
+  // Removed Redux dispatch
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  const order = useSelector(selectCurrentOrder);
-  const status = useSelector(selectOrderStatus);
-  const error = useSelector(selectOrderError);
+  const [order, setOrder] = React.useState(null);
+  const [status, setStatus] = React.useState("idle");
+  const [error, setError] = React.useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+    async function fetchOrder() {
+      setStatus("loading_detail");
+      setError(null);
+      try {
+        const res = await fetchOrderDetailServiceAPI(orderId);
+        if (isMounted) {
+          setOrder(res.data);
+          setStatus("succeeded_detail");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setStatus("failed_detail");
+          setError(err?.response?.data?.message || "Không tìm thấy đơn hàng.");
+        }
+      }
+    }
     if (!authLoading) {
       if (!isAuthenticated) {
         navigate("/auth/login", {
           state: { from: { pathname: `/orders/${orderId}` } },
         });
       } else if (orderId) {
-        if (
-          !order ||
-          order._id !== orderId ||
-          status === "idle" ||
-          status === "failed_detail"
-        ) {
-          dispatch(fetchOrderDetailAPI(orderId));
-        }
+        fetchOrder();
       } else {
         navigate("/orders");
       }
     }
     return () => {
-      dispatch(clearCurrentOrder());
+      isMounted = false;
+      setOrder(null);
     };
-  }, [
-    dispatch,
-    orderId,
-    isAuthenticated,
-    authLoading,
-    navigate,
-    order,
-    status,
-  ]);
+  }, [orderId, isAuthenticated, authLoading, navigate]);
 
   if (
     authLoading ||

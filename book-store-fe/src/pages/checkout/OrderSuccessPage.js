@@ -1,52 +1,57 @@
 import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+// Removed Redux
 import MainLayout from "../../components/layout/MainLayout";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
-import {
-  fetchOrderDetailAPI,
-  clearCurrentOrder,
-  selectCurrentOrder,
-  selectOrderStatus,
-  selectOrderError,
-} from "../../store/slices/orderSlice";
-import { resetCart } from "../../store/slices/cartSlice";
+import { fetchOrderDetailAPI as fetchOrderDetailServiceAPI } from "../../services/orderService";
+import { clearCartAPI } from "../../services/cartService";
 import { payosCheckoutSuccess } from "../../services/orderService";
 
 const OrderSuccessPage = () => {
   const { orderId } = useParams();
-  const dispatch = useDispatch();
+  // Removed Redux dispatch
   const navigate = useNavigate();
 
-  const currentOrder = useSelector(selectCurrentOrder);
-  const orderApiStatus = useSelector(selectOrderStatus);
-  const orderApiError = useSelector(selectOrderError);
+  const [currentOrder, setCurrentOrder] = React.useState(null);
+  const [orderApiStatus, setOrderApiStatus] = React.useState("idle");
+  const [orderApiError, setOrderApiError] = React.useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+    async function fetchOrder() {
+      setOrderApiStatus("loading_detail");
+      setOrderApiError(null);
+      try {
+        await payosCheckoutSuccess(orderId);
+      } catch {}
+      try {
+        const res = await fetchOrderDetailServiceAPI(orderId);
+        if (isMounted) {
+          setCurrentOrder(res.data);
+          setOrderApiStatus("succeeded_detail");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setOrderApiStatus("failed_detail");
+          setOrderApiError(
+            err?.response?.data?.message || "Không thể tải thông tin đơn hàng."
+          );
+        }
+      }
+    }
     if (orderId) {
-      payosCheckoutSuccess(orderId)
-        .then(() => {
-          if (
-            !currentOrder ||
-            currentOrder._id !== orderId ||
-            orderApiStatus === "idle" ||
-            orderApiStatus === "failed_detail"
-          ) {
-            dispatch(fetchOrderDetailAPI(orderId));
-          }
-        })
-        .catch(() => {
-          dispatch(fetchOrderDetailAPI(orderId));
-        });
+      fetchOrder();
     } else {
       navigate("/");
     }
-    dispatch(resetCart());
+    // Clear cart in backend
+    clearCartAPI();
     return () => {
-      dispatch(clearCurrentOrder());
+      isMounted = false;
+      setCurrentOrder(null);
     };
-  }, [dispatch, orderId, currentOrder, navigate, orderApiStatus]);
+  }, [orderId, navigate]);
 
   if (
     orderApiStatus === "loading_detail" ||

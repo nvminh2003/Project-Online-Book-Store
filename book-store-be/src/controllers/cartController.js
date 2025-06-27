@@ -54,99 +54,134 @@ const getCart = async (req, res) => {
   }
 };
 
-// Add item to cart
+const mongoose = require("mongoose");
+// Add multiple items to cart (atomic, gộp trùng, kiểm tra tồn kho, validate book, transaction)
 const addToCart = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const { bookId, quantity } = req.body;
-
-    if (!bookId || !quantity) {
-      return res.status(400).json({
-        message: "Book ID and quantity are required",
-        status: "Error",
-      });
+    // 1. Gộp các item trùng bookId
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (items.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res
+        .status(400)
+        .json({ message: "Items array is required", status: "Error" });
     }
+    const normalizedItems = items.reduce((acc, curr) => {
+      const found = acc.find((i) => i.bookId === curr.bookId);
+      if (found) found.quantity += curr.quantity;
+      else acc.push({ ...curr });
+      return acc;
+    }, []);
 
-    if (quantity <= 0) {
-      return res.status(400).json({
-        message: "Quantity must be greater than 0",
-        status: "Error",
-      });
-    }
-
-    // Check if book exists
-    const book = await Book.findById(bookId);
-    if (!book) {
-      return res.status(404).json({
-        message: "Book not found",
-        status: "Error",
-      });
-    }
-
-    // Check if book is in stock
-    if (book.stockQuantity < quantity) {
-      return res.status(400).json({
-        message: "Not enough stock available",
-        status: "Error",
-      });
-    }
-
-    let cart = await Cart.findOne({ user: req.account._id });
-
-    if (!cart) {
-      cart = new Cart({
-        user: req.account._id,
-        items: [{ book: bookId, quantity }],
-      });
-    } else {
-      // Check if book already in cart
-      const existingItem = cart.items.find(
-        (item) => item.book.toString() === bookId
-      );
-
-      if (existingItem) {
-        // Check if new total quantity exceeds stock
-        if (book.stockQuantity < existingItem.quantity + quantity) {
-          return res.status(400).json({
-            message: "Not enough stock available",
+    // 2. Validate all items
+    for (const item of normalizedItems) {
+      if (!item.bookId || !item.quantity || item.quantity <= 0) {
+        await session.abortTransaction();
+        session.endSession();
+        return res
+          .status(400)
+          .json({
+            message: "Each item must have bookId and quantity > 0",
             status: "Error",
           });
-        }
-        existingItem.quantity += quantity;
-      } else {
-        cart.items.push({ book: bookId, quantity });
       }
     }
 
-    await cart.save();
+    // 3. Lấy tất cả bookId và truy vấn 1 lần
+    const bookIds = normalizedItems.map((i) => i.bookId);
+    const books = await Book.find({ _id: { $in: bookIds } }).session(session);
+    const bookMap = {};
+    books.forEach((b) => {
+      bookMap[b._id.toString()] = b;
+    });
+
+    // 4. Kiểm tra tồn kho, trạng thái, loại bỏ sách không hợp lệ
+    for (const item of normalizedItems) {
+      const book = bookMap[item.bookId];
+      if (!book) {
+        await session.abortTransaction();
+        session.endSession();
+        return res
+          .status(404)
+          .json({ message: `Book not found: ${item.bookId}`, status: "Error" });
+      }
+      // Kiểm tra trạng thái sách (isAvailable, isHidden, deletedAt)
+      if (book.isHidden || book.deletedAt || book.isAvailable === false) {
+        await session.abortTransaction();
+        session.endSession();
+        return res
+          .status(400)
+          .json({
+            message: `Book is not available: ${book.title}`,
+            status: "Error",
+          });
+      }
+      if (book.stockQuantity < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
+        return res
+          .status(400)
+          .json({
+            message: `Not enough stock for book: ${book.title}`,
+            status: "Error",
+          });
+      }
+    }
+
+    // 5. Lấy hoặc tạo cart
+    let cart = await Cart.findOne({ user: req.account._id }).session(session);
+    if (!cart) cart = new Cart({ user: req.account._id, items: [] });
+
+    // 6. Thêm/gộp từng item vào cart
+    for (const item of normalizedItems) {
+      const book = bookMap[item.bookId];
+      const existingItem = cart.items.find(
+        (i) => i.book.toString() === item.bookId
+      );
+      if (existingItem) {
+        if (book.stockQuantity < existingItem.quantity + item.quantity) {
+          await session.abortTransaction();
+          session.endSession();
+          return res
+            .status(400)
+            .json({
+              message: `Not enough stock for book: ${book.title}`,
+              status: "Error",
+            });
+        }
+        existingItem.quantity += item.quantity;
+      } else {
+        cart.items.push({ book: item.bookId, quantity: item.quantity });
+      }
+    }
+
+    await cart.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     // Populate book details and calculate total
-    cart = await Cart.findById(cart._id)
+    let populatedCart = await Cart.findById(cart._id)
       .populate(
         "items.book",
-        "title sellingPrice images authors publisher stockQuantity"
+        "title sellingPrice images authors publisher stockQuantity isHidden isAvailable deletedAt"
       )
       .populate("user", "email customerInfo.fullName");
-
-    const total = calculateTotal(cart.items);
+    // Lọc các item có book == null (sách đã xoá)
+    populatedCart.items = populatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(populatedCart.items);
 
     return res.status(201).json({
       message: "Add to cart successfully",
       status: "Success",
-      data: {
-        ...cart.toObject(),
-        total,
-      },
+      data: { ...populatedCart.toObject(), total },
     });
   } catch (error) {
-    console.error(error);
-    const message =
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : error.message;
-    return res.status(500).json({
-      message,
-      status: "Error",
-    });
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(400).json({ message: error.message, status: "Error" });
   }
 };
 

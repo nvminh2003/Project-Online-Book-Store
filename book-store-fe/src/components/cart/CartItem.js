@@ -1,8 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
   const [inputValue, setInputValue] = useState(item?.quantity || 1);
   const [warning, setWarning] = useState("");
+
+  useEffect(() => {
+    // Đồng bộ giá trị input cục bộ với trạng thái từ component cha khi nó thay đổi
+    if (item?.quantity !== Number(inputValue)) {
+      setInputValue(item.quantity);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.quantity]);
 
   if (!item || !item.book) return null;
 
@@ -10,32 +18,63 @@ const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
   const { title, sellingPrice, images, stockQuantity } = book;
   const thumbnail = images?.[0] || "/default-book.png";
 
+  // Xử lý khi người dùng nhập vào ô input
   const handleInputChange = (e) => {
     const value = e.target.value;
-    if (!/^[0-9]*$/.test(value)) return;
-    setInputValue(value);
-    setWarning("");
+    // Chỉ cho phép nhập số
+    if (/^[0-9]*$/.test(value)) {
+      setInputValue(value);
+      setWarning("");
+    }
   };
 
+  // Xử lý khi người dùng rời khỏi ô input
   const handleInputBlur = () => {
     let num = Number(inputValue);
+
+    // Nếu giá trị không phải là số hoặc không thay đổi, hoàn nguyên về số lượng ban đầu từ props
+    if (isNaN(num) || num === quantity) {
+      setInputValue(quantity);
+      setWarning("");
+      return;
+    }
+
     if (num > stockQuantity) {
-      setInputValue(stockQuantity);
+      num = stockQuantity;
       setWarning(`Chỉ còn ${stockQuantity} sản phẩm trong kho.`);
-      onQuantityChange(stockQuantity);
-    } else if (num < 1 || !num) {
-      setInputValue(1);
+    } else if (num < 1) {
+      num = 1;
       setWarning("Số lượng tối thiểu là 1.");
-      onQuantityChange(1);
     } else {
       setWarning("");
-      if (num !== quantity) onQuantityChange(num);
+    }
+
+    // Cập nhật lại giá trị hiển thị trên input
+    setInputValue(num);
+    // Gọi API để cập nhật trong DB
+    onQuantityChange(num);
+  };
+
+  // Xử lý khi nhấn nút giảm số lượng
+  const handleDecrement = () => {
+    const currentVal = Number(quantity);
+    if (currentVal > 1) {
+      const newVal = currentVal - 1;
+      onQuantityChange(newVal); // Cập nhật ngay lập tức
+    }
+  };
+
+  // Xử lý khi nhấn nút tăng số lượng
+  const handleIncrement = () => {
+    const currentVal = Number(quantity);
+    if (currentVal < stockQuantity) {
+      const newVal = currentVal + 1;
+      onQuantityChange(newVal); // Cập nhật ngay lập tức
     }
   };
 
   return (
     <div className="flex items-center gap-6">
-      {console.log("CartItem book:", book)}
       {/* Hình ảnh sách */}
       <div className="w-24 h-32 bg-gray-100 flex-shrink-0 rounded overflow-hidden">
         <img
@@ -50,16 +89,37 @@ const CartItem = ({ item, onQuantityChange, onRemoveItem }) => {
         <h2 className="text-lg font-medium">{title}</h2>
         <p className="text-gray-500">Giá: {sellingPrice.toLocaleString()}đ</p>
         <div className="flex items-center mt-2 gap-2">
-          <label className="text-sm text-gray-700">Số lượng:</label>
-          <input
-            type="number"
-            min={1}
-            max={stockQuantity}
-            value={inputValue}
-            onChange={handleInputChange}
-            onBlur={handleInputBlur}
-            className="w-16 p-1 border rounded text-center"
-          />
+          <label
+            htmlFor={`quantity-${book._id}`}
+            className="text-sm text-gray-700"
+          >
+            Số lượng:
+          </label>
+          <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+            <button
+              onClick={handleDecrement}
+              disabled={quantity <= 1}
+              className="px-3 py-1 text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              -
+            </button>
+            <input
+              id={`quantity-${book._id}`}
+              type="text"
+              inputMode="numeric"
+              value={inputValue}
+              onChange={handleInputChange}
+              onBlur={handleInputBlur}
+              className="w-12 p-1 text-center border-l border-r border-gray-300 focus:outline-none"
+            />
+            <button
+              onClick={handleIncrement}
+              disabled={quantity >= stockQuantity}
+              className="px-3 py-1 text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              +
+            </button>
+          </div>
           <span className="text-xs text-gray-500">
             / Kho: {stockQuantity ?? "?"}
           </span>

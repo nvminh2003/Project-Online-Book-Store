@@ -11,7 +11,6 @@ const CartSummary = ({
   onCouponCodeChange,
   onApplyCoupon,
   onProceedToCheckout,
-  couponError,
   applyingCoupon,
 }) => {
   return (
@@ -70,9 +69,6 @@ const CartSummary = ({
             {applyingCoupon ? "Đang xử lý..." : "Áp dụng"}
           </button>
         </div>
-        {couponError && (
-          <p className="mt-2 text-sm text-red-600">{couponError}</p>
-        )}
       </div>
 
       <button

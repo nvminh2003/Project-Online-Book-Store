@@ -11,9 +11,7 @@ import ProductListingPage from "../pages/products/ProductListingPage";
 import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
 //check out pages
-import ShippingPage from "../pages/checkout/ShippingPage";
-import PaymentPage from "../pages/checkout/PaymentPage";
-import OrderReviewPage from "../pages/checkout/OrderReviewPage";
+import CheckoutPage from "../pages/checkout/CheckoutPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
 import UploadExcel from "../pages/products/UploadExcel";
@@ -42,62 +40,50 @@ import BlogListingPage from "../pages/blog/BlogListingPage";
 import BlogDetailPage from "../pages/blog/BlogDetailPage";
 
 export const routes = [
-
-
-    {
-        path: "/",
-        page: HomePage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/register",
-        page: RegisterPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/login",
-        page: LoginPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/cart",
-        page: CartPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/forgot-password",
-        page: ForgotPasswordPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/profile",
-        page: ProfilePage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/change-password",
-        page: ChangePasswordPage,
-        isShowHeader: true,
-    },
-      // --- THÊM CÁC ROUTE CHO CHECKOUT (VỚI PREFIX /auth) ---
   {
-    path: "/auth/checkout/shipping",
-    page: ShippingPage, // Render trực tiếp component ShippingPage
-    isShowHeader: true, // Hoặc false nếu bạn có layout riêng cho checkout
-  },
-  {
-    path: "/auth/checkout/payment",
-    page: PaymentPage, // Render trực tiếp component PaymentPage
+    path: "/",
+    page: HomePage,
     isShowHeader: true,
   },
   {
-    path: "/auth/checkout/review",
-    page: OrderReviewPage, // Render trực tiếp component OrderReviewPage
+    path: "/auth/register",
+    page: RegisterPage,
     isShowHeader: true,
   },
   {
-    path: "/auth/checkout/success/:orderId", // Thêmã hiểu, bạn muốn đoạn code **chỉ riêng cho phần checkout routes** trong file :orderId để hiển thị chi tiết đơn hàng thành công
-    page: OrderSuccessPage, // Render trực tiếp component OrderSuccessPage
+    path: "/auth/login",
+    page: LoginPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/cart",
+    page: CartPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/forgot-password",
+    page: ForgotPasswordPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/profile",
+    page: ProfilePage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/change-password",
+    page: ChangePasswordPage,
+    isShowHeader: true,
+  },
+  // --- THÊM CÁC ROUTE CHO CHECKOUT (VỚI PREFIX /auth) ---
+  {
+    path: "/auth/checkout",
+    page: CheckoutPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/checkout/success/:orderId",
+    page: OrderSuccessPage,
     isShowHeader: true,
   },
   {
@@ -105,38 +91,42 @@ export const routes = [
     page: OrderCancelPage,
     isShowHeader: true,
   },
-  // --- KẾT THÚC ĐOẠN CODE CHO `routes.js`
-    {
-        path: "/reset-password",
-        page: ResetPasswordPage,
-        isShowHeader: true
-    },
-    {
-        path: "/about",
-        page: AboutUs,
-        isShowHeader: true,
-    },
-    {
-        path: "/payment-info",
-        page: PaymentInfo,
-        isShowHeader: true,
-    },
-    {
-        path: "/sales-policy",
-        page: SalesPolicy,
-        isShowHeader: true,
-    },
-    {
-        path: "/blogs",
-        page: BlogListingPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/blogs/:id",
-        page: BlogDetailPage,
-        isShowHeader: true,
-    },
-    // Admin Routes
+  {
+    path: "/auth/upload-excel",
+    page: UploadExcel,
+    isShowHeader: true,
+  },
+  {
+    path: "/reset-password",
+    page: ResetPasswordPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/about",
+    page: AboutUs,
+    isShowHeader: true,
+  },
+  {
+    path: "/payment-info",
+    page: PaymentInfo,
+    isShowHeader: true,
+  },
+  {
+    path: "/sales-policy",
+    page: SalesPolicy,
+    isShowHeader: true,
+  },
+  {
+    path: "/blogs",
+    page: BlogListingPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/blogs/:id",
+    page: BlogDetailPage,
+    isShowHeader: true,
+  },
+  // Admin Routes
   {
     path: "/admin",
     page: () => (
@@ -268,16 +258,16 @@ export const routes = [
     isShowHeader: false,
   },
 
-    {
-        path: '/auth/google/success',
-        page: GoogleSuccess,
-        isShowHeader: false,
-    },
-    {
-        path: "*",
-        page: NotFoundPage,
-    },
-     {
+  {
+    path: "/auth/google/success",
+    page: GoogleSuccess,
+    isShowHeader: false,
+  },
+  {
+    path: "*",
+    page: NotFoundPage,
+  },
+  {
     path: "/getbook",
     page: ProductListingPage,
     isShowHeader: true,

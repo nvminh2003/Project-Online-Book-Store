@@ -1,29 +1,22 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
+// Removed Redux
 import { useLocation, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  selectCartItems,
-  selectCartSubtotal,
-  fetchCart,
+  fetchCartAPI,
   applyCouponToCartAPI,
-  resetCouponStatus,
-  resetCart as resetCartAction,
-} from "../../store/slices/cartSlice";
-import {
-  createOrderAPI,
-  clearCurrentOrder,
-  resetOrderStatus,
-} from "../../store/slices/orderSlice";
+  clearCartAPI,
+} from "../../services/cartService";
+import { createOrderAPI as createOrderServiceAPI } from "../../services/orderService";
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
 const OrderReviewPage = () => {
-  const dispatch = useDispatch();
+  // Removed Redux dispatch
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -36,18 +29,16 @@ const OrderReviewPage = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [appliedCouponDetails, setAppliedCouponDetails] = useState(null);
 
-  const cartItems = useSelector(selectCartItems);
-  const cartSubtotal = useSelector(selectCartSubtotal);
-  const cartCouponApplied = useSelector(
-    (state) => state.cart.couponAppliedDetails
-  );
-  const cartApiStatus = useSelector((state) => state.cart.status);
-  const couponApiStatus = useSelector((state) => state.cart.couponStatus);
-  const couponApiError = useSelector((state) => state.cart.couponError);
+  const [cartItems, setCartItems] = useState([]);
+  const [cartSubtotal, setCartSubtotal] = useState(0);
+  const [cartCouponApplied, setCartCouponApplied] = useState(null);
+  const [cartApiStatus, setCartApiStatus] = useState("idle");
+  const [couponApiStatus, setCouponApiStatus] = useState("idle");
+  const [couponApiError, setCouponApiError] = useState(null);
 
-  const orderCreationStatus = useSelector((state) => state.order.status);
-  const orderCreationError = useSelector((state) => state.order.error);
-  const currentCreatedOrder = useSelector((state) => state.order.currentOrder);
+  const [orderCreationStatus, setOrderCreationStatus] = useState("idle");
+  const [orderCreationError, setOrderCreationError] = useState(null);
+  const [currentCreatedOrder, setCurrentCreatedOrder] = useState(null);
 
   const shippingFee = 30000;
   const discountAmount = useMemo(() => {
@@ -75,13 +66,23 @@ const OrderReviewPage = () => {
     return Math.max(0, cartSubtotal - discountAmount + shippingFee);
   }, [cartSubtotal, discountAmount, shippingFee]);
 
+  // Fetch cart on mount
   useEffect(() => {
-    dispatch(resetOrderStatus());
-    dispatch(resetCouponStatus());
-    return () => {
-      dispatch(clearCurrentOrder());
-    };
-  }, [dispatch]);
+    setCartApiStatus("loading_fetch");
+    fetchCartAPI()
+      .then((res) => {
+        setCartItems(res.data.items || []);
+        setCartSubtotal(res.data.subtotal || 0);
+        setCartCouponApplied(res.data.couponAppliedDetails || null);
+        setCartApiStatus("succeeded");
+      })
+      .catch(() => {
+        setCartApiStatus("failed");
+        setCartItems([]);
+        setCartSubtotal(0);
+        setCartCouponApplied(null);
+      });
+  }, []);
 
   useEffect(() => {
     if (!authLoading) {
@@ -118,58 +119,75 @@ const OrderReviewPage = () => {
         currentCreatedOrder.paymentMethod === "PAYOS" &&
         currentCreatedOrder.checkoutUrl
       ) {
-        // 👉 Redirect to PayOS
         window.location.href = currentCreatedOrder.checkoutUrl;
       } else {
-        // ✅ Redirect to success page (for COD/VNPAY/etc.)
-        dispatch(resetCartAction());
-        navigate(`/auth/checkout/success/${currentCreatedOrder._id}`, {
-          replace: true,
+        // Clear cart in backend and local state
+        clearCartAPI().finally(() => {
+          setCartItems([]);
+          setCartSubtotal(0);
+          setCartCouponApplied(null);
+          navigate(`/auth/checkout/success/${currentCreatedOrder._id}`, {
+            replace: true,
+          });
         });
       }
     }
-  }, [orderCreationStatus, currentCreatedOrder, navigate, dispatch]);
+  }, [orderCreationStatus, currentCreatedOrder, navigate]);
   const handleApplyCouponOnReview = async () => {
     if (!couponCodeInput.trim()) {
       alert("Vui lòng nhập mã giảm giá.");
       return;
     }
-    dispatch(applyCouponToCartAPI(couponCodeInput))
-      .unwrap()
-      .then((updatedCartWithCoupon) => {
+    setCouponApiStatus("loading");
+    setCouponApiError(null);
+    applyCouponToCartAPI(couponCodeInput)
+      .then((res) => {
         alert("Áp dụng mã giảm giá thành công!");
-        setAppliedCouponDetails(updatedCartWithCoupon.couponDetails || null);
+        setAppliedCouponDetails(res.data.couponDetails || null);
+        setCartCouponApplied(res.data.couponDetails || null);
+        setCouponApiStatus("succeeded");
         setCouponCodeInput("");
       })
-      .catch(() => {
+      .catch((err) => {
         setAppliedCouponDetails(null);
+        setCouponApiStatus("failed");
+        setCouponApiError(
+          err?.response?.data?.message || "Lỗi áp dụng mã giảm giá"
+        );
       });
   };
-  const handlePlaceOrder = () => {
-    if (isPlacingOrder) return; // 🛑 Chặn double click
-    setIsPlacingOrder(true); // ✅ Đánh dấu đang đặt hàng
+  const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return;
+    setIsPlacingOrder(true);
+    setOrderCreationStatus("loading_create");
+    setOrderCreationError(null);
 
-    // Validate dữ liệu cơ bản
     if (
       !shippingInfoFromState ||
       !paymentMethodFromState ||
       cartItems.length === 0
     ) {
       alert("Thông tin đơn hàng chưa đầy đủ hoặc giỏ hàng trống.");
-      setIsPlacingOrder(false); // ❗ RESET nếu lỗi
+      setIsPlacingOrder(false);
+      setOrderCreationStatus("failed_create");
+      setOrderCreationError(
+        "Thông tin đơn hàng chưa đầy đủ hoặc giỏ hàng trống."
+      );
       return;
     }
-
     if (!shippingInfoFromState.address) {
       alert("Địa chỉ giao hàng không hợp lệ. Vui lòng kiểm tra lại.");
-      setIsPlacingOrder(false); // ❗ RESET nếu lỗi
+      setIsPlacingOrder(false);
+      setOrderCreationStatus("failed_create");
+      setOrderCreationError("Địa chỉ giao hàng không hợp lệ.");
       return;
     }
-
     const validPaymentMethods = ["COD", "VNPAY", "MOMO", "PAYOS"];
     if (!validPaymentMethods.includes(paymentMethodFromState)) {
       alert(`Phương thức thanh toán "${paymentMethodFromState}" không hợp lệ.`);
-      setIsPlacingOrder(false); // ❗RESET nếu lỗi
+      setIsPlacingOrder(false);
+      setOrderCreationStatus("failed_create");
+      setOrderCreationError("Phương thức thanh toán không hợp lệ.");
       navigate("/auth/checkout/payment", {
         state: {
           shippingInfo: shippingInfoFromState,
@@ -178,7 +196,6 @@ const OrderReviewPage = () => {
       });
       return;
     }
-
     const orderDetailsToCreate = {
       fullName: shippingInfoFromState.fullName,
       phone: shippingInfoFromState.phone,
@@ -187,10 +204,16 @@ const OrderReviewPage = () => {
       discountCode:
         (appliedCouponDetails || cartCouponApplied)?.code || undefined,
     };
-
-    console.log("Placing order with details:", orderDetailsToCreate);
-
-    dispatch(createOrderAPI(orderDetailsToCreate));
+    try {
+      const res = await createOrderServiceAPI(orderDetailsToCreate);
+      setOrderCreationStatus("succeeded_create");
+      setCurrentCreatedOrder(res.data);
+    } catch (err) {
+      setOrderCreationStatus("failed_create");
+      setOrderCreationError(err?.response?.data?.message || "Lỗi tạo đơn hàng");
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   // Define valid payment methods

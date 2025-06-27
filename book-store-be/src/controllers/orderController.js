@@ -10,6 +10,7 @@ const payos = new PayOS(
   process.env.PAYOS_API_KEY,
   process.env.PAYOS_CHECKSUM_KEY
 );
+const mongoose = require("mongoose");
 
 // Generate unique order code
 const generateOrderCode = () => {
@@ -43,6 +44,9 @@ const createPaymentLink = async (paymentData) => {
 
 // Create Order
 const createOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { fullName, phone, address, discountCode, paymentMethod } = req.body;
 
@@ -60,22 +64,37 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const cart = await Cart.findOne({ user: req.account._id }).populate(
-      "items.book"
-    );
+    const cart = await Cart.findOne({ user: req.account._id }).session(session);
     if (!cart || cart.items.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         message: "Cart is empty",
         status: "Error",
       });
     }
 
+    const bookIds = cart.items.map((item) => item.book);
+    const books = await Book.find({ _id: { $in: bookIds } }).session(session);
+    const bookMap = new Map(books.map((book) => [book._id.toString(), book]));
+
     let totalAmount = 0;
     const orderItems = [];
 
     for (const item of cart.items) {
-      const book = item.book;
+      const book = bookMap.get(item.book.toString());
+      if (!book || book.isDeleted || !book.isPublished) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          message: `Book with id ${item.book} is not available.`,
+          status: "Error",
+        });
+      }
+
       if (book.stockQuantity < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
           message: `Not enough stock for book: ${book.title}`,
           status: "Error",
@@ -92,21 +111,27 @@ const createOrder = async (req, res) => {
     }
 
     let discountAmount = 0;
+    let appliedDiscount = null;
     if (discountCode) {
       const discount = await DiscountCode.findOne({
         code: discountCode,
         isActive: true,
         startDate: { $lte: new Date() },
         endDate: { $gte: new Date() },
-      });
+      }).session(session);
 
       if (discount) {
         if (discount.maxUses && discount.usesCount >= discount.maxUses) {
+          await session.abortTransaction();
+          session.endSession();
           return res.status(400).json({
             message: "Discount code has reached maximum uses",
             status: "Error",
           });
         }
+
+        // Further validation for discount applicability can be added here
+        appliedDiscount = discount;
 
         if (discount.books.length > 0) {
           const eligibleItems = orderItems.filter((item) =>
@@ -131,9 +156,6 @@ const createOrder = async (req, res) => {
             discountAmount = discount.value;
           }
         }
-
-        discount.usesCount += 1;
-        await discount.save();
       }
     }
 
@@ -147,7 +169,7 @@ const createOrder = async (req, res) => {
       fullName,
       phone,
       address,
-      discountCode: discountCode || null,
+      discountCode: appliedDiscount ? appliedDiscount.code : null,
       discountAmount,
       shippingFee,
       totalAmount: finalTotal,
@@ -157,7 +179,27 @@ const createOrder = async (req, res) => {
       items: orderItems,
     });
 
-    await newOrder.save();
+    await newOrder.save({ session });
+
+    const bulkOps = orderItems.map((item) => ({
+      updateOne: {
+        filter: { _id: item.book },
+        update: { $inc: { stockQuantity: -item.quantity } },
+      },
+    }));
+
+    await Book.bulkWrite(bulkOps, { session });
+
+    if (appliedDiscount) {
+      appliedDiscount.usesCount += 1;
+      await appliedDiscount.save({ session });
+    }
+
+    cart.items = [];
+    await cart.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     if (paymentMethod === "PAYOS") {
       const checkoutUrl = await createPaymentLink({
@@ -178,15 +220,6 @@ const createOrder = async (req, res) => {
       });
     }
 
-    for (const item of orderItems) {
-      await Book.findByIdAndUpdate(item.book, {
-        $inc: { stockQuantity: -item.quantity },
-      });
-    }
-
-    cart.items = [];
-    await cart.save();
-
     const populatedOrder = await Order.findById(newOrder._id)
       .populate("items.book", "title sellingPrice images")
       .populate("user", "email customerInfo.fullName");
@@ -197,8 +230,10 @@ const createOrder = async (req, res) => {
       data: populatedOrder,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     return res.status(500).json({
-      message: error.message,
+      message: `Order creation failed: ${error.message}`,
       status: "Error",
     });
   }
@@ -278,6 +313,8 @@ const getOrderById = async (req, res) => {
 
 // Update order status (admin only)
 const updateOrderStatus = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { orderStatus, paymentStatus } = req.body;
 
@@ -288,7 +325,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).session(session);
 
     if (!order) {
       return res.status(404).json({
@@ -323,16 +360,20 @@ const updateOrderStatus = async (req, res) => {
     if (orderStatus) order.orderStatus = orderStatus;
     if (paymentStatus) order.paymentStatus = paymentStatus;
 
-    await order.save();
-
     // If order is cancelled, return stock
     if (orderStatus === "cancelled" && order.orderStatus !== "cancelled") {
-      for (const item of order.items) {
-        await Book.findByIdAndUpdate(item.book, {
-          $inc: { stockQuantity: item.quantity },
-        });
-      }
+      const bulkOps = order.items.map((item) => ({
+        updateOne: {
+          filter: { _id: item.book },
+          update: { $inc: { stockQuantity: item.quantity } },
+        },
+      }));
+      await Book.bulkWrite(bulkOps, { session });
     }
+
+    await order.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     // Populate order details
     const updatedOrder = await Order.findById(order._id)
@@ -345,6 +386,8 @@ const updateOrderStatus = async (req, res) => {
       data: updatedOrder,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     res.status(500).json({
       message: error.message,
       status: "Error",
@@ -406,15 +449,21 @@ const payosWebhook = async (req, res) => {
 
 // Handle PayOS checkout success
 const handlePayosSuccess = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { orderId } = req.params;
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).session(session);
     if (!order) {
+      await session.abortTransaction();
+      session.endSession();
       return res
         .status(404)
         .json({ message: "Order not found", status: "Error" });
     }
     if (order.paymentStatus === "paid") {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(200).json({
         message: "Order already paid",
         status: "Success",
@@ -425,20 +474,53 @@ const handlePayosSuccess = async (req, res) => {
     // const payosStatus = await payos.getOrderStatus(order.orderCode);
     // if (payosStatus.status !== 'PAID') { ... }
     order.paymentStatus = "paid";
-    order.orderStatus = "pending";
-    await order.save();
-    // Reduce stock
-    for (const item of order.items) {
-      await Book.findByIdAndUpdate(item.book, {
-        $inc: { stockQuantity: -item.quantity },
+    order.orderStatus = "pending"; // Or some other status like 'processing'
+
+    // Reduce stock atomically
+    const bulkOps = order.items.map((item) => ({
+      updateOne: {
+        filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
+        update: { $inc: { stockQuantity: -item.quantity } },
+      },
+    }));
+
+    const result = await Book.bulkWrite(bulkOps, { session });
+
+    // Check if all stock updates were successful
+    if (result.modifiedCount !== order.items.length) {
+      await session.abortTransaction();
+      session.endSession();
+      // Handle stock unavailability issue, e.g., by refunding the user
+      order.orderStatus = "failed";
+      order.paymentStatus = "refund_pending"; // Custom status
+      await order.save(); // Save outside transaction
+      return res.status(400).json({
+        message:
+          "Order could not be processed due to insufficient stock. Please contact support.",
+        status: "Error",
       });
     }
+
+    await order.save({ session });
+
+    // Clear the cart
+    const cart = await Cart.findOne({ user: order.user }).session(session);
+    if (cart) {
+      cart.items = [];
+      await cart.save({ session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
     return res.status(200).json({
       message: "Order payment successful",
       status: "Success",
       data: order,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     return res.status(500).json({ message: error.message, status: "Error" });
   }
 };
