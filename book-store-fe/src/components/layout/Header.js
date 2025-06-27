@@ -184,13 +184,7 @@ const Header = () => {
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-4">
-                <Link
-                  to="/auth/profile"
-                  className={`font-medium no-underline transition-colors ${isActivePath('/auth/profile') ? 'text-blue-600' : 'text-black hover:text-blue-600'
-                    }`}
-                >
-                  Tài khoản
-                </Link>
+
                 {(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                   <button
                     onClick={handleAdminClick}
@@ -206,6 +200,16 @@ const Header = () => {
                   Đăng xuất
                 </button>
               </div>
+            )}
+            {/* User */}
+            {isAuthenticated && (
+              <Link
+                to="/auth/profile"
+                className={`relative transition-colors ${isActivePath('/auth/profile') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                  }`}
+              >
+                <Icon icon="line-md:account" className="w-6 h-6" />
+              </Link>
             )}
 
             {/* Wishlist */}
