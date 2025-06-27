@@ -275,9 +275,9 @@ const ProductDetailPage = () => {
             </button>
             <button
               onClick={handleAddToWishlist}
-              className="bg-pink-500 hover:bg-pink-600 text-white px-5 py-2 rounded-xl transition text-sm"
+              className="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600 ml-2"
             >
-              Yêu thích
+              Thêm vào yêu thích
             </button>
             <button
               onClick={() => navigate(-1)}

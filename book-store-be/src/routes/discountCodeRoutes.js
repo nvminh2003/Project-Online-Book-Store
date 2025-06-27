@@ -3,14 +3,10 @@ const router = express.Router();
 const discountCodeController = require('../controllers/discountCodeController');
 const { authorizeRole } = require('../middleware/authMiddleware');
 
-// Public routes
-router.get('/', discountCodeController.getAllDiscountCodes);
-router.get('/:id', discountCodeController.getDiscountCodeById);
-router.post('/validate', discountCodeController.validateDiscountCode);
+router.post('/', discountCodeController.createDiscountCode);  // Tạo discount code
+router.get('/', authorizeRole(['adminbusiness']), discountCodeController.getAllDiscountCodes);    // Lấy danh sách discount codes
+router.put('/:id', authorizeRole(['adminbusiness']), discountCodeController.updateDiscountCode); // Cập nhật discount code
+router.delete('/:id', authorizeRole(['adminbusiness']), discountCodeController.deleteDiscountCode);
 
-// Admin only routes
-router.post('/', authorizeRole(['superadmin', 'admin'], ['business']), discountCodeController.createDiscountCode);
-router.put('/:id', authorizeRole(['superadmin', 'admin'], ['business']), discountCodeController.updateDiscountCode);
-router.delete('/:id', authorizeRole(['superadmin', 'admin'], ['business']), discountCodeController.deleteDiscountCode);
 
 module.exports = router;
