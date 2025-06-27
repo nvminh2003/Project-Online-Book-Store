@@ -180,7 +180,7 @@ const AddBook = () => {
       setImages([]);
       setPreviewUrls([]);
       setTimeout(() => {
-        navigate("/");
+        navigate("/admin/books");
       }, 1500);
     } catch (error) {
       console.error("Upload lỗi:", error);

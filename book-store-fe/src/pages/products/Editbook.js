@@ -159,7 +159,7 @@ const EditBook = () => {
 
     setSuccessMsg("✅ Cập nhật sách thành công!");
     setTimeout(() => {
-      navigate("/");
+      navigate("/admin/books");
     }, 1500);
   } catch (err) {
     console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);

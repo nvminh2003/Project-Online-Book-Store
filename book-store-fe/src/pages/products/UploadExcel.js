@@ -60,7 +60,7 @@ const UploadExcel = () => {
         );
         setSuccessMsg(" Thêm sách thành công!");
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/admin/books";
         }, 1500);
         console.log("✅ Server response:", res.data);
       } catch (err) {
