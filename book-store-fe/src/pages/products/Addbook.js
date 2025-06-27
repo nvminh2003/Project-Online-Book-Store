@@ -27,6 +27,8 @@ const AddBook = () => {
   const [uploading, setUploading] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("error"); // 'success' | 'error
   const navigate = useNavigate();
 
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
@@ -104,8 +106,7 @@ const AddBook = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // ✅ VALIDATE TRƯỚC
+    // VALIDATE TRƯỚC
     const requiredFields = [
       { field: "title", label: "Tiêu đề" },
       { field: "authors", label: "Tác giả" },
@@ -119,28 +120,39 @@ const AddBook = () => {
       { field: "sellingPrice", label: "Giá bán" },
       { field: "stockQuantity", label: "Số lượng" },
     ];
-
     for (const item of requiredFields) {
       if (!bookData[item.field] || String(bookData[item.field]).trim() === "") {
-        alert(`Vui lòng nhập ${item.label}`);
+        setToastMsg(`Vui lòng nhập ${item.label}`);
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 1500);
         return;
       }
     }
-
+    // Validate số dương
+    if (Number(bookData.publicationYear) <= 0) {
+      setToastMsg("Năm xuất bản phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.pageCount) <= 0) {
+      setToastMsg("Số trang phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.originalPrice) <= 0) {
+      setToastMsg("Giá gốc phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.sellingPrice) <= 0) {
+      setToastMsg("Giá bán phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.stockQuantity) <= 0) {
+      setToastMsg("Số lượng phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
     if (bookData.categories.length === 0) {
-      alert("Vui lòng chọn ít nhất một danh mục.");
-      return;
+      setToastMsg("Vui lòng chọn danh mục."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
     }
-
     if (images.length === 0) {
-      alert("Vui lòng chọn ít nhất một ảnh sách.");
-      return;
+      setToastMsg("Vui lòng chọn ít nhất một ảnh sách."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
     }
-
     try {
       setUploading(true);
       const imageUrls = await uploadImagesToCloudinary();
-
       const payload = {
         ...bookData,
         authors: bookData.authors.split(",").map((a) => a.trim()),
@@ -151,15 +163,12 @@ const AddBook = () => {
         stockQuantity: Number(bookData.stockQuantity),
         images: imageUrls,
       };
-
       const token = localStorage.getItem("accessToken");
-
       await axios.post(`${apiUrl}/books`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
       setSuccessMsg("✅ Thêm sách thành công!");
       setBookData({
         title: "",
@@ -184,7 +193,9 @@ const AddBook = () => {
       }, 1500);
     } catch (error) {
       console.error("Upload lỗi:", error);
-      alert("Có lỗi xảy ra khi thêm sách.");
+      setToastMsg("Có lỗi xảy ra khi thêm sách.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
     } finally {
       setUploading(false);
     }
@@ -192,9 +203,9 @@ const AddBook = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
-      {successMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          {successMsg}
+      {toastMsg && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
+          {toastMsg}
         </div>
       )}
       <h2 className="text-2xl font-semibold mb-6 text-center text-blue-700">

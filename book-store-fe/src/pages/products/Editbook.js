@@ -19,6 +19,8 @@ const EditBook = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState(""); // Thêm state cho thông báo thành công
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("error"); // 'success' | 'error'
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -111,64 +113,104 @@ const EditBook = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!bookData) return;
-
-  const token = localStorage.getItem("accessToken");
-  if (!token) {
-    alert("Vui lòng đăng nhập để thực hiện hành động này.");
-    navigate("/auth/login");
-    return;
-  }
-
-  let finalImageUrls = bookData.images;
-
-  try {
-    // Nếu có ảnh mới, upload và thay toàn bộ
-    if (newImages.length > 0) {
-      const uploadedNewImageUrls = await Promise.all(
-        newImages.map(async (imageFile) => {
-          const formData = new FormData();
-          formData.append("file", imageFile);
-          formData.append("upload_preset", "book_upload");
-          const res = await axios.post(
-            "https://api.cloudinary.com/v1_1/dhwegqmxl/image/upload",
-            formData
-          );
-          return res.data.secure_url;
-        })
-      );
-      finalImageUrls = uploadedNewImageUrls; // ✅ Ghi đè toàn bộ ảnh cũ bằng ảnh mới
+    e.preventDefault();
+    if (!bookData) return;
+    // VALIDATE TRƯỚC
+    const requiredFields = [
+      { field: "title", label: "Tiêu đề" },
+      { field: "authors", label: "Tác giả" },
+      { field: "publisher", label: "NXB" },
+      { field: "publicationYear", label: "Năm xuất bản" },
+      { field: "pageCount", label: "Số trang" },
+      { field: "coverType", label: "Loại bìa" },
+      { field: "description", label: "Mô tả" },
+      { field: "isbn", label: "ISBN" },
+      { field: "originalPrice", label: "Giá gốc" },
+      { field: "sellingPrice", label: "Giá bán" },
+      { field: "stockQuantity", label: "Số lượng" },
+    ];
+    for (const item of requiredFields) {
+      if (!bookData[item.field] || String(bookData[item.field]).trim() === "") {
+        setToastMsg(`Vui lòng nhập ${item.label}`);
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 1500);
+        return;
+      }
     }
-
-    const { _id, ...dataToUpdate } = bookData;
-
-    const updatePayload = {
-      ...dataToUpdate,
-      images: finalImageUrls,
-      publicationYear: Number(bookData.publicationYear),
-      pageCount: Number(bookData.pageCount),
-      originalPrice: Number(bookData.originalPrice),
-      sellingPrice: Number(bookData.sellingPrice),
-      stockQuantity: Number(bookData.stockQuantity),
-    };
-
-    await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setSuccessMsg("✅ Cập nhật sách thành công!");
-    setTimeout(() => {
-      navigate("/admin/books");
-    }, 1500);
-  } catch (err) {
-    console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
-    alert(
-      "❌ Đã xảy ra lỗi khi cập nhật sách: " +
-        (err.response?.data?.message || err.message)
-    );
-  }
-};
+    if (Number(bookData.publicationYear) <= 0) {
+      setToastMsg("Năm xuất bản phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.pageCount) <= 0) {
+      setToastMsg("Số trang phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.originalPrice) <= 0) {
+      setToastMsg("Giá gốc phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.sellingPrice) <= 0) {
+      setToastMsg("Giá bán phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (Number(bookData.stockQuantity) <= 0) {
+      setToastMsg("Số lượng phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    if (!bookData.categories || bookData.categories.length === 0) {
+      setToastMsg("Vui lòng chọn danh mục."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    // Phải có ít nhất 1 ảnh (cũ hoặc mới)
+    if ((newImages.length === 0) && (!bookData.images || bookData.images.length === 0)) {
+      setToastMsg("Vui lòng chọn ít nhất một ảnh sách."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+    }
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setToastMsg("Vui lòng đăng nhập để thực hiện hành động này.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
+      setTimeout(() => navigate("/auth/login"), 1500);
+      return;
+    }
+    let finalImageUrls = bookData.images;
+    try {
+      // Nếu có ảnh mới, upload và thay toàn bộ
+      if (newImages.length > 0) {
+        const uploadedNewImageUrls = await Promise.all(
+          newImages.map(async (imageFile) => {
+            const formData = new FormData();
+            formData.append("file", imageFile);
+            formData.append("upload_preset", "book_upload");
+            const res = await axios.post(
+              "https://api.cloudinary.com/v1_1/dhwegqmxl/image/upload",
+              formData
+            );
+            return res.data.secure_url;
+          })
+        );
+        finalImageUrls = uploadedNewImageUrls; // ✅ Ghi đè toàn bộ ảnh cũ bằng ảnh mới
+      }
+      const { _id, ...dataToUpdate } = bookData;
+      const updatePayload = {
+        ...dataToUpdate,
+        images: finalImageUrls,
+        publicationYear: Number(bookData.publicationYear),
+        pageCount: Number(bookData.pageCount),
+        originalPrice: Number(bookData.originalPrice),
+        sellingPrice: Number(bookData.sellingPrice),
+        stockQuantity: Number(bookData.stockQuantity),
+      };
+      await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccessMsg("✅ Cập nhật sách thành công!");
+      setToastType("success");
+      setTimeout(() => {
+        setSuccessMsg("");
+        navigate("/admin/books");
+      }, 1500);
+    } catch (err) {
+      console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
+      setToastMsg("❌ Đã xảy ra lỗi khi cập nhật sách: " + (err.response?.data?.message || err.message));
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
+    }
+  };
 
   // --- KẾT THÚC HÀM GỬI FORM ---
 
@@ -244,6 +286,11 @@ const EditBook = () => {
       {successMsg && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
           {successMsg}
+        </div>
+      )}
+      {toastMsg && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
+          {toastMsg}
         </div>
       )}
       <form
@@ -440,7 +487,8 @@ const EditBook = () => {
             </div>
           ) : (
             <p className="text-sm text-gray-500">Chưa có ảnh nào.</p>
-          )}
+          )
+          }
         </div>
         <div>
           <label htmlFor="newImages" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
