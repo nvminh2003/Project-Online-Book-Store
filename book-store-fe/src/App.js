@@ -5,6 +5,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminActivityProvider } from "./contexts/AdminActivityContext";
 
+
 function App() {
   return (
     <AuthProvider>
@@ -32,5 +33,6 @@ function App() {
     </AuthProvider>
   );
 }
+
 
 export default App;

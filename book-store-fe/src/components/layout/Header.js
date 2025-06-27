@@ -34,7 +34,7 @@ const Header = () => {
     const menuItems = [
       { label: 'Trang chủ', to: '/' },
       { label: 'Sản phẩm', to: '/products' },
-      { label: 'Sách hay sách mới', to: '/products?filter=new-arrivals' },
+      { label: 'Sách hay sách mới', to: '/getbook' },
     ];
 
     return (
@@ -125,8 +125,8 @@ const Header = () => {
               Trang chủ
             </Link>
             <Link
-              to="/products?filter=new-arrivals"
-              className={`no-underline transition-colors ${location.search === "?filter=new-arrivals" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+              to="/getbook"
+              className={`no-underline transition-colors ${location.search === "getbook" ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
               Sách mới sách hay
