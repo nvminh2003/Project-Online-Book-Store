@@ -119,14 +119,14 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link
               to="/"
-              className={`no-underline transition-colors ${location.search === "?filter=mkmn" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+              className={`no-underline transition-colors ${isActivePath('/') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
               Trang chủ
             </Link>
             <Link
               to="/getbook"
-              className={`no-underline transition-colors ${location.search === "getbook" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+              className={`no-underline transition-colors ${isActivePath('/getbook') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
               Sách mới sách hay
