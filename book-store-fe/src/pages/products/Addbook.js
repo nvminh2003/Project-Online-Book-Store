@@ -353,11 +353,11 @@ const AddBook = () => {
             <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
           <select
-            multiple
-            value={bookData.categories}
-            onChange={handleCategorySelect}
-            className="input-field h-32"
+            value={bookData.categories[0] || ""}
+            onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
+            className="input-field"
           >
+            <option value="">-- Chọn danh mục --</option>
             {categoryOptions.map((cat) => (
               <option key={cat._id} value={cat._id}>
                 {cat.name}
