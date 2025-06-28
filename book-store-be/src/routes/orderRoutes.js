@@ -17,27 +17,42 @@ router.get("/payos/order-status", orderController.getPayosOrderStatus);
 
 // Public routes (authenticated users)
 router.post("/", orderController.createOrder);
-router.get("/", orderController.getAllOrders);
-router.get("/:id", orderController.getOrderById);
 
-// PayOS checkout success/cancel handlers
-router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
-router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
+// Customer routes
+router.get('/my-orders',
+    authorizeRole(['customer']),
+    orderController.getUserOrders
+);
+router.get('/:id/detail',
+    authorizeRole(['adminbusiness', 'customer']),
+    orderController.getOrderById
+);
 
-// Admin only routes
+// Admin routes
+router.get("/",
+    authorizeRole(['adminbusiness']),
+    orderController.getAllOrders
+);
 router.patch(
     "/update-order-status/:id",
-    checkAuthMiddleware,
     authorizeRole(['adminbusiness']),
     checkPermission(A.UPDATE_ORDER_STATUS),
     orderController.updateOrderStatus
 );
 router.patch(
     "/update-payment-status/:id",
-    checkAuthMiddleware,
     authorizeRole(['adminbusiness']),
     checkPermission(A.UPDATE_PAYMENT_STATUS),
     orderController.updatePaymentStatus
 );
+router.get(
+    "/export/excel",
+    authorizeRole(['adminbusiness']),
+    orderController.exportOrdersToExcel
+);
+
+// PayOS checkout success/cancel handlers
+router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
+router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
 
 module.exports = router;

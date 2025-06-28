@@ -6,6 +6,9 @@ const DiscountCode = require("../models/discountCodeModel");
 const AdminActivityLog = require("../models/AdminActivityLog");
 const { sendOrderConfirmationEmail } = require("../utils/emailService");
 const Account = require("../models/accountModel");
+const XLSX = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
 const PayOS = require("@payos/node");
 const payos = new PayOS(
@@ -393,21 +396,36 @@ const createOrder = async (req, res) => {
   }
 };
 
-// Get all orders (admin only)
-const getAllOrders = async (req, res) => {
+// Get user orders (for customer)
+const getUserOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const query = {};
-    if (req.account.role !== "admin") {
-      query.user = req.account._id;
+    // Customer chỉ xem orders của mình
+    const query = { user: req.account._id };
+
+    // Filter theo trạng thái đơn hàng
+    if (req.query.orderStatus) {
+      query.orderStatus = req.query.orderStatus;
+    }
+
+    // Filter theo trạng thái thanh toán
+    if (req.query.paymentStatus) {
+      query.paymentStatus = req.query.paymentStatus;
+    }
+
+    // Filter theo khoảng thời gian
+    if (req.query.startDate && req.query.endDate) {
+      query.createdAt = {
+        $gte: new Date(req.query.startDate),
+        $lte: new Date(req.query.endDate)
+      };
     }
 
     const orders = await Order.find(query)
       .populate("items.book", "title sellingPrice images")
-      .populate("user", "email customerInfo.fullName")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -415,7 +433,7 @@ const getAllOrders = async (req, res) => {
     const total = await Order.countDocuments(query);
 
     res.status(200).json({
-      message: "Get orders successfully",
+      message: "Get user orders successfully",
       status: "Success",
       data: {
         orders,
@@ -434,11 +452,127 @@ const getAllOrders = async (req, res) => {
     });
   }
 };
-// Get order by ID
+
+// Get all orders (for adminbusiness with search and filter)
+const getAllOrders = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    // Search theo nhiều trường nếu có searchTerm
+    if (req.query.searchTerm) {
+      const searchRegex = { $regex: req.query.searchTerm, $options: 'i' };
+
+      const matchedUsers = await Account.find({
+        email: searchRegex
+      }).select('_id');
+
+      query.$or = [
+        { orderCode: searchRegex },
+        { fullName: searchRegex },
+        { phone: searchRegex },
+      ];
+
+      if (matchedUsers.length > 0) {
+        query.$or.push({ user: { $in: matchedUsers.map(u => u._id) } });
+      }
+    }
+
+    // Filter theo trạng thái đơn hàng
+    if (req.query.orderStatus) {
+      query.orderStatus = req.query.orderStatus;
+    }
+
+    // Filter theo trạng thái thanh toán
+    if (req.query.paymentStatus) {
+      query.paymentStatus = req.query.paymentStatus;
+    }
+
+    // Filter theo phương thức thanh toán
+    if (req.query.paymentMethod) {
+      query.paymentMethod = req.query.paymentMethod;
+    }
+
+    // Filter theo khoảng thời gian
+    if (req.query.startDate && req.query.endDate) {
+      query.createdAt = {
+        $gte: new Date(req.query.startDate),
+        $lte: new Date(req.query.endDate)
+      };
+    }
+
+    // Filter theo khoảng giá
+    if (req.query.minAmount || req.query.maxAmount) {
+      query.totalAmount = {};
+      if (req.query.minAmount) query.totalAmount.$gte = parseFloat(req.query.minAmount);
+      if (req.query.maxAmount) query.totalAmount.$lte = parseFloat(req.query.maxAmount);
+    }
+
+    // Filter theo có/không có mã giảm giá
+    if (req.query.hasDiscount === 'true') {
+      query.discountCode = { $ne: null };
+    } else if (req.query.hasDiscount === 'false') {
+      query.discountCode = null;
+    }
+
+    const orders = await Order.find(query)
+      .populate("items.book", "title sellingPrice images")
+      .populate("user", "email customerInfo.fullName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Order.countDocuments(query);
+
+    // Tính tổng thống kê
+    const stats = await Order.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+          avgOrderValue: { $avg: "$totalAmount" }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      message: "Get all orders successfully",
+      status: "Success",
+      data: {
+        orders,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        stats: stats[0] || {
+          totalOrders: 0,
+          totalRevenue: 0,
+          avgOrderValue: 0
+        }
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Get order by ID (for both customer and adminbusiness)
 const getOrderById = async (req, res) => {
   try {
     const query = { _id: req.params.id };
-    if (req.account.role !== "admin") {
+
+    // Customer chỉ xem orders của mình, adminbusiness xem tất cả
+    if (req.account.role === "customer") {
       query.user = req.account._id;
     }
 
@@ -507,6 +641,13 @@ const updatePaymentStatus = async (req, res) => {
       });
     }
 
+    if (order.orderStatus === 'completed' && paymentStatus !== 'paid') {
+      return res.status(400).json({
+        message: "Không thể thay đổi trạng thái thanh toán của đơn đã hoàn thành.",
+        status: "Error"
+      });
+    }
+
     order.paymentStatus = paymentStatus;
     await order.save();
 
@@ -547,7 +688,10 @@ const updateOrderStatus = async (req, res) => {
 
     if (["completed", "cancelled"].includes(order.orderStatus)) {
       return res.status(400).json({
-        message: `Không thể cập nhật đơn hàng đã ở trạng thái "${order.orderStatus}".`,
+        message:
+          order.orderStatus === 'completed'
+            ? 'Đơn hàng đã hoàn tất. Không thể cập nhật trạng thái mới.'
+            : 'Đơn hàng đã bị huỷ. Không thể cập nhật trạng thái mới.',
         status: "Error"
       });
     }
@@ -571,6 +715,13 @@ const updateOrderStatus = async (req, res) => {
     if (orderStatus === 'cancelled' && order.paymentStatus === 'paid') {
       return res.status(400).json({
         message: "Không thể huỷ đơn hàng đã thanh toán.",
+        status: "Error"
+      });
+    }
+
+    if (orderStatus === "completed" && order.paymentStatus !== "paid") {
+      return res.status(400).json({
+        message: "Không thể hoàn thành đơn hàng chưa được thanh toán.",
         status: "Error"
       });
     }
@@ -737,6 +888,43 @@ const handlePayosCancel = async (req, res) => {
   }
 };
 
+const exportOrdersToExcel = async (req, res) => {
+  try {
+    const orders = await Order.find({})
+      .populate("items.book", "title")
+      .populate("user", "email customerInfo.fullName")
+      .sort({ createdAt: -1 });
+
+    // Chuẩn bị dữ liệu cho sheet
+    const data = orders.map(order => ({
+      'Mã đơn': order.orderCode,
+      'Khách hàng': order.fullName || order.user?.customerInfo?.fullName || '',
+      'Email': order.user?.email || '',
+      'Số điện thoại': order.phone,
+      'Tổng tiền': order.totalAmount,
+      'Trạng thái đơn': order.orderStatus,
+      'Trạng thái thanh toán': order.paymentStatus,
+      'Ngày tạo': order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
+      'Sản phẩm': order.items.map(i => `${i.book?.title} (SL: ${i.quantity})`).join('; ')
+    }));
+
+    // Tạo workbook và worksheet
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+
+    // Ghi file vào buffer
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Gửi file về FE
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.end(buf);
+  } catch (error) {
+    res.status(500).json({ message: error.message, status: "Error" });
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -748,4 +936,6 @@ module.exports = {
   handlePayosSuccess,
   handlePayosCancel,
   updatePaymentStatus,
+  getUserOrders,
+  exportOrdersToExcel
 };

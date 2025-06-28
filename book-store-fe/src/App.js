@@ -4,6 +4,7 @@ import { routes } from "./routes/routes";
 import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminActivityProvider } from "./contexts/AdminActivityContext";
+import { ToastManager } from "./components/common/ToastManager";
 
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
     <AuthProvider>
       <AdminActivityProvider>
         <Router>
+          <ToastManager />
           <Routes>
             {routes.map((route) => {
               const Page = route.page;
