@@ -1,5 +1,4 @@
 import React from "react";
-// import styles from "./Pagination.module.css";
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
@@ -16,9 +15,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   };
 
   return (
-    <nav className={styles.pagination} aria-label="Pagination Navigation">
+    <nav
+      className="flex items-center justify-center gap-2 my-4"
+      aria-label="Pagination Navigation"
+    >
       <button
-        className={styles.pageButton}
+        className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => handlePageChange(currentPage - 1)}
         disabled={currentPage === 1}
         aria-label="Previous Page"
@@ -28,8 +30,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       {pages.map((page) => (
         <button
           key={page}
-          className={`${styles.pageButton} ${page === currentPage ? styles.active : ""
-            }`}
+          className={`w-8 h-8 rounded flex items-center justify-center ${
+            page === currentPage
+              ? "bg-blue-600 text-white"
+              : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+          }`}
           onClick={() => handlePageChange(page)}
           aria-current={page === currentPage ? "page" : undefined}
         >
@@ -37,7 +42,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         </button>
       ))}
       <button
-        className={styles.pageButton}
+        className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={() => handlePageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         aria-label="Next Page"

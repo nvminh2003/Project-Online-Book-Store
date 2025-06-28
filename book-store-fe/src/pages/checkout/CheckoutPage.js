@@ -379,7 +379,7 @@ const CheckoutPage = () => {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="container mx-auto mt-10 p-4 md:p-8">
         <h1 className="text-3xl font-bold mb-8 text-center">Thanh toán</h1>
         {error && (
@@ -709,7 +709,7 @@ const CheckoutPage = () => {
       >
         <p>{modalContent.body}</p>
       </Modal>
-    </MainLayout>
+    </>
   );
 };
 

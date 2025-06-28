@@ -1,11 +1,14 @@
+// Required models and libraries
 const Cart = require("../models/cartModel");
 const Book = require("../models/bookModel");
+const mongoose = require("mongoose");
 
 // Helper function to populate cart with book and user details
 const populateCart = async (cartId) => {
   return await Cart.findById(cartId)
     .populate(
       "items.book",
+      // Removed non-existent fields isPublished and isDeleted
       "title sellingPrice images authors publisher stockQuantity"
     )
     .populate("user", "email customerInfo.fullName");
@@ -29,17 +32,49 @@ const getCart = async (req, res) => {
       await cart.save();
     }
 
-    cart = await populateCart(cart._id);
+    const populatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(cart.items);
+    if (!populatedCart) {
+      return res
+        .status(404)
+        .json({ message: "Cart not found", status: "Error" });
+    }
+
+    const originalItemCount = populatedCart.items.length;
+
+    // Filter out items that are unavailable (book doesn't exist or has zero stock)
+    const validItems = populatedCart.items.filter(
+      (item) => item.book && item.book.stockQuantity > 0
+    );
+
+    const itemsRemoved = originalItemCount !== validItems.length;
+    let message = "Get cart successfully";
+
+    // If items were removed, update the cart in the DB and set a message
+    if (itemsRemoved) {
+      cart.items = validItems.map((item) => ({
+        book: item.book._id,
+        quantity: item.quantity,
+      }));
+      await cart.save();
+      message =
+        "Cart updated. Some items were removed as they are no longer available.";
+    }
+
+    // Recalculate total with only valid items
+    const total = calculateTotal(validItems);
+
+    // The populated cart object to be returned
+    const cartToReturn = {
+      ...populatedCart.toObject(),
+      items: validItems, // Return the filtered list of items
+      total,
+    };
 
     return res.status(200).json({
-      message: "Get cart successfully",
+      message,
       status: "Success",
-      data: {
-        ...cart.toObject(),
-        total,
-      },
+      data: cartToReturn,
     });
   } catch (error) {
     console.error(error);
@@ -54,17 +89,12 @@ const getCart = async (req, res) => {
   }
 };
 
-const mongoose = require("mongoose");
-// Add multiple items to cart (atomic, gộp trùng, kiểm tra tồn kho, validate book, transaction)
+// Add multiple items to cart (atomic, gộp trùng, kiểm tra tồn kho, validate book)
 const addToCart = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     // 1. Gộp các item trùng bookId
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     if (items.length === 0) {
-      await session.abortTransaction();
-      session.endSession();
       return res
         .status(400)
         .json({ message: "Items array is required", status: "Error" });
@@ -79,20 +109,16 @@ const addToCart = async (req, res) => {
     // 2. Validate all items
     for (const item of normalizedItems) {
       if (!item.bookId || !item.quantity || item.quantity <= 0) {
-        await session.abortTransaction();
-        session.endSession();
-        return res
-          .status(400)
-          .json({
-            message: "Each item must have bookId and quantity > 0",
-            status: "Error",
-          });
+        return res.status(400).json({
+          message: "Each item must have bookId and quantity > 0",
+          status: "Error",
+        });
       }
     }
 
     // 3. Lấy tất cả bookId và truy vấn 1 lần
     const bookIds = normalizedItems.map((i) => i.bookId);
-    const books = await Book.find({ _id: { $in: bookIds } }).session(session);
+    const books = await Book.find({ _id: { $in: bookIds } });
     const bookMap = {};
     books.forEach((b) => {
       bookMap[b._id.toString()] = b;
@@ -102,37 +128,22 @@ const addToCart = async (req, res) => {
     for (const item of normalizedItems) {
       const book = bookMap[item.bookId];
       if (!book) {
-        await session.abortTransaction();
-        session.endSession();
         return res
           .status(404)
           .json({ message: `Book not found: ${item.bookId}`, status: "Error" });
       }
-      // Kiểm tra trạng thái sách (isAvailable, isHidden, deletedAt)
-      if (book.isHidden || book.deletedAt || book.isAvailable === false) {
-        await session.abortTransaction();
-        session.endSession();
-        return res
-          .status(400)
-          .json({
-            message: `Book is not available: ${book.title}`,
-            status: "Error",
-          });
-      }
+      // NOTE: Removed checks for isPublished and isDeleted fields as they do not exist on the book model.
+
       if (book.stockQuantity < item.quantity) {
-        await session.abortTransaction();
-        session.endSession();
-        return res
-          .status(400)
-          .json({
-            message: `Not enough stock for book: ${book.title}`,
-            status: "Error",
-          });
+        return res.status(400).json({
+          message: `Not enough stock for book: ${book.title}`,
+          status: "Error",
+        });
       }
     }
 
     // 5. Lấy hoặc tạo cart
-    let cart = await Cart.findOne({ user: req.account._id }).session(session);
+    let cart = await Cart.findOne({ user: req.account._id });
     if (!cart) cart = new Cart({ user: req.account._id, items: [] });
 
     // 6. Thêm/gộp từng item vào cart
@@ -142,45 +153,34 @@ const addToCart = async (req, res) => {
         (i) => i.book.toString() === item.bookId
       );
       if (existingItem) {
-        if (book.stockQuantity < existingItem.quantity + item.quantity) {
-          await session.abortTransaction();
-          session.endSession();
-          return res
-            .status(400)
-            .json({
-              message: `Not enough stock for book: ${book.title}`,
-              status: "Error",
-            });
+        const newQuantity = existingItem.quantity + item.quantity;
+        if (book.stockQuantity < newQuantity) {
+          return res.status(400).json({
+            message: `Not enough stock for book: ${book.title}`,
+            status: "Error",
+          });
         }
-        existingItem.quantity += item.quantity;
+        existingItem.quantity = newQuantity;
       } else {
         cart.items.push({ book: item.bookId, quantity: item.quantity });
       }
     }
 
-    await cart.save({ session });
-    await session.commitTransaction();
-    session.endSession();
+    await cart.save();
 
     // Populate book details and calculate total
-    let populatedCart = await Cart.findById(cart._id)
-      .populate(
-        "items.book",
-        "title sellingPrice images authors publisher stockQuantity isHidden isAvailable deletedAt"
-      )
-      .populate("user", "email customerInfo.fullName");
-    // Lọc các item có book == null (sách đã xoá)
-    populatedCart.items = populatedCart.items.filter((item) => item.book);
-    const total = calculateTotal(populatedCart.items);
+    const populatedCart = await populateCart(cart._id);
+
+    // Filter for response consistency
+    const validItems = populatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(201).json({
       message: "Add to cart successfully",
       status: "Success",
-      data: { ...populatedCart.toObject(), total },
+      data: { ...populatedCart.toObject(), items: validItems, total },
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     return res.status(400).json({ message: error.message, status: "Error" });
   }
 };
@@ -246,13 +246,16 @@ const updateCartItem = async (req, res) => {
 
     const updatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(updatedCart.items);
+    // Filter for response consistency
+    const validItems = updatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(200).json({
       message: "Update cart successfully",
       status: "Success",
       data: {
         ...updatedCart.toObject(),
+        items: validItems,
         total,
       },
     });
@@ -289,13 +292,16 @@ const removeFromCart = async (req, res) => {
 
     const updatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(updatedCart.items);
+    // Filter for response consistency
+    const validItems = updatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(200).json({
       message: "Remove from cart successfully",
       status: "Success",
       data: {
         ...updatedCart.toObject(),
+        items: validItems,
         total,
       },
     });

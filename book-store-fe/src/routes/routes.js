@@ -27,6 +27,8 @@ import AdminReports from "../pages/admin/Reports";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+import OrderHistoryPage from "../pages/account/OrderHistoryPage";
+import OrderDetailPage from "../pages/account/OrderDetailPage";
 
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import AdminActivity from "../pages/admin/AdminActivity";
@@ -89,6 +91,16 @@ export const routes = [
   {
     path: "/auth/checkout/cancel/:orderId",
     page: OrderCancelPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/account/orders",
+    page: OrderHistoryPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/account/orders/:orderId",
+    page: OrderDetailPage,
     isShowHeader: true,
   },
   {
