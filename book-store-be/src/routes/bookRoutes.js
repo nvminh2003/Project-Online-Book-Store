@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const bookController = require("../controllers/bookController");
-const { authorizeRole } = require("../middleware/authMiddleware");
-
+const { authorizeRole, checkAuthMiddleware } = require("../middleware/authMiddleware");
+const A = require('../utils/actionTypes');
+const checkPermission = require('../middleware/checkPermission');
 // Public routes
 router.get("/", bookController.getAllBooks);
 router.get("/search", bookController.searchBooks);
@@ -10,39 +11,25 @@ router.get("/:id", bookController.getBookById);
 
 // Admin only routes
 router.post(
-  "/",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
+  "/",checkAuthMiddleware,
+  authorizeRole(["admindev"]),checkPermission(A.CREATE_BOOK),
   bookController.createBook
 );
 router.put(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
+  "/:id",checkAuthMiddleware,
+  authorizeRole(['admindev']),checkPermission(A.UPDATE_BOOK),
   bookController.updateBook
 );
 router.delete(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
+  "/:id",checkAuthMiddleware,
+  authorizeRole(['admindev']),checkPermission(A.DELETE_BOOK),
   bookController.deleteBook
 );
 router.post(
-  "/",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.createBook
-);
-router.put(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.updateBook
-);
-router.delete(
-  "/:id",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
-  bookController.deleteBook
-);
-router.post(
-  "/upload-excel",
-  authorizeRole(["superadmin", "admindev"], ["dev"]),
+  "/upload-excel",checkAuthMiddleware,
+  authorizeRole(['admindev']),checkPermission(A.CREATE_BOOK),
   bookController.uploadBooksFromExcel
 );
+
 
 module.exports = router;
