@@ -91,7 +91,7 @@ export const AdminActivityProvider = ({ children }) => {
             // AdminBusiness routes
             '/admin/discounts': 'VIEW_DISCOUNT',
             '/admin/orders': 'VIEW_ORDER',
-            '/admin/reviews': 'VIEW_REVIEW',
+            '/admin/review': 'VIEW_REVIEW',
             '/admin/reports': 'VIEW_SALES_REPORT'
         };
 
