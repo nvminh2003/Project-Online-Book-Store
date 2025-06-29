@@ -239,9 +239,9 @@ const updateBook = async (req, res) => {
     const slug =
       title !== book.title
         ? title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
         : book.slug;
 
     // Update book fields
@@ -274,7 +274,7 @@ const updateBook = async (req, res) => {
     await AdminActivityLog.create({
       adminId: req.account._id,
       action: "UPDATE_BOOK",
-      details: `Admin ${req.account.email} updated account ${updatedBook.title} (ID: ${updatedBook._id})`,
+      details: `Admin ${req.account.email} updated book ${updatedBook.title} (ID: ${updatedBook._id})`,
     });
 
     res.status(200).json({
@@ -306,7 +306,7 @@ const deleteBook = async (req, res) => {
     await AdminActivityLog.create({
       adminId: req.account._id,
       action: "DELETE_BOOK",
-      details: `Admin ${req.account.email} updated account ${book.title} (ID: ${book._id})`,
+      details: `Admin ${req.account.email} delete book ${book.title} (ID: ${book._id})`,
     });
 
     res.status(200).json({
@@ -455,6 +455,54 @@ const uploadBooksFromExcel = async (req, res) => {
   }
 };
 
+// Get featured books for homepage
+const getFeaturedBooks = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8; // Mặc định lấy 8 sách nổi bật
+
+    const featuredBooks = await Book.find({ isFeatured: true })
+      .populate("categories")
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json({
+      message: "Get featured books successfully",
+      status: "Success",
+      data: featuredBooks,
+    });
+  } catch (error) {
+    console.error("Error getting featured books:", error);
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Get new arrival books for homepage
+const getNewArrivalBooks = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8; // Mặc định lấy 8 sách mới
+
+    const newArrivalBooks = await Book.find({ isNewArrival: true })
+      .populate("categories")
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json({
+      message: "Get new arrival books successfully",
+      status: "Success",
+      data: newArrivalBooks,
+    });
+  } catch (error) {
+    console.error("Error getting new arrival books:", error);
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
 module.exports = {
   createBook,
   getAllBooks,
@@ -463,4 +511,6 @@ module.exports = {
   updateBook,
   deleteBook,
   uploadBooksFromExcel,
+  getFeaturedBooks,
+  getNewArrivalBooks,
 };

@@ -242,7 +242,9 @@ const ProductDetailPage = () => {
                     alt={book.title}
                     className="w-[120px] h-[170px] object-cover mx-auto mb-2 rounded"
                   />
-                  <h3 className="font-bold text-center text-base mb-1 line-clamp-2">{book.title}</h3>
+                  <h3 className="font-semibold text-[17px] leading-snug text-gray-900 text-center mb-1 line-clamp-2 min-h-[48px]">
+                    {book.title}
+                  </h3>
                   <p className="text-xs text-gray-500 text-center mb-1">{Array.isArray(book.authors) ? book.authors.join(", ") : book.authors}</p>
                   <div className="mb-1 text-center text-xs text-gray-400">{book.publisher} {book.publicationYear ? `- ${book.publicationYear}` : ""}</div>
                   <div className="mb-2 text-center">
@@ -254,37 +256,43 @@ const ProductDetailPage = () => {
 
                   {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
                   <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleAddToCart(book._id);
-    }}
-    className="bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200"
-    title="Thêm vào giỏ hàng"
-  >
-    <Icon icon="mdi:cart" width="24" height="24" color="#2563eb" />
-  </button>
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleAddToWishlist(book._id);
-    }}
-    className="bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200"
-    title="Yêu thích"
-  >
-    <Icon icon="mdi:heart" width="24" height="24" color="#2563eb" />
-  </button>
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleViewDetail(book._id);
-    }}
-    className="bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200"
-    title="Xem chi tiết"
-  >
-    <Icon icon="mdi:eye" width="24" height="24" color="#2563eb" />
-  </button>
-</div>
+                    {/* Thêm vào giỏ */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(book._id);
+                      }}
+                      className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                      title="Thêm vào giỏ hàng"
+                    >
+                      <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
+                    </button>
+
+                    {/* Yêu thích */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToWishlist(book._id);
+                      }}
+                      className="bg-white border border-red-500 p-3 rounded-full hover:bg-red-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                      title="Yêu thích"
+                    >
+                      <Icon icon="mdi:heart" width="20" height="20" color="#dc2626" />
+                    </button>
+
+                    {/* Xem chi tiết */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewDetail(book._id);
+                      }}
+                      className="bg-white border border-purple-500 p-3 rounded-full hover:bg-purple-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                      title="Xem chi tiết"
+                    >
+                      <Icon icon="mdi:eye" width="20" height="20" color="#7c3aed" />
+                    </button>
+                  </div>
+
                 </div>
               );
             })

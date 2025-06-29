@@ -58,8 +58,8 @@ const OrderHistoryPage = () => {
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { text: 'Chờ xử lý', className: 'bg-yellow-100 text-yellow-800' },
-      processing: { text: 'Đang xử lý', className: 'bg-blue-100 text-blue-800' },
-      shipping: { text: 'Đang giao', className: 'bg-purple-100 text-purple-800' },
+      confirmed: { text: 'Đang xử lý', className: 'bg-blue-100 text-blue-800' },
+      // shipping: { text: 'Đang giao', className: 'bg-purple-100 text-purple-800' },
       completed: { text: 'Hoàn thành', className: 'bg-green-100 text-green-800' },
       cancelled: { text: 'Đã hủy', className: 'bg-red-100 text-red-800' }
     };
@@ -78,7 +78,7 @@ const OrderHistoryPage = () => {
       pending: { text: 'Chờ thanh toán', className: 'bg-yellow-100 text-yellow-800' },
       paid: { text: 'Đã thanh toán', className: 'bg-green-100 text-green-800' },
       failed: { text: 'Thanh toán thất bại', className: 'bg-red-100 text-red-800' },
-      refunded: { text: 'Đã hoàn tiền', className: 'bg-gray-100 text-gray-800' }
+      // refunded: { text: 'Đã hoàn tiền', className: 'bg-gray-100 text-gray-800' }
     };
 
     const config = statusConfig[status] || { text: status, className: 'bg-gray-100 text-gray-800' };
@@ -169,7 +169,7 @@ const OrderHistoryPage = () => {
             <div key={order._id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
               <div className="p-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="mb-4 sm:mb-0">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Đơn hàng #{order.orderCode}
@@ -189,7 +189,7 @@ const OrderHistoryPage = () => {
                 </div>
 
                 {/* Order Items */}
-                <div className="mb-4">
+                <div className="mb-4 border-t border-gray-200">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Sản phẩm:</h4>
                   <div className="space-y-2">
                     {order.items?.slice(0, 3).map((item, index) => (
@@ -233,13 +233,47 @@ const OrderHistoryPage = () => {
                       <span className="text-sm text-gray-500">Thanh toán: </span>
                       {getPaymentStatusBadge(order.paymentStatus)}
                     </div>
+                    {/* ✅ Thêm trạng thái đánh giá tại đây */}
+                    {order.orderStatus === 'completed' && (
+                      <div>
+                        <span className="text-sm text-gray-500">Đánh giá: </span>
+                        {order.items.every(item => item.reviewId && (typeof item.reviewId === 'object' ? item.reviewId._id : item.reviewId)) ? (
+                          <span className="text-green-600 font-medium">Đã đánh giá</span>
+                        ) : order.items.some(item => item.reviewId && (typeof item.reviewId === 'object' ? item.reviewId._id : item.reviewId)) ? (
+                          <span className="text-yellow-600 font-medium">Đã đánh giá một phần</span>
+                        ) : (
+                          <span className="text-orange-500 font-medium">Chờ đánh giá</span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex space-x-2">
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 justify-end">
                     <Link to={`/orders/${order._id}`}>
-                      <Button variant="outline" size="sm">
+                      <button className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md bg-white hover:bg-blue-50 transition">
                         Xem chi tiết
-                      </Button>
+                      </button>
                     </Link>
+
+                    {/* {order.orderStatus === 'completed' && order.items?.map(item => (
+                      <Link
+                        key={item.book?._id}
+                        to={`/review/${order._id}/${item.book?._id}`}
+                        state={{
+                          book: {
+                            _id: item.book?._id,
+                            title: item.book?.title,
+                            image: item.book?.images?.[0],
+                            price: item.price,
+                            quantity: item.quantity
+                          }
+                        }}
+                      >
+                        <button className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 transition">
+                          Đánh giá sản phẩm
+                        </button>
+                      </Link>
+                    ))} */}
                   </div>
                 </div>
               </div>

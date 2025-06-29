@@ -5,6 +5,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminActivityProvider } from "./contexts/AdminActivityContext";
 import { ToastManager } from "./components/common/ToastManager";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
     <AuthProvider>
       <AdminActivityProvider>
         <Router>
+          <ScrollToTop />
           <ToastManager />
           <Routes>
             {routes.map((route) => {

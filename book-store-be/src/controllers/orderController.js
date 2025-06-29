@@ -426,6 +426,7 @@ const getUserOrders = async (req, res) => {
 
     const orders = await Order.find(query)
       .populate("items.book", "title sellingPrice images")
+      .populate("items.reviewId", "rating comment images createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -520,6 +521,7 @@ const getAllOrders = async (req, res) => {
 
     const orders = await Order.find(query)
       .populate("items.book", "title sellingPrice images")
+      .populate("items.reviewId", "rating comment images createdAt")
       .populate("user", "email customerInfo.fullName")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -578,7 +580,8 @@ const getOrderById = async (req, res) => {
 
     const order = await Order.findOne(query)
       .populate("items.book", "title sellingPrice images")
-      .populate("user", "email customerInfo.fullName");
+      .populate("items.reviewId", "rating comment images createdAt")
+      .populate("user", "email customerInfo.fullName").lean();
 
     if (!order) {
       return res.status(404).json({

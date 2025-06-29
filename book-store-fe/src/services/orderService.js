@@ -6,6 +6,52 @@ const API_URL =
 const getToken = () => localStorage.getItem('accessToken') || localStorage.getItem('access_token');
 
 const orderService = {
+  // Tạo đơn hàng mới (customer)
+  createOrder: async (orderData) => {
+    try {
+      const token = getToken();
+      const response = await axios.post(`${API_URL}/orders`, orderData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy danh sách đơn hàng của user (customer)
+  getUserOrders: async (params = {}) => {
+    try {
+      const token = getToken();
+      const response = await axios.get(`${API_URL}/orders/my-orders`, {
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy chi tiết đơn hàng theo id (customer)
+  getOrderDetail: async (id) => {
+    try {
+      const token = getToken();
+      const response = await axios.get(`${API_URL}/orders/${id}/detail`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Lấy tất cả orders (admin business)
   getAllOrders: async (params = {}) => {
     try {

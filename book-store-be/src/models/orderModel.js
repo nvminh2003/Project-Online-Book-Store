@@ -19,7 +19,7 @@ const OrderSchema = new mongoose.Schema(
         },
         paymentStatus: {
             type: String,
-            enum: ["pending", "awaiting_payment", "paid", "failed"],
+            enum: ["pending", "paid", "failed"],
             default: "pending"
         },
         orderStatus: {
@@ -32,6 +32,7 @@ const OrderSchema = new mongoose.Schema(
                 book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
                 quantity: Number,
                 price: Number,
+                reviewId: { type: mongoose.Schema.Types.ObjectId, ref: "Review" },
             },
         ],
     },

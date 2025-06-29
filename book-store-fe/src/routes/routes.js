@@ -25,6 +25,8 @@ import PaymentPage from "../pages/checkout/PaymentPage";
 import OrderReviewPage from "../pages/checkout/OrderReviewPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
+import OrderHistoryPage from "../pages/checkout/OrderHistoryPage";
+import OrderDetailPage from "../pages/checkout/OrderDetailPage";
 
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
@@ -32,8 +34,8 @@ import AdminCategories from "../pages/admin/Categories";
 import AdminDiscounts from "../pages/admin/Discounts";
 import AdminUsers from "../pages/admin/Users";
 import AdminOrders from "../pages/admin/Orders";
-import AdminReviews from "../pages/admin/Reviews";
 import AdminBlog from "../pages/admin/Blog";
+import AdminReview from "../pages/admin/Reviews";
 import AdminReports from "../pages/admin/Reports";
 import AdminActivity from "../pages/admin/AdminActivity";
 
@@ -45,13 +47,14 @@ import BlogDetailPage from "../pages/blog/BlogDetailPage";
 import AboutUs from "../pages/AboutUs";
 import PaymentInfo from "../pages/PaymentInfo";
 import SalesPolicy from "../pages/SalesPolicy";
+import ReviewForm from "../components/user/ReviewForm";
 
 export const routes = [
   // Public Pages
   { path: "/", page: HomePage, isShowHeader: true },
   { path: "/auth/register", page: RegisterPage, isShowHeader: true },
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
-  { path: "/auth/cart", page: CartPage, isShowHeader: true },
+  // { path: "/auth/cart", page: CartPage, isShowHeader: true },
   { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
   { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
   { path: "/auth/change-password", page: ChangePasswordPage, isShowHeader: true },
@@ -76,6 +79,11 @@ export const routes = [
   { path: "/auth/checkout/success/:orderId", page: OrderSuccessPage, isShowHeader: true },
   { path: "/auth/checkout/cancel/:orderId", page: OrderCancelPage, isShowHeader: true },
 
+  { path: "/orders", page: OrderHistoryPage, isShowHeader: true },
+  { path: "/orders/:id", page: OrderDetailPage, isShowHeader: true },
+
+  { path: "/review/:orderId/:bookId", page: ReviewForm, isShowHeader: true },
+  { path: "/review/:orderId/:bookId/:reviewId", page: ReviewForm, isShowHeader: true },
   // Auth Callback
   { path: "/auth/google/success", page: GoogleSuccess, isShowHeader: false },
 
@@ -158,11 +166,11 @@ export const routes = [
     isShowHeader: false,
   },
   {
-    path: "/admin/reviews",
+    path: "/admin/review",
     page: () => (
       <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_REVIEW">
         <AdminLayout>
-          <AdminReviews />
+          <AdminReview />
         </AdminLayout>
       </ProtectedRoute>
     ),

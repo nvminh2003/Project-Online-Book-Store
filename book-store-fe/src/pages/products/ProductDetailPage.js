@@ -3,6 +3,9 @@ import React, { useEffect, useState, useCallback, useRef } from "react"; // Thê
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Icon } from '@iconify/react';
+import ReviewList from "../account/ReviewList";
+import reviewService from "../../services/reviewService";
+import { notifySuccess, notifyError } from "../../components/common/ToastManager";
 
 // --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
 // import { useDispatch } from "react-redux";
@@ -14,8 +17,8 @@ const API_URL =
 
 const ProductDetailPage = () => {
   const { bookId } = useParams();
-  const [error, setError]= useState(false);
-  const [loading, setLoading]= useState(false);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -23,8 +26,16 @@ const ProductDetailPage = () => {
   const imageIntervalRef = useRef();
   const navigate = useNavigate();
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("success"); // 'success' | 'error'
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [reviewsPagination, setReviewsPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0
+  });
 
   const fetchBookDetail = useCallback(async () => {
     setLoading(true);
@@ -46,19 +57,44 @@ const ProductDetailPage = () => {
         err.response?.data || err.message
       );
       if (err.response?.status === 401) {
-        setToastMsg("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
-        setToastType("error");
+        notifyError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
         setTimeout(() => navigate("/auth/login"), 1500);
       } else {
         setError(
           err.response?.data?.message ||
-            "Không thể tải thông tin chi tiết sách."
+          "Không thể tải thông tin chi tiết sách."
         );
       }
     } finally {
       setLoading(false);
     }
   }, [bookId, navigate]); // Thêm navigate vào dependencies của useCallback
+
+  // Fetch reviews for the book
+  const fetchReviews = useCallback(async (page = 1) => {
+    if (!bookId) return;
+
+    setReviewsLoading(true);
+    setReviewsError(null);
+    try {
+      const response = await reviewService.getReviewsByBook(bookId, page, 5);
+      if (response.status === "Success") {
+        setReviews(response.data.reviews);
+        setReviewsPagination({
+          page: response.data.pagination.page,
+          totalPages: response.data.pagination.totalPages,
+          total: response.data.pagination.total
+        });
+      } else {
+        setReviewsError(response.message || "Không thể tải đánh giá");
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy đánh giá:", error);
+      setReviewsError("Không thể tải đánh giá sản phẩm");
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [bookId]);
 
   useEffect(() => {
     // const token = localStorage.getItem("accessToken"); // Token đã được kiểm tra trong fetchBookDetail nếu API cần
@@ -70,6 +106,11 @@ const ProductDetailPage = () => {
     fetchBookDetail();
   }, [fetchBookDetail]); // Gọi fetchBookDetail khi nó thay đổi (chỉ 1 lần khi bookId thay đổi)
 
+  // Fetch reviews when bookId changes
+  useEffect(() => {
+    fetchReviews(1);
+  }, [fetchReviews]);
+
   // Tự động chuyển ảnh chính sau vài giây
   useEffect(() => {
     if (book?.images?.length > 1) {
@@ -78,29 +119,24 @@ const ProductDetailPage = () => {
       }, 4000); // 4 giây đổi ảnh
       return () => clearInterval(imageIntervalRef.current);
     }
-    return () => {};
+    return () => { };
   }, [book]);
 
   const handleAddToCart = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setToastMsg("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-      setToastType("error");
+      notifyError("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
       setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
     if (!book || !book._id) {
-      setToastMsg("Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại.");
       return;
     }
     const currentQuantity = Number(quantity);
     if (isNaN(currentQuantity) || currentQuantity < 1) {
-      setToastMsg("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
-      setToastType("error");
+      notifyError("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
       setQuantity(1);
-      setTimeout(() => setToastMsg(""), 1500);
       return;
     }
     const payload = {
@@ -114,13 +150,9 @@ const ProductDetailPage = () => {
         },
       });
       if (response.data && response.data.status === "Success") {
-        setToastMsg("Đã thêm vào giỏ hàng thành công!");
-        setToastType("success");
-        setTimeout(() => setToastMsg(""), 1500);
+        notifySuccess("Đã thêm vào giỏ hàng thành công!");
       } else {
-        setToastMsg(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-        setToastType("error");
-        setTimeout(() => setToastMsg(""), 1500);
+        notifyError(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
       }
     } catch (err) {
       console.error(
@@ -131,9 +163,7 @@ const ProductDetailPage = () => {
         err.response?.data?.message ||
         err.message ||
         "Không thể thêm sản phẩm vào giỏ hàng.";
-      setToastMsg(errorMessage);
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError(errorMessage);
       // if (err.response?.status === 401) {
       //   localStorage.removeItem("accessToken");
       //   navigate("/auth/login");
@@ -144,15 +174,12 @@ const ProductDetailPage = () => {
   const handleAddToWishlist = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
-      setToastType("error");
+      notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
       setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
     if (!book || !book._id) {
-      setToastMsg("Thông tin sách chưa được tải xong.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Thông tin sách chưa được tải xong.");
       return;
     }
     try {
@@ -165,18 +192,19 @@ const ProductDetailPage = () => {
           },
         }
       );
-      setToastMsg("Đã thêm vào mục yêu thích!");
-      setToastType("success");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifySuccess("Đã thêm vào mục yêu thích!");
     } catch (err) {
       console.error(
         "Lỗi khi thêm vào yêu thích:",
         err.response?.data || err.message
       );
-      setToastMsg(err.response?.data?.message || "Không thể thêm vào yêu thích.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError(err.response?.data?.message || "Không thể thêm vào yêu thích.");
     }
+  };
+
+  // Handle review pagination
+  const handleReviewPageChange = (page) => {
+    fetchReviews(page);
   };
 
   if (loading)
@@ -199,17 +227,12 @@ const ProductDetailPage = () => {
 
   const discountPercent = hasDiscount
     ? Math.round(
-        ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
-      )
+      ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
+    )
     : 0;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      {toastMsg && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
-          {toastMsg}
-        </div>
-      )}
       {/* Modal xem ảnh to */}
       {showImageModal && book.images?.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
@@ -297,6 +320,13 @@ const ProductDetailPage = () => {
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
             {book.title}
           </h1>
+          {book.averageRating > 0 && (
+            <div className="flex items-center text-sm text-yellow-600 gap-1 mb-1">
+              <Icon icon="mdi:star" className="text-yellow-500" width={18} />
+              <span className="font-semibold">{book.averageRating.toFixed(1)}</span>
+              <span className="text-gray-500">({book.totalRatings} đánh giá)</span>
+            </div>
+          )}
           <p className="text-gray-600 mb-1 text-sm">
             Tác giả:{" "}
             <span className="font-medium text-blue-600">
@@ -448,6 +478,57 @@ const ProductDetailPage = () => {
           </ul>
         </div>
       </div>
+
+      {/* Đánh giá sản phẩm */}
+      <div className="mt-10 pt-6 border-t border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Đánh giá sản phẩm ({reviewsPagination.total} đánh giá)
+        </h2>
+
+        {reviewsLoading ? (
+          <p className="text-center text-gray-500 py-4">Đang tải đánh giá...</p>
+        ) : reviewsError ? (
+          <p className="text-center text-red-500 py-4">{reviewsError}</p>
+        ) : (
+          <>
+            <ReviewList
+              reviews={reviews.map(review => ({
+                reviewerName: review.user?.info?.fullName || review.user?.email || 'Khách hàng',
+                rating: review.rating,
+                comment: review.comment,
+                images: review.images || [],
+                createdAt: review.createdAt
+              }))}
+            />
+
+            {/* Pagination cho reviews */}
+            {reviewsPagination.totalPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleReviewPageChange(reviewsPagination.page - 1)}
+                    disabled={reviewsPagination.page <= 1}
+                    className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Trước
+                  </button>
+                  <span className="px-3 py-1 text-gray-600">
+                    Trang {reviewsPagination.page} / {reviewsPagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() => handleReviewPageChange(reviewsPagination.page + 1)}
+                    disabled={reviewsPagination.page >= reviewsPagination.totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
     </div>
   );
 };

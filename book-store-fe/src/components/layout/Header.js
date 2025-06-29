@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from "../common/Icon";
 import logo from '../../assets/image.png';
@@ -10,15 +10,18 @@ const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const menuRef = useRef(null);
 
   const isActivePath = (path) => location.pathname === path;
 
   const handleLogout = async () => {
     await logout();
+    setIsMenuOpen(false);
     navigate('/');
   };
 
   const handleAdminClick = () => {
+    setIsMenuOpen(false);
     if (user?.role === 'superadmin') {
       navigate('/admin/users');
     } else if (user?.role === 'admindev') {
@@ -27,6 +30,27 @@ const Header = () => {
       navigate('/admin/orders');
     }
   };
+
+  useEffect(() => {
+    setIsMenuOpen(false); // Tự động đóng menu khi URL thay đổi
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
 
   const renderMobileMenu = () => {
     if (!isMenuOpen) return null;
@@ -247,11 +271,11 @@ const Header = () => {
                     <Icon name="mdi:menu" className="w-6 h-6" />
                   </button>
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    <div ref={menuRef} className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
                       <div className="py-2">
                         <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Trang chủ</Link>
-                        <Link to="/products" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sản phẩm</Link>
-                        <Link to="/products?filter=new-arrivals" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sách hay sách mới</Link>
+                        {/* <Link to="/products" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sản phẩm</Link> */}
+                        <Link to="/getbook" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sách hay sách mới</Link>
                         <div className="border-t my-2" />
                         <Link to="/auth/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Tài khoản của tôi</Link>
                         <Link to="/orders" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Lịch sử đơn hàng</Link>
