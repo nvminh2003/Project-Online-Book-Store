@@ -20,9 +20,7 @@ import EditBook from "../pages/products/Editbook";
 import UploadExcel from "../pages/products/UploadExcel";
 
 // Checkout Pages
-import ShippingPage from "../pages/checkout/ShippingPage";
-import PaymentPage from "../pages/checkout/PaymentPage";
-import OrderReviewPage from "../pages/checkout/OrderReviewPage";
+import CheckoutPage from "../pages/checkout/CheckoutPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
 

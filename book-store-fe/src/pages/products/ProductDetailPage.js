@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react"; // Thêm useCallback
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Icon } from '@iconify/react';
+import { Icon } from "@iconify/react";
 
 // --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
 // import { useDispatch } from "react-redux";
@@ -14,13 +14,11 @@ const API_URL =
 
 const ProductDetailPage = () => {
   const { bookId } = useParams();
-  const [error, setError]= useState(false);
-  const [loading, setLoading]= useState(false);
-  const [book, setBook] = useState(null);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null)
+  const [book, setBook] = useState(null);
   const [reviews, setReviews] = useState([]);
-  const [newReview, setNewReview] = useState({rating: 0, comment: ""});
+  const [newReview, setNewReview] = useState({ rating: 0, comment: "" });
   const [quantity, setQuantity] = useState(1);
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
@@ -50,7 +48,9 @@ const ProductDetailPage = () => {
         err.response?.data || err.message
       );
       if (err.response?.status === 401) {
-        setToastMsg("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
+        setToastMsg(
+          "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại."
+        );
         setToastType("error");
         setTimeout(() => navigate("/auth/login"), 1500);
       } else {
@@ -94,7 +94,9 @@ const ProductDetailPage = () => {
       return;
     }
     if (!book || !book._id) {
-      setToastMsg("Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại.");
+      setToastMsg(
+        "Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại."
+      );
       setToastType("error");
       setTimeout(() => setToastMsg(""), 1500);
       return;
@@ -122,7 +124,9 @@ const ProductDetailPage = () => {
         setToastType("success");
         setTimeout(() => setToastMsg(""), 1500);
       } else {
-        setToastMsg(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        setToastMsg(
+          response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng."
+        );
         setToastType("error");
         setTimeout(() => setToastMsg(""), 1500);
       }
@@ -177,7 +181,9 @@ const ProductDetailPage = () => {
         "Lỗi khi thêm vào yêu thích:",
         err.response?.data || err.message
       );
-      setToastMsg(err.response?.data?.message || "Không thể thêm vào yêu thích.");
+      setToastMsg(
+        err.response?.data?.message || "Không thể thêm vào yêu thích."
+      );
       setToastType("error");
       setTimeout(() => setToastMsg(""), 1500);
     }
@@ -203,14 +209,47 @@ const ProductDetailPage = () => {
 
   const discountPercent = hasDiscount
     ? Math.round(
-      ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
-    )
+        ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
+      )
     : 0;
+
+  // Define empty functions to fix undefined errors
+  const handleAddReview = () => {
+    setToastMsg('Tính năng đang được phát triển');
+    setToastType('error');
+    setTimeout(() => setToastMsg(''), 1500);
+  };
+
+  const handleEditReview = () => {
+    setToastMsg('Tính năng đang được phát triển');
+    setToastType('error');
+    setTimeout(() => setToastMsg(''), 1500);
+  };
+
+  const handleDeleteReview = () => {
+    setToastMsg('Tính năng đang được phát triển');
+    setToastType('error');
+    setTimeout(() => setToastMsg(''), 1500);
+  };
+
+  const handleReportReview = () => {
+    setToastMsg('Tính năng đang được phát triển');
+    setToastType('error');
+    setTimeout(() => setToastMsg(''), 1500);
+  };
+
+  const currentUserId = null; // Placeholder for user ID
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {toastMsg && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
+        <div
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${
+            toastType === "success"
+              ? "bg-green-100 border border-green-400 text-green-700"
+              : "bg-red-100 border border-red-400 text-red-700"
+          }`}
+        >
           {toastMsg}
         </div>
       )}
@@ -271,7 +310,7 @@ const ProductDetailPage = () => {
               src={book.images?.[currentImageIdx] || "/default-book.jpg"}
               alt={book.title}
               className="w-full h-auto object-cover rounded-2xl shadow mx-auto bg-transparent"
-              style={{ maxHeight: 220, background: 'transparent' }}
+              style={{ maxHeight: 220, background: "transparent" }}
             />
             {book.images?.length > 1 && (
               <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
@@ -281,18 +320,19 @@ const ProductDetailPage = () => {
           </div>
           {book.images?.length > 1 && (
             <div className="mt-3 grid grid-cols-4 gap-1 w-full min-h-14">
-              {book.images.map((img, idx) => (
-                idx !== currentImageIdx && (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={`Ảnh ${idx + 1}`}
-                    className="w-full h-14 object-cover rounded-md border cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-lg"
-                    onClick={() => setCurrentImageIdx(idx)}
-                    style={{ visibility: 'visible' }}
-                  />
-                )
-              ))}
+              {book.images.map(
+                (img, idx) =>
+                  idx !== currentImageIdx && (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt={`Ảnh ${idx + 1}`}
+                      className="w-full h-14 object-cover rounded-md border cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-lg"
+                      onClick={() => setCurrentImageIdx(idx)}
+                      style={{ visibility: "visible" }}
+                    />
+                  )
+              )}
             </div>
           )}
         </div>
@@ -380,154 +420,165 @@ const ProductDetailPage = () => {
               onClick={() => navigate(-1)}
               className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
             >
-              <Icon icon="mdi:arrow-left" width="18" height="18" color="#2563eb" />
+              <Icon
+                icon="mdi:arrow-left"
+                width="18"
+                height="18"
+                color="#2563eb"
+              />
               Quay lại
             </button>
           </div>
         </div>
       </div>
 
-    <div className="mt-10 pt-6 border-t border-gray-200">
-      {book.description && (
-        <div className="mb-6">
+      <div className="mt-10 pt-6 border-t border-gray-200">
+        {book.description && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+              Mô tả sản phẩm
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {book.description}
+            </p>
+          </div>
+        )}
+
+        <div>
           <h2 className="text-xl font-semibold text-gray-800 mb-3">
-            Mô tả sản phẩm
+            Thông tin chi tiết
           </h2>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {book.description}
-          </p>
+          <ul className="text-gray-700 text-sm space-y-2 bg-gray-50 p-4 rounded-lg">
+            {book.title && (
+              <li>
+                <strong>Tiêu đề:</strong> {book.title}
+              </li>
+            )}
+            {book.authors && book.authors.length > 0 && (
+              <li>
+                <strong>Tác giả:</strong>{" "}
+                {Array.isArray(book.authors)
+                  ? book.authors.join(", ")
+                  : book.authors}
+              </li>
+            )}
+            {book.publisher && (
+              <li>
+                <strong>Nhà xuất bản:</strong> {book.publisher}
+              </li>
+            )}
+            {book.publicationYear && (
+              <li>
+                <strong>Năm phát hành:</strong> {book.publicationYear}
+              </li>
+            )}
+            {book.pageCount && (
+              <li>
+                <strong>Số trang:</strong> {book.pageCount}
+              </li>
+            )}
+            {book.coverType && (
+              <li>
+                <strong>Loại bìa:</strong> {book.coverType}
+              </li>
+            )}
+            {book.isbn && (
+              <li>
+                <strong>Mã ISBN:</strong> {book.isbn}
+              </li>
+            )}
+            {typeof book.stockQuantity === "number" && (
+              <li>
+                <strong>Tồn kho:</strong> {book.stockQuantity}
+              </li>
+            )}
+          </ul>
         </div>
-      )}
 
-      <div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-3">
-          Thông tin chi tiết
-        </h2>
-        <ul className="text-gray-700 text-sm space-y-2 bg-gray-50 p-4 rounded-lg">
-          {book.title && (
-            <li>
-              <strong>Tiêu đề:</strong> {book.title}
-            </li>
-          )}
-          {book.authors && book.authors.length > 0 && (
-            <li>
-              <strong>Tác giả:</strong>{" "}
-              {Array.isArray(book.authors)
-                ? book.authors.join(", ")
-                : book.authors}
-            </li>
-          )}
-          {book.publisher && (
-            <li>
-              <strong>Nhà xuất bản:</strong> {book.publisher}
-            </li>
-          )}
-          {book.publicationYear && (
-            <li>
-              <strong>Năm phát hành:</strong> {book.publicationYear}
-            </li>
-          )}
-          {book.pageCount && (
-            <li>
-              <strong>Số trang:</strong> {book.pageCount}
-            </li>
-          )}
-          {book.coverType && (
-            <li>
-              <strong>Loại bìa:</strong> {book.coverType}
-            </li>
-          )}
-          {book.isbn && (
-            <li>
-              <strong>Mã ISBN:</strong> {book.isbn}
-            </li>
-          )}
-          {typeof book.stockQuantity === "number" && (
-            <li>
-              <strong>Tồn kho:</strong> {book.stockQuantity}
-            </li>
-          )}
-        </ul>
+        {/* Form gửi đánh giá */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Chọn số sao:</label>
+          <select
+            value={newReview.rating}
+            onChange={(e) =>
+              setNewReview({ ...newReview, rating: parseInt(e.target.value) })
+            }
+            className="border p-2 rounded text-sm"
+          >
+            <option value={0}>-- Chọn --</option>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <option key={star} value={star}>
+                {star} sao
+              </option>
+            ))}
+          </select>
+
+          <label className="block mt-3 text-sm font-medium mb-1">
+            Bình luận:
+          </label>
+          <textarea
+            value={newReview.comment}
+            onChange={(e) =>
+              setNewReview({ ...newReview, comment: e.target.value })
+            }
+            className="w-full border p-2 rounded text-sm"
+            rows={3}
+          />
+
+          <button
+            onClick={handleAddReview}
+            className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Gửi đánh giá
+          </button>
+        </div>
+
+        {/* Danh sách đánh giá */}
+        {reviews.length > 0 ? (
+          <ul className="space-y-4">
+            {reviews.map((review) => (
+              <li key={review._id} className="border p-4 rounded-md bg-gray-50">
+                <p className="font-semibold">
+                  {review.user?.email || "Ẩn danh"}
+                </p>
+                <p className="text-yellow-500">{"⭐".repeat(review.rating)}</p>
+                <p className="text-gray-700">{review.comment}</p>
+
+                {review.user?._id === currentUserId ? (
+                  <div className="mt-2 space-x-2">
+                    <button
+                      onClick={() => handleEditReview(review)}
+                      className="text-blue-600 text-sm"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => handleDeleteReview(review._id)}
+                      className="text-red-600 text-sm"
+                    >
+                      Xoá
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => handleReportReview(review._id)}
+                      className="text-orange-600 text-sm"
+                    >
+                      Báo cáo
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">
+            Chưa có đánh giá nào cho sản phẩm này.
+          </p>
+        )}
       </div>
-
-      {/* Form gửi đánh giá */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Chọn số sao:</label>
-        <select
-          value={newReview.rating}
-          onChange={(e) =>
-            setNewReview({ ...newReview, rating: parseInt(e.target.value) })
-          }
-          className="border p-2 rounded text-sm"
-        >
-          <option value={0}>-- Chọn --</option>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <option key={star} value={star}>
-              {star} sao
-            </option>
-          ))}
-        </select>
-
-        <label className="block mt-3 text-sm font-medium mb-1">Bình luận:</label>
-        <textarea
-          value={newReview.comment}
-          onChange={(e) =>
-            setNewReview({ ...newReview, comment: e.target.value })
-          }
-          className="w-full border p-2 rounded text-sm"
-          rows={3}
-        />
-
-        <button
-          onClick={handleAddReview}
-          className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-        >
-          Gửi đánh giá
-        </button>
-      </div>
-
-      {/* Danh sách đánh giá */}
-      {reviews.length > 0 ? (
-        <ul className="space-y-4">
-          {reviews.map((review) => (
-            <li key={review._id} className="border p-4 rounded-md bg-gray-50">
-              <p className="font-semibold">{review.user?.email || "Ẩn danh"}</p>
-              <p className="text-yellow-500">{"⭐".repeat(review.rating)}</p>
-              <p className="text-gray-700">{review.comment}</p>
-
-              {review.user?._id === currentUserId ? (
-                <div className="mt-2 space-x-2">
-                  <button
-                    onClick={() => handleEditReview(review)}
-                    className="text-blue-600 text-sm"
-                  >
-                    Sửa
-                  </button>
-                  <button
-                    onClick={() => handleDeleteReview(review._id)}
-                    className="text-red-600 text-sm"
-                  >
-                    Xoá
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <button
-                    onClick={() => handleReportReview(review._id)}
-                    className="text-orange-600 text-sm"
-                  >
-                    Báo cáo
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này.</p>
-      )}
     </div>
-  </div>
-);
-}
-export default ProductDetailPage
+  );
+};
+export default ProductDetailPage;

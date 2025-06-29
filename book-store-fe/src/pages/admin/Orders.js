@@ -4,7 +4,7 @@ import AdminSearch from '../../components/admin/AdminSearch';
 import AdminTable from '../../components/admin/AdminTable';
 import AdminPagination from '../../components/admin/AdminPagination';
 import AdminModal from '../../components/admin/AdminModal';
-import orderService from '../../services/orderService';
+import * as orderService from '../../services/orderService';
 import Icon from '../../components/common/Icon';
 import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 
