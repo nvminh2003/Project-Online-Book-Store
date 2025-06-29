@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import { Icon } from '@iconify/react';
 
 const AddBook = () => {
   const [bookData, setBookData] = useState({
@@ -25,6 +26,7 @@ const AddBook = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
 
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
@@ -158,7 +160,7 @@ const AddBook = () => {
         },
       });
 
-      alert("Thêm sách thành công!");
+      setSuccessMsg("✅ Thêm sách thành công!");
       setBookData({
         title: "",
         authors: "",
@@ -177,6 +179,9 @@ const AddBook = () => {
       });
       setImages([]);
       setPreviewUrls([]);
+      setTimeout(() => {
+        navigate("/admin/books");
+      }, 1500);
     } catch (error) {
       console.error("Upload lỗi:", error);
       alert("Có lỗi xảy ra khi thêm sách.");
@@ -187,105 +192,172 @@ const AddBook = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
+      {successMsg && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
+          {successMsg}
+        </div>
+      )}
       <h2 className="text-2xl font-semibold mb-6 text-center text-blue-700">
         Thêm sách mới
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          name="title"
-          placeholder="Tiêu đề"
-          value={bookData.title}
-          onChange={handleChange}
-          required
-          className="input-field"
-        />
-        <input
-          name="authors"
-          placeholder="Tác giả (cách nhau bằng dấu phẩy)"
-          value={bookData.authors}
-          onChange={handleChange}
-          required
-          className="input-field"
-        />
-        <input
-          name="publisher"
-          placeholder="NXB"
-          value={bookData.publisher}
-          onChange={handleChange}
-          required
-          className="input-field"
-        />
-        <input
-          name="publicationYear"
-          type="number"
-          placeholder="Năm XB"
-          value={bookData.publicationYear}
-          onChange={handleChange}
-          required
-          className="input-field"
-        />
-        <input
-          name="pageCount"
-          type="number"
-          placeholder="Số trang"
-          value={bookData.pageCount}
-          onChange={handleChange}
-          className="input-field"
-        />
-        <input
-          name="coverType"
-          placeholder="Loại bìa"
-          value={bookData.coverType}
-          onChange={handleChange}
-          className="input-field"
-        />
-        <textarea
-          name="description"
-          placeholder="Mô tả"
-          value={bookData.description}
-          onChange={handleChange}
-          className="input-field h-28"
-        />
-        <input
-          name="isbn"
-          placeholder="ISBN"
-          value={bookData.isbn}
-          onChange={handleChange}
-          className="input-field"
-        />
-        <input
-          name="originalPrice"
-          type="number"
-          placeholder="Giá gốc"
-          value={bookData.originalPrice}
-          onChange={handleChange}
-          className="input-field"
-        />
-        <input
-          name="sellingPrice"
-          type="number"
-          placeholder="Giá bán"
-          value={bookData.sellingPrice}
-          onChange={handleChange}
-          className="input-field"
-        />
-        <input
-          name="stockQuantity"
-          type="number"
-          placeholder="Số lượng"
-          value={bookData.stockQuantity}
-          onChange={handleChange}
-          className="input-field"
-        />
-
         <div>
-          <label className="font-medium">Danh mục:</label>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:book-open-page-variant" width="20" className="text-blue-500" /> Tiêu đề:
+          </label>
+          <input
+            name="title"
+            placeholder="Tiêu đề"
+            value={bookData.title}
+            onChange={handleChange}
+            required
+            className="input-field"
+          />
+        </div>
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:account-multiple" width="20" className="text-blue-500" /> Tác giả:
+          </label>
+          <input
+            name="authors"
+            placeholder="Tác giả (cách nhau bằng dấu phẩy)"
+            value={bookData.authors}
+            onChange={handleChange}
+            required
+            className="input-field"
+          />
+        </div>
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:domain" width="20" className="text-blue-500" /> Nhà xuất bản:
+          </label>
+          <input
+            name="publisher"
+            placeholder="NXB"
+            value={bookData.publisher}
+            onChange={handleChange}
+            required
+            className="input-field"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:calendar" width="20" className="text-blue-500" /> Năm xuất bản:
+            </label>
+            <input
+              name="publicationYear"
+              type="number"
+              placeholder="Năm XB"
+              value={bookData.publicationYear}
+              onChange={handleChange}
+              required
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:file-document-outline" width="20" className="text-blue-500" /> Số trang:
+            </label>
+            <input
+              name="pageCount"
+              type="number"
+              placeholder="Số trang"
+              value={bookData.pageCount}
+              onChange={handleChange}
+              className="input-field"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:book-variant" width="20" className="text-blue-500" /> Loại bìa:
+          </label>
+          <input
+            name="coverType"
+            placeholder="Loại bìa"
+            value={bookData.coverType}
+            onChange={handleChange}
+            className="input-field"
+          />
+        </div>
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:text" width="20" className="text-blue-500" /> Mô tả:
+          </label>
+          <textarea
+            name="description"
+            placeholder="Mô tả"
+            value={bookData.description}
+            onChange={handleChange}
+            className="input-field h-28"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:barcode" width="20" className="text-blue-500" /> ISBN:
+            </label>
+            <input
+              name="isbn"
+              placeholder="ISBN"
+              value={bookData.isbn}
+              onChange={handleChange}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:cash" width="20" className="text-blue-500" /> Giá gốc:
+            </label>
+            <input
+              name="originalPrice"
+              type="number"
+              placeholder="Giá gốc"
+              value={bookData.originalPrice}
+              onChange={handleChange}
+              className="input-field"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:cash-multiple" width="20" className="text-blue-500" /> Giá bán:
+            </label>
+            <input
+              name="sellingPrice"
+              type="number"
+              placeholder="Giá bán"
+              value={bookData.sellingPrice}
+              onChange={handleChange}
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+              <Icon icon="mdi:warehouse" width="20" className="text-blue-500" /> Số lượng:
+            </label>
+            <input
+              name="stockQuantity"
+              type="number"
+              placeholder="Số lượng"
+              value={bookData.stockQuantity}
+              onChange={handleChange}
+              className="input-field"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
+          </label>
           <select
-            multiple
-            value={bookData.categories}
-            onChange={handleCategorySelect}
-            className="input-field h-32"
+            value={bookData.categories[0] || ""}
+            onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
+            className="input-field"
           >
+            <option value="">-- Chọn danh mục --</option>
             {categoryOptions.map((cat) => (
               <option key={cat._id} value={cat._id}>
                 {cat.name}
@@ -293,7 +365,6 @@ const AddBook = () => {
             ))}
           </select>
         </div>
-
         <div className="flex gap-6">
           <label className="flex items-center gap-2">
             <input
@@ -302,7 +373,7 @@ const AddBook = () => {
               checked={bookData.isFeatured}
               onChange={handleChange}
             />
-            Nổi bật
+            <Icon icon="mdi:star" width="18" className="text-yellow-400" /> Nổi bật
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -311,18 +382,21 @@ const AddBook = () => {
               checked={bookData.isNewArrival}
               onChange={handleChange}
             />
-            Mới về
+            <Icon icon="mdi:new-box" width="18" className="text-green-500" /> Mới về
           </label>
         </div>
-
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleImageChange}
-          className="input-field"
-        />
-
+        <div>
+          <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
+            <Icon icon="mdi:image-multiple" width="20" className="text-blue-500" /> Ảnh sách:
+          </label>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleImageChange}
+            className="input-field"
+          />
+        </div>
         {previewUrls.length > 0 && (
           <div className="flex flex-wrap gap-3">
             {previewUrls.map((url, idx) => (
@@ -335,12 +409,12 @@ const AddBook = () => {
             ))}
           </div>
         )}
-
         <button
           type="submit"
           disabled={uploading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition flex items-center justify-center gap-2"
         >
+          <Icon icon="mdi:plus-box" width="22" />
           {uploading ? "Đang upload..." : "Thêm sách"}
         </button>
       </form>

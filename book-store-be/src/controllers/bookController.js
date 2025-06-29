@@ -1,309 +1,466 @@
-const AdminActivityLog = require("../models/AdminActivityLog");
 const Book = require("../models/bookModel");
+const AdminActivityLog = require("../models/AdminActivityLog");
+const Category = require("../models/categoryModel");
+// Create a new book (Admin only)
+
+const mongoose = require("mongoose"); // Thêm nếu chưa import ở đầu file
 
 // Create a new book (Admin only)
 const createBook = async (req, res) => {
-    try {
-        const {
-            title,
-            authors,
-            publisher,
-            publicationYear,
-            pageCount,
-            coverType,
-            description,
-            images,
-            isbn,
-            originalPrice,
-            sellingPrice,
-            stockQuantity,
-            isFeatured,
-            isNewArrival,
-            categories
-        } = req.body;
+  try {
+    const {
+      title,
+      authors,
+      publisher,
+      publicationYear,
+      pageCount,
+      coverType,
+      description,
+      images,
+      isbn,
+      originalPrice,
+      sellingPrice,
+      stockQuantity,
+      isFeatured,
+      isNewArrival,
+      categories,
+    } = req.body;
 
-        console.log("body: ", req.body);
-        // Validate required fields
-        if (!title || !authors || !publisher || !originalPrice || !sellingPrice || !stockQuantity) {
-            return res.status(400).json({
-                message: "Missing required fields",
-                status: "Error"
-            });
-        }
+    console.log("body: ", req.body);
 
-        function removeVietnameseTones(str) {
-            return str.normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "") // remove diacritics
-                .replace(/đ/g, "d").replace(/Đ/g, "D");
-        }
+    if (
+      !title ||
+      !authors ||
+      !publisher ||
+      !originalPrice ||
+      !sellingPrice ||
+      !stockQuantity
+    ) {
+      return res.status(400).json({
+        message: "Missing required fields",
+        status: "Error",
+      });
+    }
 
-        // Generate slug from name
-        const slug = removeVietnameseTones(title)
+    function removeVietnameseTones(str) {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+    }
+
+    const slug = removeVietnameseTones(title)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const newBook = new Book({
+      title,
+      slug,
+      authors,
+      publisher,
+      publicationYear,
+      pageCount,
+      coverType,
+      description,
+      images,
+      isbn,
+      originalPrice,
+      sellingPrice,
+      stockQuantity,
+      isFeatured: isFeatured || false,
+      isNewArrival: isNewArrival || false,
+      categories: categories.map((id) => new mongoose.Types.ObjectId(id)),
+      createdBy: req.account?._id, // sẽ undefined nếu bạn chưa có login, có thể bỏ nếu chưa cần
+    });
+
+    await newBook.save();
+
+    await AdminActivityLog.create({
+      adminId: req.account._id,
+      action: "CREATE_BOOK",
+      details: `Admin ${req.account.email} created book ${newBook.title} (ID: ${newBook._id})`,
+    });
+
+    res.status(201).json({
+      message: "Book created successfully",
+      status: "Success",
+      data: newBook,
+    });
+  } catch (error) {
+    console.error("Error creating book:", error.stack);
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Get all books with pagination
+const getAllBooks = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const books = await Book.find()
+      .populate("categories")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Book.countDocuments();
+
+    res.status(200).json({
+      message: "Get books successfully",
+      status: "Success",
+      data: {
+        books,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Search books
+const searchBooks = async (req, res) => {
+  try {
+    const { query } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const searchQuery = {
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { authors: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { publisher: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    const books = await Book.find(searchQuery)
+      .populate("categories")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Book.countDocuments(searchQuery);
+
+    res.status(200).json({
+      message: "Search books successfully",
+      status: "Success",
+      data: {
+        books,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Get book by ID
+const getBookById = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id).populate("categories");
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found",
+        status: "Error",
+      });
+    }
+
+    res.status(200).json({
+      message: "Get book successfully",
+      status: "Success",
+      data: book,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
+// Update book (Admin only)
+const updateBook = async (req, res) => {
+  try {
+    const {
+      title,
+      authors,
+      publisher,
+      publicationYear,
+      pageCount,
+      coverType,
+      description,
+      images,
+      isbn,
+      originalPrice,
+      sellingPrice,
+      stockQuantity,
+      isFeatured,
+      isNewArrival,
+      categories,
+    } = req.body;
+
+    const book = await Book.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found",
+        status: "Error",
+      });
+    }
+
+    // Generate new slug if title is changed
+    const slug =
+      title !== book.title
+        ? title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)/g, "");
+            .replace(/(^-|-$)/g, "")
+        : book.slug;
 
-        // Create new book
-        const newBook = new Book({
-            title,
-            slug,
-            authors,
-            publisher,
-            publicationYear,
-            pageCount,
-            coverType,
-            description,
-            images,
-            isbn,
-            originalPrice,
-            sellingPrice,
-            stockQuantity,
-            isFeatured: isFeatured || false,
-            isNewArrival: isNewArrival || false,
-            categories,
-            createdBy: req.account._id
-        });
+    // Update book fields
+    const updatedFields = {
+      title: title || book.title,
+      slug,
+      authors: authors || book.authors,
+      publisher: publisher || book.publisher,
+      publicationYear: publicationYear || book.publicationYear,
+      pageCount: pageCount || book.pageCount,
+      coverType: coverType || book.coverType,
+      description: description || book.description,
+      images: images || book.images,
+      isbn: isbn || book.isbn,
+      originalPrice: originalPrice || book.originalPrice,
+      sellingPrice: sellingPrice || book.sellingPrice,
+      stockQuantity: stockQuantity || book.stockQuantity,
+      isFeatured: isFeatured !== undefined ? isFeatured : book.isFeatured,
+      isNewArrival:
+        isNewArrival !== undefined ? isNewArrival : book.isNewArrival,
+      categories: categories || book.categories,
+      updatedBy: req.account._id,
+    };
 
-        await newBook.save();
+    const updatedBook = await Book.findByIdAndUpdate(
+      req.params.id,
+      updatedFields,
+      { new: true }
+    ).populate("categories");
+    await AdminActivityLog.create({
+      adminId: req.account._id,
+      action: "UPDATE_BOOK",
+      details: `Admin ${req.account.email} updated account ${updatedBook.title} (ID: ${updatedBook._id})`,
+    });
 
-        // Log admin activity
-        await AdminActivityLog.create({
-            adminId: req.account._id,
-            action: 'CREATE_BOOK',
-            details: `Admin ${req.account.email} created new book post: ${title}`
-        });
-
-        res.status(201).json({
-            message: "Book created successfully",
-            status: "Success",
-            data: newBook
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
+    res.status(200).json({
+      message: "Book updated successfully",
+      status: "Success",
+      data: updatedBook,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
 };
 
-// Get all books with pagination, filtering, and sorting
-const getAllBooks = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const {
-            sort,
-            category,
-            isFeatured,
-            isNewArrival,
-            minPrice,
-            maxPrice
-        } = req.query;
-
-        const query = {};
-
-        // Filtering
-        if (category) {
-            query.categories = category;
-        }
-        if (isFeatured) {
-            query.isFeatured = isFeatured === 'true';
-        }
-        if (isNewArrival) {
-            query.isNewArrival = isNewArrival === 'true';
-        }
-
-        // Price range filter
-        if (minPrice || maxPrice) {
-            query.sellingPrice = {};
-            if (minPrice) query.sellingPrice.$gte = parseInt(minPrice);
-            if (maxPrice) query.sellingPrice.$lte = parseInt(maxPrice);
-        }
-
-        // Sorting
-        let sortOption = { createdAt: -1 }; // default sort
-        if (sort) {
-            const parts = sort.split(':'); // e.g., 'sellingPrice:asc'
-            if (parts.length === 2) {
-                sortOption = { [parts[0]]: parts[1] === 'desc' ? -1 : 1 };
-            }
-        }
-
-        const books = await Book.find(query)
-            .populate('categories')
-            .sort(sortOption)
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Book.countDocuments(query);
-
-        res.status(200).json({
-            message: "Get books successfully",
-            status: "Success",
-            data: {
-                books,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
-// Get a single book by ID
-const getBookById = async (req, res) => {
-    try {
-        const book = await Book.findById(req.params.id)
-            .populate('categories', 'name slug')
-            .populate('createdBy', 'info.fullName email');
-
-        if (!book) {
-            return res.status(404).json({ message: "Book not found", status: "Error" });
-        }
-        res.status(200).json({
-            message: "Get book successfully",
-            status: "Success",
-            data: book
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message, status: "Error" });
-    }
-};
-
-// Update a book (Admin only)
-const updateBook = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const bookData = req.body;
-
-        const book = await Book.findById(id);
-        if (!book) {
-            return res.status(404).json({ message: "Book not found", status: "Error" });
-        }
-
-        // if title is updated, regenerate slug
-        if (bookData.title && bookData.title !== book.title) {
-            function removeVietnameseTones(str) {
-                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
-            }
-            bookData.slug = removeVietnameseTones(bookData.title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-        }
-
-        const updatedBook = await Book.findByIdAndUpdate(
-            id,
-            { ...bookData, updatedBy: req.account._id },
-            { new: true, runValidators: true }
-        ).populate('categories');
-
-        // Log admin activity
-        await AdminActivityLog.create({
-            adminId: req.account._id,
-            action: 'UPDATE_BOOK',
-            details: `Admin ${req.account.email} updated book: ${updatedBook.title}`
-        });
-
-        res.status(200).json({
-            message: "Book updated successfully",
-            status: "Success",
-            data: updatedBook
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message, status: "Error" });
-    }
-};
-
-// Delete a book (Admin only)
+// Delete book (Admin only)
 const deleteBook = async (req, res) => {
-    try {
-        const book = await Book.findById(req.params.id);
-        if (!book) {
-            return res.status(404).json({ message: "Book not found", status: "Error" });
-        }
+  try {
+    const book = await Book.findById(req.params.id);
 
-        await Book.findByIdAndDelete(req.params.id);
-
-        // Log admin activity
-        await AdminActivityLog.create({
-            adminId: req.account._id,
-            action: 'DELETE_BOOK',
-            details: `Admin ${req.account.email} deleted book: ${book.title}`
-        });
-
-        res.status(200).json({ message: "Book deleted successfully", status: "Success" });
-    } catch (error) {
-        res.status(500).json({ message: error.message, status: "Error" });
+    if (!book) {
+      return res.status(404).json({
+        message: "Book not found",
+        status: "Error",
+      });
     }
+
+    await Book.findByIdAndDelete(req.params.id);
+    await AdminActivityLog.create({
+      adminId: req.account._id,
+      action: "DELETE_BOOK",
+      details: `Admin ${req.account.email} updated account ${book.title} (ID: ${book._id})`,
+    });
+
+    res.status(200).json({
+      message: "Book deleted successfully",
+      status: "Success",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
 };
-
-// Search books by a search term
-const searchBooks = async (req, res) => {
-    try {
-        const { searchTerm } = req.query;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        if (!searchTerm) {
-            return res.status(400).json({
-                message: "Search term is required",
-                status: "Error"
-            });
-        }
-
-        const query = {
-            $or: [
-                { title: { $regex: searchTerm, $options: 'i' } },
-                { authors: { $in: [new RegExp(searchTerm, 'i')] } },
-                { description: { $regex: searchTerm, $options: 'i' } },
-                { isbn: { $regex: searchTerm, $options: 'i' } }
-            ]
-        };
-
-        const [books, total] = await Promise.all([
-            Book.find(query)
-                .populate('categories')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            Book.countDocuments(query)
-        ]);
-
-        res.status(200).json({
-            message: "Search books successfully",
-            status: "Success",
-            data: {
-                books,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
+const uploadBooksFromExcel = async (req, res) => {
+  try {
+    const books = req.body.books;
+    if (!Array.isArray(books)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid books data", status: "Error" });
     }
+
+    // Hàm tạo slug như bên createBook
+    function removeVietnameseTones(str) {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D");
+    }
+
+    const createdBooks = [];
+
+    for (const book of books) {
+      const {
+        title,
+        authors,
+        publisher,
+        publicationYear,
+        pageCount,
+        coverType,
+        description,
+        images,
+        isbn,
+        originalPrice,
+        sellingPrice,
+        stockQuantity,
+        isFeatured,
+        isNewArrival,
+        categories,
+      } = book;
+
+      if (
+        !title ||
+        !authors ||
+        !publisher ||
+        !originalPrice ||
+        !sellingPrice ||
+        !stockQuantity
+      ) {
+        continue; // Bỏ qua nếu thiếu trường bắt buộc
+      }
+
+      const slug = removeVietnameseTones(title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+      // ✅ Xử lý images đảm bảo đúng kiểu mảng chuỗi
+      let imageArray = [];
+      if (typeof images === "string") {
+        imageArray = images
+          .split(",")
+          .map((img) => img.trim())
+          .filter(Boolean);
+      } else if (Array.isArray(images)) {
+        imageArray = images.map((img) => String(img).trim()).filter(Boolean);
+      }
+
+      if (!Array.isArray(imageArray)) {
+        console.warn(
+          `⚠️ images for book "${title}" is not an array. Received:`,
+          images
+        );
+        imageArray = [];
+      }
+
+      // Log rõ ràng để debug
+      console.log(`📦 Đang xử lý sách: ${title}`);
+      console.log("🔗 images:", imageArray);
+
+      // Xử lý categories từ slug
+      let categoryIds = [];
+      if (categories) {
+        const categorySlugs = categories.split(",").map((c) => c.trim());
+        const foundCategories = await Category.find({
+          slug: { $in: categorySlugs },
+        });
+        categoryIds = foundCategories.map((cat) => cat._id);
+      }
+
+      const newBook = new Book({
+        title,
+        slug,
+        authors: authors?.split(",").map((a) => a.trim()),
+        publisher,
+        publicationYear: publicationYear
+          ? parseInt(publicationYear)
+          : undefined,
+        pageCount: pageCount ? parseInt(pageCount) : undefined,
+        coverType,
+        description,
+        images: imageArray,
+        isbn,
+        originalPrice: parseFloat(originalPrice),
+        sellingPrice: parseFloat(sellingPrice),
+        stockQuantity: parseInt(stockQuantity),
+        isFeatured: isFeatured || false,
+        isNewArrival: isNewArrival || false,
+        categories: categoryIds,
+        createdBy: req.account._id,
+      });
+
+      await newBook.save();
+
+      await AdminActivityLog.create({
+        adminId: req.account._id,
+        action: "CREATE_BOOK",
+        details: `Admin ${req.account.email} imported book "${newBook.title}" (ID: ${newBook._id}) via Excel`,
+      });
+
+      createdBooks.push(newBook);
+    }
+
+    res.status(201).json({
+      message: "Import sách thành công",
+      status: "Success",
+      data: createdBooks,
+    });
+  } catch (err) {
+    console.error("❌ Lỗi import Excel:", err);
+    res.status(500).json({
+      message: err.message,
+      status: "Error",
+    });
+  }
 };
 
 module.exports = {
-    createBook,
-    getAllBooks,
-    getBookById,
-    updateBook,
-    deleteBook,
-    searchBooks
+  createBook,
+  getAllBooks,
+  searchBooks,
+  getBookById,
+  updateBook,
+  deleteBook,
+  uploadBooksFromExcel,
 };

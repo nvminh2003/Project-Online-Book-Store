@@ -15,7 +15,7 @@ const port = process.env.PORT || 9999;
 
 const corsOptions = {
   origin: process.env.CLIENT_URL || "http://localhost:3000", // Cho phép frontend truy cập
-  methods: ["GET", "POST", "PUT", "DELETE"], // Các phương thức được phép
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Các phương thức được phép
   credentials: true, // Cho phép gửi cookie, authentication headers
   allowedHeaders: ["Content-Type", "Authorization", "token"],
 };

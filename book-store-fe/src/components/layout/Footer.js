@@ -63,7 +63,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/products?filter=new-arrivals" className="text-gray-400 hover:text-white transition-colors no-underline">
+                <Link to="/getbook" className="text-gray-400 hover:text-white transition-colors no-underline">
                   Sách hay sách mới
                 </Link>
               </li>
