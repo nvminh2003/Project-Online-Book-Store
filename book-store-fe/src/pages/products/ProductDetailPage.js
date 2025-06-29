@@ -1,13 +1,9 @@
 // src/pages/products/ProductDetailPage.js
-import React, { useEffect, useState, useCallback, useRef } from "react"; // Thêm useCallback
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Icon } from "@iconify/react";
-
-// --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
-// import { useDispatch } from "react-redux";
-// import { addItemToCartAPI } from "../../store/slices/cartSlice"; // Đường dẫn đúng
-// --- KẾT THÚC IMPORT REDUX ---
+import { useCart } from "../../contexts/CartContext"; // Import useCart hook
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api"; // Đảm bảo có /api nếu backend có prefix
@@ -24,7 +20,7 @@ const ProductDetailPage = () => {
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const imageIntervalRef = useRef();
   const navigate = useNavigate();
-  // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
+  const { addToCart } = useCart(); // Use the cart context
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("success"); // 'success' | 'error'
 
@@ -109,24 +105,17 @@ const ProductDetailPage = () => {
       setTimeout(() => setToastMsg(""), 1500);
       return;
     }
-    const payload = {
-      bookId: book._id,
-      quantity: currentQuantity,
-    };
+
     try {
-      const response = await axios.post(`${API_URL}/cart/add`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.data && response.data.status === "Success") {
+      // Use the addToCart function from CartContext instead of direct API call
+      const result = await addToCart(book._id, currentQuantity);
+
+      if (result.success) {
         setToastMsg("Đã thêm vào giỏ hàng thành công!");
         setToastType("success");
         setTimeout(() => setToastMsg(""), 1500);
       } else {
-        setToastMsg(
-          response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng."
-        );
+        setToastMsg(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
         setToastType("error");
         setTimeout(() => setToastMsg(""), 1500);
       }
@@ -142,10 +131,6 @@ const ProductDetailPage = () => {
       setToastMsg(errorMessage);
       setToastType("error");
       setTimeout(() => setToastMsg(""), 1500);
-      // if (err.response?.status === 401) {
-      //   localStorage.removeItem("accessToken");
-      //   navigate("/auth/login");
-      // }
     }
   };
 
@@ -215,27 +200,27 @@ const ProductDetailPage = () => {
 
   // Define empty functions to fix undefined errors
   const handleAddReview = () => {
-    setToastMsg('Tính năng đang được phát triển');
-    setToastType('error');
-    setTimeout(() => setToastMsg(''), 1500);
+    setToastMsg("Tính năng đang được phát triển");
+    setToastType("error");
+    setTimeout(() => setToastMsg(""), 1500);
   };
 
   const handleEditReview = () => {
-    setToastMsg('Tính năng đang được phát triển');
-    setToastType('error');
-    setTimeout(() => setToastMsg(''), 1500);
+    setToastMsg("Tính năng đang được phát triển");
+    setToastType("error");
+    setTimeout(() => setToastMsg(""), 1500);
   };
 
   const handleDeleteReview = () => {
-    setToastMsg('Tính năng đang được phát triển');
-    setToastType('error');
-    setTimeout(() => setToastMsg(''), 1500);
+    setToastMsg("Tính năng đang được phát triển");
+    setToastType("error");
+    setTimeout(() => setToastMsg(""), 1500);
   };
 
   const handleReportReview = () => {
-    setToastMsg('Tính năng đang được phát triển');
-    setToastType('error');
-    setTimeout(() => setToastMsg(''), 1500);
+    setToastMsg("Tính năng đang được phát triển");
+    setToastType("error");
+    setTimeout(() => setToastMsg(""), 1500);
   };
 
   const currentUserId = null; // Placeholder for user ID

@@ -54,11 +54,11 @@ export const CartProvider = ({ children }) => {
   }, [fetchCart]);
 
   // Hàm thêm sản phẩm vào giỏ hàng
-  const addToCart = useCallback(async (items) => {
+  const addToCart = useCallback(async (bookId, quantity) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await addItemToCartAPI(items);
+      const res = await addItemToCartAPI(bookId, quantity);
       setCart(res.data.data);
       return { success: true, data: res.data.data }; // Trả về kết quả thành công
     } catch (err) {

@@ -307,12 +307,20 @@ const CheckoutPage = () => {
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handlePlaceOrder = async () => {
     if (!validateForm()) {
       openModal(
         "Lỗi",
         "Vui lòng điền đầy đủ và chính xác các thông tin bắt buộc."
+      );
+      return;
+    }
+
+    // Check if the cart is empty
+    if (!cart || !cart.items || cart.items.length === 0) {
+      openModal(
+        "Giỏ hàng trống",
+        "Vui lòng thêm sản phẩm vào giỏ hàng trước khi đặt hàng."
       );
       return;
     }
@@ -344,17 +352,82 @@ const CheckoutPage = () => {
         discountCode: cart?.couponDetails?.code,
         note: shippingInfo.note,
       };
+
+      console.log("=== Frontend Order Request ===");
+      console.log("Order data being sent:", orderData);
+
       const res = await createOrderAPI(orderData);
-      if (paymentMethod === "PAYOS" && res.data.checkoutUrl) {
-        window.location.href = res.data.checkoutUrl;
+
+      console.log("=== Frontend Order Response ===");
+      console.log("Full response:", res);
+      console.log("Response data:", res.data);
+      console.log("Response data.data:", res.data?.data);
+
+      if (paymentMethod === "PAYOS") {
+        // Check both possible response structures
+        const checkoutUrl =
+          res.data?.data?.checkoutUrl || res.data?.checkoutUrl;
+        const orderId = res.data?.data?.orderId || res.data?.orderId;
+
+        console.log("PayOS Response Analysis:", {
+          checkoutUrl,
+          orderId,
+          fullResponse: res.data,
+        });
+
+        if (checkoutUrl) {
+          // Store order ID in localStorage for reference after return from payment gateway
+          localStorage.setItem("pendingOrderId", orderId);
+
+          console.log("Redirecting to PayOS:", checkoutUrl);
+          // Open payment link in the same window
+          window.location.href = checkoutUrl;
+        } else {
+          console.error("No checkout URL found in response:", res.data);
+          openModal(
+            "Lỗi Thanh Toán",
+            `Không thể tạo liên kết thanh toán. Response: ${JSON.stringify(
+              res.data
+            )}. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.`
+          );
+        }
       } else {
-        navigate(`/auth/checkout/success/${res.data.orderId}`);
+        // For COD payments, go directly to success page
+        const orderId = res.data?.data?.orderId || res.data?.orderId;
+        navigate(`/auth/checkout/success/${orderId}`);
       }
     } catch (err) {
-      openModal(
-        "Order Failed",
-        err.response?.data?.message || "Failed to create order"
-      );
+      console.error("Order creation error:", err);
+      console.error("Error response:", err.response?.data);
+
+      // Don't reload cart data on error - keep current cart state
+
+      if (
+        err.response?.data?.message?.includes("payment link") ||
+        err.response?.data?.message?.includes("PayOS") ||
+        err.response?.data?.message?.includes("Failed to create PayOS")
+      ) {
+        openModal(
+          "Lỗi Cổng Thanh Toán PayOS",
+          `Có lỗi khi tạo liên kết thanh toán PayOS: ${
+            err.response?.data?.message || err.message
+          }. Giỏ hàng của bạn vẫn được giữ nguyên. Vui lòng thử lại hoặc chọn phương thức thanh toán khi nhận hàng (COD).`
+        );
+      } else if (
+        err.response?.data?.message?.includes("empty") ||
+        err.response?.data?.message?.includes("Cart is empty")
+      ) {
+        openModal(
+          "Giỏ hàng trống",
+          "Không thể đặt hàng vì giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm vào giỏ hàng."
+        );
+      } else {
+        openModal(
+          "Đặt hàng thất bại",
+          err.response?.data?.message ||
+            "Không thể tạo đơn hàng. Vui lòng thử lại sau."
+        );
+      }
     } finally {
       setIsPlacingOrder(false);
     }
@@ -619,7 +692,7 @@ const CheckoutPage = () => {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="mr-2"
                   />
-                  Thanh toán qua PayOS
+                  Thanh toán qua PayOS (VNPAY, thẻ ATM, ví điện tử)
                 </label>
               </div>
             </div>

@@ -50,9 +50,17 @@ export const routes = [
   { path: "/auth/register", page: RegisterPage, isShowHeader: true },
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
   { path: "/auth/cart", page: CartPage, isShowHeader: true },
-  { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
+  {
+    path: "/auth/forgot-password",
+    page: ForgotPasswordPage,
+    isShowHeader: true,
+  },
   { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
-  { path: "/auth/change-password", page: ChangePasswordPage, isShowHeader: true },
+  {
+    path: "/auth/change-password",
+    page: ChangePasswordPage,
+    isShowHeader: true,
+  },
   { path: "/reset-password", page: ResetPasswordPage, isShowHeader: true },
   { path: "/about", page: AboutUs, isShowHeader: true },
   { path: "/payment-info", page: PaymentInfo, isShowHeader: true },
@@ -68,11 +76,17 @@ export const routes = [
   { path: "/autoadd", page: UploadExcel, isShowHeader: true },
 
   // Checkout Routes
-  { path: "/auth/checkout/shipping", page: ShippingPage, isShowHeader: true },
-  { path: "/auth/checkout/payment", page: PaymentPage, isShowHeader: true },
-  { path: "/auth/checkout/review", page: OrderReviewPage, isShowHeader: true },
-  { path: "/auth/checkout/success/:orderId", page: OrderSuccessPage, isShowHeader: true },
-  { path: "/auth/checkout/cancel/:orderId", page: OrderCancelPage, isShowHeader: true },
+  { path: "/auth/checkout", page: CheckoutPage, isShowHeader: true },
+  {
+    path: "/auth/checkout/success/:orderId",
+    page: OrderSuccessPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/checkout/cancel/:orderId",
+    page: OrderCancelPage,
+    isShowHeader: true,
+  },
 
   // Auth Callback
   { path: "/auth/google/success", page: GoogleSuccess, isShowHeader: false },
@@ -81,7 +95,9 @@ export const routes = [
   {
     path: "/admin",
     page: () => (
-      <ProtectedRoute requiredRole={["admindev", "adminbusiness", "superadmin"]}>
+      <ProtectedRoute
+        requiredRole={["admindev", "adminbusiness", "superadmin"]}
+      >
         <AdminLayout>
           <RoleBasedDashboard />
         </AdminLayout>
@@ -103,7 +119,10 @@ export const routes = [
   {
     path: "/admin/categories",
     page: () => (
-      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_CATEGORY">
+      <ProtectedRoute
+        requiredRole="admindev"
+        requiredPermission="VIEW_CATEGORY"
+      >
         <AdminLayout>
           <AdminCategories />
         </AdminLayout>
@@ -114,7 +133,10 @@ export const routes = [
   {
     path: "/admin/discounts",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_DISCOUNT">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_DISCOUNT"
+      >
         <AdminLayout>
           <AdminDiscounts />
         </AdminLayout>
@@ -136,7 +158,10 @@ export const routes = [
   {
     path: "/admin/view-admin-activity",
     page: () => (
-      <ProtectedRoute requiredRole="superadmin" requiredPermission="VIEW_ADMIN_ACTIVITY">
+      <ProtectedRoute
+        requiredRole="superadmin"
+        requiredPermission="VIEW_ADMIN_ACTIVITY"
+      >
         <AdminLayout>
           <AdminActivity />
         </AdminLayout>
@@ -147,7 +172,10 @@ export const routes = [
   {
     path: "/admin/orders",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_ORDER">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_ORDER"
+      >
         <AdminLayout>
           <AdminOrders />
         </AdminLayout>
@@ -158,7 +186,10 @@ export const routes = [
   {
     path: "/admin/reviews",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_REVIEW">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_REVIEW"
+      >
         <AdminLayout>
           <AdminReviews />
         </AdminLayout>
@@ -180,7 +211,10 @@ export const routes = [
   {
     path: "/admin/reports",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_SALES_REPORT"
+      >
         <AdminLayout>
           <AdminReports />
         </AdminLayout>

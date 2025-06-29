@@ -20,7 +20,9 @@ export const fetchCartAPI = async () => {
 export const addItemToCartAPI = async (bookId, quantity) => {
   return axios.post(
     `${API_BASE_URL}/cart/add`,
-    { bookId, quantity },
+    {
+      items: [{ bookId, quantity }],
+    },
     getAxiosConfig()
   );
 };

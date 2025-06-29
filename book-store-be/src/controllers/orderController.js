@@ -20,30 +20,85 @@ const mongoose = require("mongoose");
 
 // Generate unique order code
 const generateOrderCode = () => {
-  // Use a safe positive integer, e.g. last 9 digits of timestamp + random
-  const base = Number(Date.now().toString().slice(-9));
-  const random = Math.floor(Math.random() * 1000);
-  return base * 1000 + random; // Always a positive integer, < 9007199254740991
+  // PayOS requires orderCode to be a positive integer
+  // Use shorter timestamp (last 8 digits) + 2 digit random = max 10 digits
+  const timestamp = Date.now();
+  const timestampStr = timestamp.toString();
+  // Take last 8 digits of timestamp
+  const shortTimestamp = timestampStr.slice(-8);
+  // Add 2-digit random number
+  const random = Math.floor(Math.random() * 90) + 10; // 10-99
+  const orderCode = Number(shortTimestamp + random.toString());
+
+  console.log(
+    "Generated orderCode:",
+    orderCode,
+    "Length:",
+    orderCode.toString().length,
+    "String length:",
+    orderCode.toString().length
+  );
+  return orderCode;
 };
 
-// Create PayOS payment link
+// Create PayOS payment link following PayOS API documentation: https://payos.vn/docs/api/#operation/payment-request
 const createPaymentLink = async (paymentData) => {
   const { orderCode, totalAmount, fullName, phone, orderId } = paymentData;
 
-  const order = {
-    amount: totalAmount,
-    description: `Book order for ${fullName}`,
-    orderCode: orderCode,
+  // Create order data according to PayOS documentation
+  const payosOrderData = {
+    orderCode: orderCode, // Keep as number - PayOS accepts number
+    amount: Math.round(totalAmount), // Ensure amount is integer
+    description: `Don hang sach #${orderCode}`, // Avoid special characters
     returnUrl: `${process.env.FRONTEND_URL}/auth/checkout/success/${orderId}`,
     cancelUrl: `${process.env.FRONTEND_URL}/auth/checkout/cancel/${orderId}`,
-    buyerName: fullName,
-    buyerPhone: phone,
+    // Remove buyerName and buyerPhone as they might cause issues
   };
 
   try {
-    const paymentLinkResponse = await payos.createPaymentLink(order);
+    console.log("=== PayOS API Request ===");
+    console.log("PayOS Config:", {
+      clientId: process.env.PAYOS_CLIENT_ID ? "SET" : "NOT SET",
+      apiKey: process.env.PAYOS_API_KEY ? "SET" : "NOT SET",
+      checksumKey: process.env.PAYOS_CHECKSUM_KEY ? "SET" : "NOT SET",
+      frontendUrl: process.env.FRONTEND_URL,
+    });
+
+    console.log("PayOS Order Data:", JSON.stringify(payosOrderData, null, 2));
+    console.log("OrderCode validation:", {
+      value: orderCode,
+      type: typeof orderCode,
+      length: orderCode.toString().length,
+      isInteger: Number.isInteger(orderCode),
+      isPositive: orderCode > 0,
+      withinLimit: orderCode <= 9007199254740991,
+    });
+
+    const paymentLinkResponse = await payos.createPaymentLink(payosOrderData);
+
+    console.log("=== PayOS API Response ===");
+    console.log("Response Status: SUCCESS");
+    console.log("Response Data:", JSON.stringify(paymentLinkResponse, null, 2));
+    console.log("Checkout URL:", paymentLinkResponse.checkoutUrl);
+
+    if (!paymentLinkResponse || !paymentLinkResponse.checkoutUrl) {
+      throw new Error("Invalid PayOS response: Missing checkout URL");
+    }
+
     return paymentLinkResponse.checkoutUrl;
   } catch (error) {
+    console.error("=== PayOS API Error ===");
+    console.error("Error Type:", error.constructor.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Code:", error.code);
+    console.error("Error Status:", error.status);
+    console.error("Error Response:", error.response?.data);
+    console.error("Full Error Stack:", error.stack);
+    console.error(
+      "PayOS Request Data:",
+      JSON.stringify(payosOrderData, null, 2)
+    );
+
     throw new Error(`PayOS link creation failed: ${error.message}`);
   }
 };
@@ -333,14 +388,25 @@ const createOrder = async (req, res) => {
       await appliedDiscount.save();
     }
 
-    // Clear the user's cart
-    cart.items = [];
-    cart.coupon = null;
-    cart.subtotal = 0;
-    await cart.save();
-
     if (paymentMethod === "PAYOS") {
       try {
+        console.log("=== PayOS Payment Request ===");
+        console.log("Order Details:", {
+          orderId: newOrder._id.toString(),
+          orderCode,
+          totalAmount: finalTotal,
+          fullName,
+          phone,
+          paymentMethod,
+          discountAmount,
+          shippingFee,
+          items: orderItems.map((item) => ({
+            bookId: item.book,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        });
+
         const checkoutUrl = await createPaymentLink({
           orderCode,
           totalAmount: finalTotal,
@@ -348,6 +414,15 @@ const createOrder = async (req, res) => {
           phone,
           orderId: newOrder._id.toString(),
         });
+
+        console.log("PayOS Payment Link Created Successfully:", checkoutUrl);
+
+        // Only clear cart after successful PayOS link creation
+        cart.items = [];
+        cart.coupon = null;
+        cart.subtotal = 0;
+        await cart.save();
+        console.log("Cart cleared successfully after PayOS link creation");
 
         // Gửi email (populate để có tên sản phẩm)
         const user = await Account.findById(req.account._id);
@@ -367,17 +442,36 @@ const createOrder = async (req, res) => {
           },
         });
       } catch (error) {
-        console.error(
-          "PayOS link creation failed after order creation:",
-          error
-        );
+        console.error("=== PayOS Error Details ===");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("Order ID that failed:", newOrder._id.toString());
+
+        // Don't clear cart if PayOS fails - keep the cart intact
+        console.log("Cart preserved due to PayOS error");
+
+        // Update order status to indicate payment link failure
+        newOrder.paymentStatus = "payment_link_failed";
+        newOrder.orderStatus = "pending_payment_setup";
+        await newOrder.save();
+
         return res.status(500).json({
           message:
-            "Order created, but failed to generate payment link. Please contact support.",
+            "Failed to create PayOS payment link. Your cart has been preserved. Please try again or choose COD payment method.",
           status: "Error",
+          data: {
+            orderId: newOrder._id,
+            error: error.message,
+          },
         });
       }
     } else {
+      // For COD, clear cart immediately
+      cart.items = [];
+      cart.coupon = null;
+      cart.subtotal = 0;
+      await cart.save();
+
       // Gửi email (populate để có tên sản phẩm)
       const user = await Account.findById(req.account._id);
       const populatedOrder = await Order.findById(newOrder._id).populate(
@@ -883,6 +977,18 @@ const handlePayosCancel = async (req, res) => {
   try {
     const { orderId } = req.params;
     console.log("[PayOS Cancel] Cancel request for orderId:", orderId);
+
+    // Add CORS headers for PayOS callback
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS"
+    );
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+
     const order = await Order.findById(orderId);
     if (!order) {
       console.error("[PayOS Cancel] Order not found:", orderId);
@@ -901,10 +1007,11 @@ const handlePayosCancel = async (req, res) => {
         data: order,
       });
     }
-    order.paymentStatus = "failed";
+    order.paymentStatus = "cancelled";
     order.orderStatus = "cancelled";
     await order.save();
-    // Optionally, restore stock
+
+    // Restore stock when payment is cancelled
     for (const item of order.items) {
       await Book.findByIdAndUpdate(item.book, {
         $inc: { stockQuantity: item.quantity },

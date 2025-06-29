@@ -40,7 +40,6 @@ const OrderSuccessPage = () => {
         if (isPendingPayOS) {
           localStorage.removeItem("pendingOrderId");
           await payosCheckoutSuccess(orderId);
-          console.log("PayOS payment marked as successful for order:", orderId);
         }
 
         // Fetch order details
@@ -65,9 +64,7 @@ const OrderSuccessPage = () => {
       }
     };
 
-    if (orderId) {
-      fetchOrderDetails();
-    }
+    fetchOrderDetails();
   }, [orderId, clearCart]);
 
   if (loading) {
@@ -102,7 +99,7 @@ const OrderSuccessPage = () => {
       <MainLayout>
         <div className="container mx-auto px-4 py-12 text-center">
           <p className="text-xl text-gray-700">
-            Không tìm thấy thông tin đơn hàng đã đặt.
+            Không tìm thấy thông tin đơn hàng.
           </p>
           <Button onClick={() => navigate("/")} className="mt-4">
             Về trang chủ
@@ -119,20 +116,17 @@ const OrderSuccessPage = () => {
     address,
     items,
     totalAmount,
-    discountAmount = 0,
+    discountAmount,
     discountCode,
-    shippingFee = 30000,
+    shippingFee,
     paymentMethod,
     paymentStatus,
     orderStatus,
     createdAt,
   } = order;
 
-  const calculatedSubtotal =
-    items?.reduce(
-      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
-      0
-    ) || 0;
+  const subtotal =
+    items?.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0;
 
   return (
     <MainLayout>
@@ -152,152 +146,116 @@ const OrderSuccessPage = () => {
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h1 className="text-3xl font-bold text-green-800 mb-2">
-            Đặt hàng thành công!
-          </h1>
-          <p className="text-lg">
-            Cảm ơn bạn đã mua hàng. Chúng tôi sẽ sớm liên hệ để xác nhận đơn
-            hàng.
+          <h2 className="text-2xl font-bold mb-2">Đặt hàng thành công!</h2>
+          <p>
+            Cảm ơn bạn đã đặt hàng. Mã đơn hàng của bạn là:{" "}
+            <strong>{orderCode}</strong>
           </p>
-          {orderCode && (
-            <p className="mt-2 text-md">
-              Mã đơn hàng của bạn:{" "}
-              <strong className="text-green-900">{orderCode}</strong>
-            </p>
-          )}
         </div>
 
-        <div className="bg-white shadow-xl rounded-lg p-6 md:p-8 space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-800 border-b pb-3 mb-4">
-            Chi tiết đơn hàng
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-xl font-semibold mb-4">Thông tin đơn hàng</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-700 mb-1">
-                Thông tin người nhận:
-              </h3>
-              <p>
-                <strong>Họ tên:</strong> {fullName}
-              </p>
-              <p>
-                <strong>Điện thoại:</strong> {phone}
-              </p>
-              <p>
-                <strong>Địa chỉ:</strong> {address}
+              <p className="text-gray-600 text-sm">Người nhận:</p>
+              <p className="font-medium">{fullName}</p>
+            </div>
+            <div>
+              <p className="text-gray-600 text-sm">Số điện thoại:</p>
+              <p className="font-medium">{phone}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-gray-600 text-sm">Địa chỉ giao hàng:</p>
+              <p className="font-medium">{address}</p>
+            </div>
+            <div>
+              <p className="text-gray-600 text-sm">Trạng thái đơn hàng:</p>
+              <p
+                className={`font-medium ${
+                  orderStatus === "completed"
+                    ? "text-green-600"
+                    : orderStatus === "cancelled"
+                    ? "text-red-600"
+                    : "text-yellow-600"
+                }`}
+              >
+                {orderStatus === "pending"
+                  ? "Đang xử lý"
+                  : orderStatus === "processing"
+                  ? "Đang giao hàng"
+                  : orderStatus === "completed"
+                  ? "Đã giao hàng"
+                  : orderStatus === "cancelled"
+                  ? "Đã hủy"
+                  : orderStatus}
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-gray-700 mb-1">
-                Thông tin thanh toán & vận chuyển:
-              </h3>
-              <p>
-                <strong>Phương thức thanh toán:</strong>{" "}
-                {paymentMethod === "COD"
-                  ? "Thanh toán khi nhận hàng"
-                  : paymentMethod === "PAYOS"
-                  ? "Thanh toán qua PayOS"
-                  : paymentMethod}
-              </p>
-              <p>
-                <strong>Trạng thái thanh toán:</strong>
-                <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    paymentStatus === "paid"
-                      ? "bg-green-100 text-green-700"
-                      : paymentStatus === "failed"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {paymentStatus === "pending"
-                    ? "Chờ thanh toán"
-                    : paymentStatus === "paid"
-                    ? "Đã thanh toán"
+              <p className="text-gray-600 text-sm">Trạng thái thanh toán:</p>
+              <p
+                className={`font-medium ${
+                  paymentStatus === "paid"
+                    ? "text-green-600"
                     : paymentStatus === "failed"
-                    ? "Thất bại"
-                    : paymentStatus === "awaiting_payment"
-                    ? "Chờ thanh toán"
-                    : paymentStatus}
-                </span>
+                    ? "text-red-600"
+                    : "text-yellow-600"
+                }`}
+              >
+                {paymentStatus === "pending"
+                  ? "Chờ thanh toán"
+                  : paymentStatus === "paid"
+                  ? "Đã thanh toán"
+                  : paymentStatus === "failed"
+                  ? "Thanh toán thất bại"
+                  : paymentStatus}
               </p>
-              <p className="mt-1">
-                <strong>Trạng thái đơn hàng:</strong>
-                <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    orderStatus === "completed"
-                      ? "bg-green-100 text-green-700"
-                      : orderStatus === "cancelled"
-                      ? "bg-red-100 text-red-700"
-                      : orderStatus === "confirmed"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {orderStatus === "pending"
-                    ? "Chờ xử lý"
-                    : orderStatus === "confirmed"
-                    ? "Đã xác nhận"
-                    : orderStatus === "completed"
-                    ? "Hoàn thành"
-                    : orderStatus === "cancelled"
-                    ? "Đã hủy"
-                    : orderStatus}
-                </span>
+            </div>
+            <div>
+              <p className="text-gray-600 text-sm">Phương thức thanh toán:</p>
+              <p className="font-medium">
+                {paymentMethod === "COD"
+                  ? "Thanh toán khi nhận hàng (COD)"
+                  : paymentMethod === "PAYOS"
+                  ? "PayOS (VNPAY/Thẻ ATM/Ví điện tử)"
+                  : paymentMethod}
               </p>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-gray-700 mt-4 mb-2">
-              Sản phẩm đã đặt:
-            </h3>
-            <ul className="divide-y divide-gray-200 border rounded-md">
-              {items?.map((item, index) => (
-                <li
-                  key={item.book?._id || index}
-                  className="p-3 flex space-x-4"
-                >
-                  <img
-                    src={item.book?.images?.[0] || "/default-book.jpg"}
-                    alt={item.book?.title}
-                    className="h-20 w-16 object-cover rounded flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate">
-                      {item.book?.title || "Sản phẩm đã bị xóa"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Đơn giá: {(item.price || 0).toLocaleString("vi-VN")}đ
-                    </p>
+          <h4 className="font-semibold mb-3">Sản phẩm đã đặt:</h4>
+          <div className="space-y-4 mb-6">
+            {items?.map((item) => (
+              <div
+                key={item.book}
+                className="flex justify-between border-b pb-3"
+              >
+                <div className="flex items-start">
+                  <div className="ml-3">
+                    <p className="font-medium">{item.book.title || "Sách"}</p>
                     <p className="text-sm text-gray-500">
                       Số lượng: {item.quantity}
                     </p>
+                    <p className="text-sm">
+                      {item.price.toLocaleString("vi-VN")}đ
+                    </p>
                   </div>
-                  <p className="text-md font-semibold text-gray-800 self-center">
-                    {((item.price || 0) * (item.quantity || 0)).toLocaleString(
-                      "vi-VN"
-                    )}
-                    đ
-                  </p>
-                </li>
-              ))}
-            </ul>
+                </div>
+                <p className="font-medium">
+                  {(item.price * item.quantity).toLocaleString("vi-VN")}đ
+                </p>
+              </div>
+            ))}
           </div>
 
-          <div className="pt-4 border-t mt-4 space-y-1 text-gray-700">
+          <div className="space-y-2 border-t pt-4">
             <div className="flex justify-between">
-              <span>Tạm tính sản phẩm:</span>
-              <span>{calculatedSubtotal.toLocaleString("vi-VN")}đ</span>
+              <span>Tạm tính:</span>
+              <span>{subtotal.toLocaleString("vi-VN")}đ</span>
             </div>
             {discountAmount > 0 && (
-              <div className="flex justify-between">
-                <span>
-                  Giảm giá{discountCode ? ` (Mã: ${discountCode})` : ""}:
-                </span>
-                <span className="text-green-600 font-semibold">
-                  -{discountAmount.toLocaleString("vi-VN")}đ
-                </span>
+              <div className="flex justify-between text-green-600">
+                <span>Giảm giá {discountCode ? `(${discountCode})` : ""}:</span>
+                <span>-{discountAmount.toLocaleString("vi-VN")}đ</span>
               </div>
             )}
             <div className="flex justify-between">
@@ -306,7 +264,7 @@ const OrderSuccessPage = () => {
             </div>
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t mt-1">
               <span>Tổng cộng thanh toán:</span>
-              <span>{(totalAmount || 0).toLocaleString("vi-VN")}đ</span>
+              <span>{totalAmount.toLocaleString("vi-VN")}đ</span>
             </div>
           </div>
 
@@ -320,14 +278,13 @@ const OrderSuccessPage = () => {
         <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
           <Button
             onClick={() => navigate("/")}
-            variant="outline"
+            variant="outlined"
             className="w-full sm:w-auto"
           >
             Tiếp tục mua sắm
           </Button>
           <Button
-            onClick={() => navigate("/account/orders")}
-            variant="primary"
+            onClick={() => navigate("/auth/account/orders")}
             className="w-full sm:w-auto"
           >
             Xem lịch sử đơn hàng

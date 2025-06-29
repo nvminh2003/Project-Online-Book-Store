@@ -2,40 +2,53 @@
 const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema(
-    {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
-        orderCode: String,
-        fullName: String,
-        phone: String,
-        address: String,
-        discountCode: String,
-        discountAmount: Number,
-        shippingFee: Number,
-        totalAmount: Number,
-        paymentMethod: {
-            type: String,
-            enum: ["COD", "PAYOS"],
-            default: "COD"
-        },
-        paymentStatus: {
-            type: String,
-            enum: ["pending", "awaiting_payment", "paid", "failed"],
-            default: "pending"
-        },
-        orderStatus: {
-            type: String,
-            enum: ["pending", "confirmed", "completed", "cancelled"],
-            default: "pending"
-        },
-        items: [
-            {
-                book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
-                quantity: Number,
-                price: Number,
-            },
-        ],
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
+    orderCode: String,
+    fullName: String,
+    phone: String,
+    address: String,
+    discountCode: String,
+    discountAmount: Number,
+    shippingFee: Number,
+    totalAmount: Number,
+    paymentMethod: {
+      type: String,
+      enum: ["COD", "PAYOS"],
+      default: "COD",
     },
-    { timestamps: true }
+    paymentStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "awaiting_payment",
+        "paid",
+        "failed",
+        "cancelled",
+        "payment_link_failed",
+      ],
+      default: "pending",
+    },
+    orderStatus: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "pending_payment_setup",
+      ],
+      default: "pending",
+    },
+    items: [
+      {
+        book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
+        quantity: Number,
+        price: Number,
+      },
+    ],
+  },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Order", OrderSchema);
