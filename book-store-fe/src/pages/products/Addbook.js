@@ -29,6 +29,8 @@ const AddBook = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("error"); // 'success' | 'error
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
   const navigate = useNavigate();
 
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
@@ -201,6 +203,22 @@ const AddBook = () => {
     }
   };
 
+  const handleCategoryCheckbox = (catId) => {
+    setBookData((prev) => {
+      const exists = prev.categories.includes(catId);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((id) => id !== catId)
+          : [...prev.categories, catId],
+      };
+    });
+  };
+
+  const filteredCategories = categoryOptions.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
       {toastMsg && (
@@ -363,18 +381,73 @@ const AddBook = () => {
           <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
             <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
-          <select
-            value={bookData.categories[0] || ""}
-            onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
-            className="input-field"
+          <div className="flex flex-wrap gap-2 mb-2">
+            {bookData.categories.length === 0 ? (
+              <span className="text-gray-400 text-sm">Chưa chọn danh mục</span>
+            ) : (
+              bookData.categories.map((catId) => {
+                const cat = categoryOptions.find((c) => c._id === catId);
+                return (
+                  <span key={catId} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                    <Icon icon="mdi:tag" width="14" /> {cat ? cat.name : catId}
+                  </span>
+                );
+              })
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="bg-blue-50 border border-blue-300 text-blue-700 px-3 py-1 rounded hover:bg-blue-100 transition flex items-center gap-1"
           >
-            <option value="">-- Chọn danh mục --</option>
-            {categoryOptions.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            <Icon icon="mdi:plus" width="18" /> Chọn danh mục
+          </button>
+          {/* Modal chọn danh mục */}
+          {showCategoryModal && (
+            <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-white/40 backdrop-blur-sm">
+              <div className="w-full md:w-96 bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 animate-fade-in-up border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold text-blue-700 flex items-center gap-1">
+                    <Icon icon="mdi:shape" width="20" /> Chọn danh mục
+                  </span>
+                  <button onClick={() => setShowCategoryModal(false)} className="text-gray-500 hover:text-blue-600">
+                    <Icon icon="mdi:close" width="22" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm danh mục..."
+                  value={categorySearch}
+                  onChange={e => setCategorySearch(e.target.value)}
+                  className="w-full mb-3 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {filteredCategories.length === 0 ? (
+                    <div className="text-gray-400 text-sm">Không tìm thấy danh mục phù hợp</div>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer py-1">
+                        <input
+                          type="checkbox"
+                          checked={bookData.categories.includes(cat._id)}
+                          onChange={() => handleCategoryCheckbox(cat._id)}
+                          className="accent-blue-600"
+                        />
+                        <span>{cat.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition flex items-center justify-center gap-2"
+                >
+                  <Icon icon="mdi:check" width="20" /> Xong
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex gap-6">
           <label className="flex items-center gap-2">
