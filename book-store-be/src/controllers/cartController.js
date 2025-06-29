@@ -359,10 +359,77 @@ const clearCart = async (req, res) => {
   }
 };
 
+// Validate cart before checkout - check stock availability
+const validateCartForCheckout = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.account._id }).populate({
+      path: "items.book",
+      select: "title sellingPrice images stockQuantity",
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({
+        message: "Cart is empty",
+        status: "Error",
+      });
+    }
+
+    const validationResults = [];
+    let hasErrors = false;
+
+    for (const item of cart.items) {
+      const book = item.book;
+      const result = {
+        bookId: book._id,
+        bookTitle: book.title,
+        requestedQuantity: item.quantity,
+        availableStock: book.stockQuantity,
+        isValid: true,
+        message: "",
+      };
+
+      if (!book) {
+        result.isValid = false;
+        result.message = "Book no longer exists";
+        hasErrors = true;
+      } else if (book.stockQuantity < item.quantity) {
+        result.isValid = false;
+        result.message = `Only ${book.stockQuantity} items available`;
+        hasErrors = true;
+      } else if (book.stockQuantity === 0) {
+        result.isValid = false;
+        result.message = "Out of stock";
+        hasErrors = true;
+      }
+
+      validationResults.push(result);
+    }
+
+    return res.status(200).json({
+      message: hasErrors
+        ? "Cart validation failed"
+        : "Cart is valid for checkout",
+      status: hasErrors ? "Error" : "Success",
+      data: {
+        isValid: !hasErrors,
+        validationResults,
+        totalItems: cart.items.length,
+        validItems: validationResults.filter((r) => r.isValid).length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
 module.exports = {
   getCart,
   addToCart,
   updateCartItem,
   removeFromCart,
   clearCart,
+  validateCartForCheckout,
 };

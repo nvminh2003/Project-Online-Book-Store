@@ -34,6 +34,11 @@ router.get(
   authorizeRole(["adminbusiness", "customer"]),
   orderController.getOrderById
 );
+router.get(
+  "/:id",
+  authorizeRole(["adminbusiness", "customer"]),
+  orderController.getOrderById
+);
 
 // Admin routes
 router.get("/", authorizeRole(["adminbusiness"]), orderController.getAllOrders);

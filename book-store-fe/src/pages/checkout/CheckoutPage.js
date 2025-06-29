@@ -64,7 +64,7 @@ const CheckoutPage = () => {
     setIsModalOpen(false);
   };
 
-  const shippingFee = 30000;
+  const shippingFee = 0; // Miễn phí vận chuyển
 
   const discountAmount = useMemo(() => {
     return cart?.couponDetails?.discountAmountCalculated || 0;

@@ -121,7 +121,7 @@ const OrderSuccessPage = () => {
     totalAmount,
     discountAmount = 0,
     discountCode,
-    shippingFee = 30000,
+    shippingFee = 0, // Updated to 0 for free shipping
     paymentMethod,
     paymentStatus,
     orderStatus,

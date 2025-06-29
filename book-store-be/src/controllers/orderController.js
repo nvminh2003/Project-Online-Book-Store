@@ -352,7 +352,7 @@ const createOrder = async (req, res) => {
       }
     }
 
-    const shippingFee = 30000;
+    const shippingFee = 0; // Miễn phí vận chuyển
     const finalTotal = totalAmount - discountAmount + shippingFee;
     const orderCode = generateOrderCode();
 
@@ -368,19 +368,47 @@ const createOrder = async (req, res) => {
       shippingFee,
       totalAmount: finalTotal,
       paymentMethod,
-      paymentStatus: paymentMethod === "PAYOS" ? "awaiting_payment" : "pending",
+      paymentStatus: paymentMethod === "PAYOS" ? "pending" : "pending",
       orderStatus: "pending",
       items: orderItems,
     });
 
     await newOrder.save();
 
-    // Atomically update stock for each book
-    for (const item of orderItems) {
-      await Book.updateOne(
-        { _id: item.book },
-        { $inc: { stockQuantity: -item.quantity } }
-      );
+    // For COD orders, update stock immediately with atomic operations
+    // For PayOS orders, stock will be updated only when payment is successful
+    if (paymentMethod === "COD") {
+      // Use atomic bulkWrite to prevent race conditions
+      const bulkOps = orderItems.map((item) => ({
+        updateOne: {
+          filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
+          update: { $inc: { stockQuantity: -item.quantity } },
+        },
+      }));
+
+      const result = await Book.bulkWrite(bulkOps);
+
+      // Check if all stock updates were successful
+      if (result.modifiedCount !== orderItems.length) {
+        // Rollback: some books didn't have enough stock
+        // Find which books failed
+        const failedBooks = [];
+        for (const item of orderItems) {
+          const book = await Book.findById(item.book);
+          if (book.stockQuantity < item.quantity) {
+            failedBooks.push(book.title);
+          }
+        }
+
+        return res.status(400).json({
+          message: `Insufficient stock for: ${failedBooks.join(
+            ", "
+          )}. Please refresh your cart and try again.`,
+          status: "Error",
+        });
+      }
+
+      console.log(`Stock updated successfully for COD order: ${newOrder._id}`);
     }
 
     if (appliedDiscount) {
@@ -451,8 +479,8 @@ const createOrder = async (req, res) => {
         console.log("Cart preserved due to PayOS error");
 
         // Update order status to indicate payment link failure
-        newOrder.paymentStatus = "payment_link_failed";
-        newOrder.orderStatus = "pending_payment_setup";
+        newOrder.paymentStatus = "failed";
+        newOrder.orderStatus = "cancelled";
         await newOrder.save();
 
         return res.status(500).json({
@@ -933,7 +961,7 @@ const handlePayosSuccess = async (req, res) => {
     }
 
     order.paymentStatus = "paid";
-    order.orderStatus = "pending"; // Or some other status like 'processing'
+    order.orderStatus = "confirmed"; // Change to confirmed after successful payment
 
     const bulkOps = order.items.map((item) => ({
       updateOne: {
@@ -945,13 +973,32 @@ const handlePayosSuccess = async (req, res) => {
     const result = await Book.bulkWrite(bulkOps);
 
     if (result.modifiedCount !== order.items.length) {
-      order.orderStatus = "failed";
-      order.paymentStatus = "refund_pending"; // Custom status
-      await order.save(); // Save outside transaction
+      // Find which books failed and provide detailed error
+      const failedBooks = [];
+      for (const item of order.items) {
+        const book = await Book.findById(item.book);
+        if (book.stockQuantity < item.quantity) {
+          failedBooks.push(
+            `${book.title} (Available: ${book.stockQuantity}, Requested: ${item.quantity})`
+          );
+        }
+      }
+
+      order.orderStatus = "cancelled";
+      order.paymentStatus = "failed";
+      await order.save();
+
+      console.error(
+        `[PayOS Success] Stock insufficient for order ${orderId}:`,
+        failedBooks
+      );
+
       return res.status(400).json({
-        message:
-          "Order could not be processed due to insufficient stock. Please contact support.",
+        message: `Order could not be processed due to insufficient stock: ${failedBooks.join(
+          ", "
+        )}. Your payment will be refunded.`,
         status: "Error",
+        details: { failedBooks, orderId },
       });
     }
 
@@ -996,10 +1043,7 @@ const handlePayosCancel = async (req, res) => {
         .status(404)
         .json({ message: "Order not found", status: "Error" });
     }
-    if (
-      order.paymentStatus === "failed" ||
-      order.paymentStatus === "cancelled"
-    ) {
+    if (order.paymentStatus === "failed") {
       console.log("[PayOS Cancel] Order already cancelled:", orderId);
       return res.status(200).json({
         message: "Order already cancelled",
@@ -1007,16 +1051,15 @@ const handlePayosCancel = async (req, res) => {
         data: order,
       });
     }
-    order.paymentStatus = "cancelled";
+    order.paymentStatus = "failed";
     order.orderStatus = "cancelled";
     await order.save();
 
-    // Restore stock when payment is cancelled
-    for (const item of order.items) {
-      await Book.findByIdAndUpdate(item.book, {
-        $inc: { stockQuantity: item.quantity },
-      });
-    }
+    // For PayOS orders, stock was not deducted during order creation,
+    // so no need to restore stock when cancelling PayOS payment
+    console.log(
+      "[PayOS Cancel] Order cancelled but no stock restoration needed for PayOS orders"
+    );
     console.log("[PayOS Cancel] Order cancelled and stock restored:", orderId);
     return res.status(200).json({
       message: "Order payment cancelled",
