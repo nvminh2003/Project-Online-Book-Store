@@ -1,211 +1,106 @@
 const Review = require("../models/reviewModel");
 const Book = require("../models/bookModel");
 const Order = require("../models/orderModel");
+const { validateCreateReview, validateUpdateReview } = require("../utils/validateReviewData");
+const mongoose = require('mongoose');
+const updateBookRating = require("../utils/updateBookRating");
 
 // Create review
 const createReview = async (req, res) => {
     try {
-        const { bookId, orderId, rating, comment } = req.body;
-
-        // Validate required fields
-        if (!bookId || !orderId || !rating) {
-            return res.status(400).json({
-                message: "Book ID, order ID and rating are required",
-                status: "Error"
+        if (req.account.role !== 'customer') {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ khách hàng mới được phép đánh giá sản phẩm",
             });
         }
 
-        // Validate rating
-        if (rating < 1 || rating > 5) {
+        const { book, order, rating, comment, images } = req.body;
+
+        const validationErrors = validateCreateReview(req.body);
+        if (validationErrors.length > 0) {
             return res.status(400).json({
-                message: "Rating must be between 1 and 5",
-                status: "Error"
+                status: "Error",
+                errors: validationErrors,
+                message: "Dữ liệu đánh giá không hợp lệ",
             });
         }
 
-        // Check if book exists
-        const book = await Book.findById(bookId);
-        if (!book) {
+        const bookExists = await Book.findById(book);
+        if (!bookExists) {
             return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
+                status: "Error",
+                message: "Không tìm thấy sách để đánh giá",
             });
         }
 
-        // Check if order exists and belongs to user
-        const order = await Order.findOne({
-            _id: orderId,
-            user: req.account._id,
-            orderStatus: "completed"
-        });
-
-        if (!order) {
+        const orderExists = await Order.findById(order);
+        if (!orderExists) {
             return res.status(404).json({
-                message: "Order not found or not completed",
-                status: "Error"
+                status: "Error",
+                message: "Không tìm thấy đơn hàng",
             });
         }
 
-        // Check if book is in order
-        const bookInOrder = order.items.find(
-            item => item.book.toString() === bookId
-        );
+        if (!orderExists.user.equals(req.account._id)) {
+            return res.status(403).json({
+                status: "Error",
+                message: "Bạn chỉ có thể đánh giá đơn hàng của chính mình",
+            });
+        }
 
-        if (!bookInOrder) {
+        const hasBook = orderExists.items.some(item => item.book.equals(book));
+        if (!hasBook) {
             return res.status(400).json({
-                message: "Book is not in this order",
-                status: "Error"
+                status: "Error",
+                message: "Sách này không nằm trong đơn hàng của bạn",
             });
         }
 
-        // Check if user has already reviewed this book in this order
-        const existingReview = await Review.findOne({
-            book: bookId,
-            user: req.account._id,
-            order: orderId
-        });
-
-        if (existingReview) {
+        if (orderExists.orderStatus !== "completed") {
             return res.status(400).json({
-                message: "You have already reviewed this book for this order",
-                status: "Error"
+                status: "Error",
+                message: "Chỉ có thể đánh giá các đơn hàng đã hoàn thành",
             });
         }
 
-        // Create review
+        const existing = await Review.findOne({ user: req.account._id, book, order });
+        if (existing) {
+            return res.status(400).json({
+                status: "Error",
+                message: "Bạn đã đánh giá sách này cho đơn hàng này rồi",
+            });
+        }
+
         const review = new Review({
-            book: bookId,
+            book,
             user: req.account._id,
-            order: orderId,
+            order,
             rating,
-            comment,
-            isApproved: req.account.role === "admin" // Auto approve for admin reviews
+            comment: comment.trim(),
+            images: images || [],
+            isHidden: false,
         });
 
         await review.save();
+        await updateBookRating(book);
 
-        // Update book's average rating
-        const reviews = await Review.find({
-            book: bookId,
-            isApproved: true
+        // Cập nhật reviewId vào order.items
+        await Order.findByIdAndUpdate(order, {
+            $set: {
+                "items.$[elem].reviewId": review._id
+            }
+        }, {
+            arrayFilters: [{ "elem.book": book }]
         });
-
-        const totalRatings = reviews.length;
-        const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings;
-
-        await Book.findByIdAndUpdate(bookId, {
-            averageRating,
-            totalRatings
-        });
-
-        // Populate review details
-        const populatedReview = await Review.findById(review._id)
-            .populate('book', 'title')
-            .populate('user', 'email customerInfo.fullName');
 
         res.status(201).json({
-            message: "Review created successfully",
             status: "Success",
-            data: populatedReview
+            message: "Đánh giá đã được tạo thành công",
+            review,
         });
     } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
-// Get reviews by book ID
-const getReviewsByBook = async (req, res) => {
-    try {
-        const { bookId } = req.params;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        // Check if book exists
-        const book = await Book.findById(bookId);
-        if (!book) {
-            return res.status(404).json({
-                message: "Book not found",
-                status: "Error"
-            });
-        }
-
-        // Build query
-        const query = { book: bookId };
-        if (req.account.role !== "admin") {
-            query.isApproved = true;
-        }
-
-        const reviews = await Review.find(query)
-            .populate('user', 'email customerInfo.fullName')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Review.countDocuments(query);
-
-        res.status(200).json({
-            message: "Get reviews successfully",
-            status: "Success",
-            data: {
-                reviews,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
-    }
-};
-
-// Get user's reviews
-const getUserReviews = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const query = { user: req.account._id };
-        if (req.account.role !== "admin") {
-            query.isApproved = true;
-        }
-
-        const reviews = await Review.find(query)
-            .populate('book', 'title')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await Review.countDocuments(query);
-
-        res.status(200).json({
-            message: "Get user reviews successfully",
-            status: "Success",
-            data: {
-                reviews,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
+        res.status(500).json({ message: error.message, status: "Error" });
     }
 };
 
@@ -213,170 +108,410 @@ const getUserReviews = async (req, res) => {
 const updateReview = async (req, res) => {
     try {
         const { reviewId } = req.params;
-        const { rating, comment } = req.body;
+        const { rating, comment, images } = req.body;
 
-        // Validate rating if provided
-        if (rating && (rating < 1 || rating > 5)) {
-            return res.status(400).json({
-                message: "Rating must be between 1 and 5",
-                status: "Error"
+        if (req.account.role !== "customer") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ khách hàng mới được phép cập nhật đánh giá",
             });
         }
 
-        // Find review
-        const review = await Review.findById(reviewId);
+        if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "ID đánh giá không hợp lệ",
+            });
+        }
 
+        const review = await Review.findById(reviewId);
         if (!review) {
             return res.status(404).json({
-                message: "Review not found",
-                status: "Error"
+                status: "Error",
+                message: "Không tìm thấy đánh giá",
             });
         }
 
-        // Check ownership
-        if (review.user.toString() !== req.account._id && req.account.role !== "admin") {
+        if (!review.user.equals(req.account._id)) {
             return res.status(403).json({
-                message: "You are not authorized to update this review",
-                status: "Error"
+                status: "Error",
+                message: "Bạn chỉ có thể sửa đánh giá của chính mình",
             });
         }
 
-        // Update review
-        if (rating) review.rating = rating;
-        if (comment) review.comment = comment;
+        if (review.isHidden) {
+            return res.status(400).json({
+                status: "Error",
+                message: "Không thể chỉnh sửa đánh giá đã bị ẩn",
+            });
+        }
+
+        const validationErrors = validateUpdateReview({ rating, comment, images });
+        if (validationErrors.length > 0) {
+            return res.status(400).json({
+                status: "Error",
+                message: "Dữ liệu cập nhật không hợp lệ",
+                errors: validationErrors,
+            });
+        }
+
+        if (rating !== undefined) review.rating = rating;
+        if (comment !== undefined) review.comment = comment.trim();
+        if (images !== undefined) review.images = images;
 
         await review.save();
-
-        // Update book's average rating
-        const reviews = await Review.find({
-            book: review.book,
-            isApproved: true
-        });
-
-        const totalRatings = reviews.length;
-        const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings;
-
-        await Book.findByIdAndUpdate(review.book, {
-            averageRating,
-            totalRatings
-        });
-
-        // Populate review details
-        const updatedReview = await Review.findById(review._id)
-            .populate('book', 'title')
-            .populate('user', 'email customerInfo.fullName');
+        if (rating !== undefined) await updateBookRating(review.book);
 
         res.status(200).json({
-            message: "Update review successfully",
             status: "Success",
-            data: updatedReview
+            message: "Đánh giá đã được cập nhật thành công",
+            review,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Get reviews by book ID - Public (but filtered by visibility)
+const getReviewsByBook = async (req, res) => {
+    try {
+        const { bookId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "ID sách không hợp lệ"
+            });
+        }
+
+        const book = await Book.findById(bookId);
+        if (!book) {
+            return res.status(404).json({
+                status: "Error",
+                message: "Không tìm thấy sách"
+            });
+        }
+
+        const query = { book: bookId };
+        if (!req.account || req.account.role !== "adminbusiness") {
+            query.isHidden = false;
+        }
+
+        const reviews = await Review.find(query)
+            .populate('user', 'email info.fullName')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Review.countDocuments(query);
+
+        res.status(200).json({
+            status: "Success",
+            message: "Lấy đánh giá thành công",
+            data: {
+                reviews,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            }
         });
     } catch (error) {
         res.status(500).json({
-            message: error.message,
-            status: "Error"
+            status: "Error",
+            message: "Lỗi máy chủ: " + error.message
         });
     }
 };
 
-// Delete review
+// Get customer's reviews - Customer only
+const getUserReviews = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        if (req.account.role !== "customer") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ khách hàng mới có thể xem đánh giá của chính mình"
+            });
+        }
+
+        const query = { user: req.account._id };
+
+        const reviews = await Review.find(query)
+            .populate('book', 'title coverImage')
+            .populate('order', 'orderNumber status')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Review.countDocuments(query);
+
+        res.status(200).json({
+            status: "Success",
+            message: "Lấy đánh giá của bạn thành công",
+            data: {
+                reviews,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "Error",
+            message: "Lỗi máy chủ: " + error.message
+        });
+    }
+};
+
+// Delete review - Customer (own reviews) or AdminBusiness
 const deleteReview = async (req, res) => {
     try {
         const { reviewId } = req.params;
 
-        const review = await Review.findById(reviewId);
-
-        if (!review) {
-            return res.status(404).json({
-                message: "Review not found",
-                status: "Error"
+        if (!reviewId || !mongoose.Types.ObjectId.isValid(reviewId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "ID đánh giá không hợp lệ",
             });
         }
 
-        // Check ownership
-        if (review.user.toString() !== req.account._id && req.account.role !== "admin") {
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            return res.status(404).json({
+                status: "Error",
+                message: "Không tìm thấy đánh giá",
+            });
+        }
+
+        const isOwner = review.user.equals(req.account._id);
+        const isAdminBusiness = req.account.role === "adminbusiness";
+
+        if (!isOwner && !isAdminBusiness) {
             return res.status(403).json({
-                message: "You are not authorized to delete this review",
-                status: "Error"
+                status: "Error",
+                message: "Bạn không có quyền xóa đánh giá này",
             });
         }
 
         await review.deleteOne();
 
-        // Update book's average rating
+        // Xóa reviewId khỏi order.items
+        await Order.findByIdAndUpdate(review.order, {
+            $unset: {
+                "items.$[elem].reviewId": ""
+            }
+        }, {
+            arrayFilters: [{ "elem.book": review.book }]
+        });
+
         const reviews = await Review.find({
             book: review.book,
-            isApproved: true
+            isHidden: false,
         });
 
         const totalRatings = reviews.length;
-        const averageRating = reviews.length > 0
-            ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
-            : 0;
+        const averageRating =
+            totalRatings > 0
+                ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+                : 0;
 
         await Book.findByIdAndUpdate(review.book, {
             averageRating,
-            totalRatings
+            totalRatings,
         });
 
         res.status(200).json({
-            message: "Delete review successfully",
-            status: "Success"
+            status: "Success",
+            message: "Đánh giá đã được xóa thành công",
         });
     } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
-        });
+        res.status(500).json({ message: error.message, status: "Error" });
     }
 };
 
-// Approve review (admin only)
-const approveReview = async (req, res) => {
+// Hide/Unhide review - AdminBusiness only (for negative comments)
+const toggleReviewVisibility = async (req, res) => {
     try {
         const { reviewId } = req.params;
 
-        const review = await Review.findById(reviewId);
-
-        if (!review) {
-            return res.status(404).json({
-                message: "Review not found",
-                status: "Error"
+        if (req.account.role !== "adminbusiness") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ quản trị viên doanh nghiệp mới có quyền ẩn/hiện đánh giá",
             });
         }
 
-        review.isApproved = true;
+        if (!reviewId || !mongoose.Types.ObjectId.isValid(reviewId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "ID đánh giá không hợp lệ",
+            });
+        }
+
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            return res.status(404).json({
+                status: "Error",
+                message: "Không tìm thấy đánh giá",
+            });
+        }
+
+        review.isHidden = !review.isHidden;
         await review.save();
 
-        // Update book's average rating
-        const reviews = await Review.find({
-            book: review.book,
-            isApproved: true
-        });
-
-        const totalRatings = reviews.length;
-        const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings;
-
-        await Book.findByIdAndUpdate(review.book, {
-            averageRating,
-            totalRatings
-        });
-
-        // Populate review details
-        const updatedReview = await Review.findById(review._id)
-            .populate('book', 'title')
-            .populate('user', 'email customerInfo.fullName');
-
         res.status(200).json({
-            message: "Approve review successfully",
             status: "Success",
-            data: updatedReview
+            message: review.isHidden
+                ? "Đánh giá đã bị ẩn thành công"
+                : "Đánh giá đã được hiển thị lại",
+            data: review,
         });
     } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            status: "Error"
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+
+// Get all reviews for admin business - AdminBusiness only
+const getAllReviews = async (req, res) => {
+    try {
+        // Kiểm tra quyền truy cập
+        if (req.account.role !== "adminbusiness") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ quản trị viên doanh nghiệp mới được phép xem tất cả đánh giá",
+            });
+        }
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const { status, bookId, userId, rating, keyword } = req.query;
+
+        // Tạo điều kiện tìm kiếm
+        const query = {};
+        if (status === "hidden") query.isHidden = true;
+        else if (status === "visible") query.isHidden = false;
+
+        if (bookId) query.book = bookId;
+        if (userId) query.user = userId;
+        if (rating) query.rating = parseInt(rating);
+
+        if (keyword) {
+            query.comment = { $regex: keyword, $options: "i" };
+        }
+
+        const reviews = await Review.find(query)
+            .populate("user", "email info.fullName")
+            .populate("book", "title coverImage")
+            .populate("order", "orderNumber status")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Review.countDocuments(query);
+
+        res.status(200).json({
+            status: "Success",
+            message: "Lấy danh sách đánh giá thành công",
+            data: {
+                reviews,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            },
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Get review by orderId and bookId for current user
+const getReviewByOrderAndBook = async (req, res) => {
+    try {
+        if (req.account.role !== "customer") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ khách hàng mới có thể xem đánh giá của chính mình"
+            });
+        }
+        const { orderId, bookId } = req.query;
+        if (!orderId || !mongoose.Types.ObjectId.isValid(orderId) || !bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "orderId hoặc bookId không hợp lệ"
+            });
+        }
+        const review = await Review.findOne({
+            user: req.account._id,
+            order: orderId,
+            book: bookId
+        });
+        if (!review) {
+            return res.status(404).json({
+                status: "Error",
+                message: "Không tìm thấy đánh giá"
+            });
+        }
+        res.status(200).json({
+            status: "Success",
+            review
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
+// Get review by reviewId for current user
+const getReviewById = async (req, res) => {
+    try {
+        if (req.account.role !== "customer") {
+            return res.status(403).json({
+                status: "Error",
+                message: "Chỉ khách hàng mới có thể xem đánh giá của chính mình"
+            });
+        }
+        const { reviewId } = req.params;
+        if (!reviewId || !mongoose.Types.ObjectId.isValid(reviewId)) {
+            return res.status(400).json({
+                status: "Error",
+                message: "ID đánh giá không hợp lệ"
+            });
+        }
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            return res.status(404).json({
+                status: "Error",
+                message: "Không tìm thấy đánh giá"
+            });
+        }
+        if (!review.user.equals(req.account._id)) {
+            return res.status(403).json({
+                status: "Error",
+                message: "Bạn chỉ có thể xem đánh giá của chính mình"
+            });
+        }
+        res.status(200).json({
+            status: "Success",
+            data: review
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
     }
 };
 
@@ -386,5 +521,8 @@ module.exports = {
     getUserReviews,
     updateReview,
     deleteReview,
-    approveReview
+    toggleReviewVisibility,
+    getAllReviews,
+    getReviewByOrderAndBook,
+    getReviewById
 };

@@ -3,17 +3,46 @@ const router = express.Router();
 const reviewController = require('../controllers/reviewController');
 const { checkAuthMiddleware, authorizeRole } = require('../middleware/authMiddleware');
 
-// All review routes require authentication
+// Public routes (no authentication required)
+router.get('/book/:bookId', reviewController.getReviewsByBook);
+
+// All review routes below require authentication
 router.use(checkAuthMiddleware);
 
-// Public routes (authenticated users)
-router.post('/', reviewController.createReview);
-router.get('/book/:bookId', reviewController.getReviewsByBook);
-router.get('/user', reviewController.getUserReviews);
-router.put('/:reviewId', reviewController.updateReview);
-router.delete('/:reviewId', reviewController.deleteReview);
+// Customer routes
+router.post('/',
+    authorizeRole(['customer']),
+    reviewController.createReview
+);
+router.get('/my-reviews',
+    authorizeRole(['customer']),
+    reviewController.getUserReviews
+);
+router.put('/:reviewId',
+    authorizeRole(['customer']),
+    reviewController.updateReview
+);
+router.delete('/:reviewId',
+    authorizeRole(['adminbusiness', 'customer']),
+    reviewController.deleteReview
+);
+router.get('/my-review-by-order-book',
+    authorizeRole(['customer']),
+    reviewController.getReviewByOrderAndBook
+);
+router.get('/:reviewId',
+    authorizeRole(['customer']),
+    reviewController.getReviewById
+);
 
-// Admin only routes
-router.put('/:reviewId/approve', authorizeRole(['superadmin', 'admin'], ['business']), reviewController.approveReview);
+// Admin/Business routes
+router.get('/admin/all',
+    authorizeRole(['adminbusiness']),
+    reviewController.getAllReviews
+);
+router.put('/:reviewId/visibility',
+    authorizeRole(['adminbusiness']),
+    reviewController.toggleReviewVisibility
+);
 
 module.exports = router;

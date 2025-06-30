@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Spinner from "../../components/common/Spinner";
 import { Icon } from '@iconify/react';
+import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
@@ -18,7 +19,8 @@ const EditBook = () => {
   const [newImages, setNewImages] = useState([]); // File objects cho ảnh mới
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState(""); // Thêm state cho thông báo thành công
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -34,10 +36,10 @@ const EditBook = () => {
             authors: Array.isArray(book.authors)
               ? book.authors
               : book.authors
-              ? String(book.authors)
+                ? String(book.authors)
                   .split(",")
                   .map((s) => s.trim())
-              : [],
+                : [],
             publisher: book.publisher || "",
             publicationYear: book.publicationYear || "",
             pageCount: book.pageCount || "",
@@ -59,7 +61,7 @@ const EditBook = () => {
         console.error("Lỗi khi tải sách:", err);
         setError(
           "Không thể tải dữ liệu sách. " +
-            (err.response?.data?.message || err.message)
+          (err.response?.data?.message || err.message)
         );
       } finally {
         setLoading(false);
@@ -80,7 +82,7 @@ const EditBook = () => {
     };
     fetchCategories();
   }, []);
-  // ✅ HÀM MỚI: xử lý khi chọn ảnh mới
+  //  HÀM MỚI: xử lý khi chọn ảnh mới
   const handleImageChange = (e) => {
     setNewImages(Array.from(e.target.files));
   };
@@ -102,6 +104,21 @@ const EditBook = () => {
     setBookData((prev) => ({ ...prev, authors: authorsArray }));
   };
 
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+  const handleCategoryCheckbox = (catId) => {
+    setBookData((prev) => {
+      const exists = prev.categories.includes(catId);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((id) => id !== catId)
+          : [...prev.categories, catId],
+      };
+    });
+  };
+
   const handleCategoryChange = (e) => {
     const selectedOptions = Array.from(
       e.target.selectedOptions,
@@ -111,123 +128,92 @@ const EditBook = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!bookData) return;
+    e.preventDefault();
+    if (!bookData) return;
 
-  const token = localStorage.getItem("accessToken");
-  if (!token) {
-    alert("Vui lòng đăng nhập để thực hiện hành động này.");
-    navigate("/auth/login");
-    return;
-  }
-
-  let finalImageUrls = bookData.images;
-
-  try {
-    // Nếu có ảnh mới, upload và thay toàn bộ
-    if (newImages.length > 0) {
-      const uploadedNewImageUrls = await Promise.all(
-        newImages.map(async (imageFile) => {
-          const formData = new FormData();
-          formData.append("file", imageFile);
-          formData.append("upload_preset", "book_upload");
-          const res = await axios.post(
-            "https://api.cloudinary.com/v1_1/dhwegqmxl/image/upload",
-            formData
-          );
-          return res.data.secure_url;
-        })
-      );
-      finalImageUrls = uploadedNewImageUrls; // ✅ Ghi đè toàn bộ ảnh cũ bằng ảnh mới
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      notifyError("Vui lòng đăng nhập để thực hiện hành động này.");
+      navigate("/auth/login");
+      return;
     }
 
-    const { _id, ...dataToUpdate } = bookData;
+    // Validate số dương
+    if (Number(bookData.publicationYear) <= 0) {
+      notifyError("Năm xuất bản phải là số dương.");
+      return;
+    }
+    if (Number(bookData.pageCount) <= 0) {
+      notifyError("Số trang phải là số dương.");
+      return;
+    }
+    if (Number(bookData.originalPrice) <= 0) {
+      notifyError("Giá gốc phải là số dương.");
+      return;
+    }
+    if (Number(bookData.sellingPrice) <= 0) {
+      notifyError("Giá bán phải là số dương.");
+      return;
+    }
+    if (Number(bookData.stockQuantity) <= 0) {
+      notifyError("Số lượng phải là số dương.");
+      return;
+    }
 
-    const updatePayload = {
-      ...dataToUpdate,
-      images: finalImageUrls,
-      publicationYear: Number(bookData.publicationYear),
-      pageCount: Number(bookData.pageCount),
-      originalPrice: Number(bookData.originalPrice),
-      sellingPrice: Number(bookData.sellingPrice),
-      stockQuantity: Number(bookData.stockQuantity),
-    };
+    let finalImageUrls = bookData.images;
 
-    await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      // Nếu có ảnh mới, upload và thay toàn bộ
+      if (newImages.length > 0) {
+        const uploadedNewImageUrls = await Promise.all(
+          newImages.map(async (imageFile) => {
+            const formData = new FormData();
+            formData.append("file", imageFile);
+            formData.append("upload_preset", "book_upload");
+            const res = await axios.post(
+              "https://api.cloudinary.com/v1_1/dhwegqmxl/image/upload",
+              formData
+            );
+            return res.data.secure_url;
+          })
+        );
+        finalImageUrls = uploadedNewImageUrls; //  Ghi đè toàn bộ ảnh cũ bằng ảnh mới
+      }
 
-    setSuccessMsg("✅ Cập nhật sách thành công!");
-    setTimeout(() => {
-      navigate("/admin/books");
-    }, 1500);
-  } catch (err) {
-    console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
-    alert(
-      "❌ Đã xảy ra lỗi khi cập nhật sách: " +
-        (err.response?.data?.message || err.message)
-    );
-  }
-};
+      const { _id, ...dataToUpdate } = bookData;
 
-  // --- KẾT THÚC HÀM GỬI FORM ---
+      const updatePayload = {
+        ...dataToUpdate,
+        images: finalImageUrls,
+        publicationYear: Number(bookData.publicationYear),
+        pageCount: Number(bookData.pageCount),
+        originalPrice: Number(bookData.originalPrice),
+        sellingPrice: Number(bookData.sellingPrice),
+        stockQuantity: Number(bookData.stockQuantity),
+      };
 
-  // --- VÍ DỤ HÀM THÊM VÀO GIỎ HÀNG TỪ TRANG EDIT (NẾU CẦN) ---
-  // const handleAddToCartFromEditPage = async () => {
-  //   if (!bookData || !bookData._id) {
-  //     alert("Không có thông tin sách để thêm vào giỏ.");
-  //     return;
-  //   }
+      await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-  //   const token = localStorage.getItem("accessToken");
-  //   if (!token) {
-  //     alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-  //     navigate("/auth/login");
-  //     return;
-  //   }
-
-  //   const payload = {
-  //     bookId: bookData._id, // ID của sách đang được edit
-  //     quantity: 1, // Mặc định thêm 1, hoặc bạn có thể thêm input số lượng
-  //   };
-
-  //   console.log("EditBook - Add to cart payload:", payload);
-  //   console.log("EditBook - Token:", token);
-
-  //   try {
-  //     const response = await axios.post(
-  //       `${API_URL}/cart/add`,
-  //       payload, // Payload đã đúng
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }
-  //     );
-  //     console.log("EditBook - Add to cart response:", response.data);
-  //     if (response.data && response.data.status === "Success") {
-  //       alert("Đã thêm vào giỏ hàng thành công!");
-  //       // Khi dùng Redux:
-  //       // dispatch(addItemToCartAPI(payload));
-  //     } else {
-  //       alert(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-  //     }
-  //   } catch (err) {
-  //     console.error(
-  //       "EditBook - Lỗi khi thêm vào giỏ hàng:",
-  //       err.response?.data || err.message
-  //     );
-  //     const errorMessage =
-  //       err.response?.data?.message ||
-  //       err.message ||
-  //       "Không thể thêm sản phẩm vào giỏ hàng.";
-  //     alert(errorMessage);
-  //     if (err.response?.status === 401) {
-  //       // Xử lý token không hợp lệ
-  //     }
-  //   }
-  // };
-  // --- KẾT THÚC VÍ DỤ HÀM THÊM VÀO GIỎ HÀNG ---
+      notifySuccess(" Cập nhật sách thành công!");
+      setTimeout(() => {
+        navigate("/admin/books");
+      }, 1500);
+    } catch (err) {
+      console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
+      // Hiển thị message lỗi chi tiết từ BE
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        err.response.data.errors.forEach(error => {
+          notifyError(error);
+        });
+      } else if (err.response?.data?.message) {
+        notifyError(err.response.data.message);
+      } else {
+        notifyError("❌ Đã xảy ra lỗi khi cập nhật sách: " + err.message);
+      }
+    }
+  };
 
   if (loading)
     return (
@@ -241,11 +227,6 @@ const EditBook = () => {
 
   return (
     <>
-      {successMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          {successMsg}
-        </div>
-      )}
       <form
         onSubmit={handleSubmit}
         className="p-6 max-w-3xl mx-auto bg-white shadow-xl rounded-xl space-y-6 my-8"
@@ -409,19 +390,72 @@ const EditBook = () => {
           <label htmlFor="categories" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
             <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
-          <select
-            id="categories"
-            value={bookData.categories[0] || ""}
-            onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          <div className="flex flex-wrap gap-2 mb-2">Add commentMore actions
+            {(!bookData.categories || bookData.categories.length === 0) ? (
+              <span className="text-gray-400 text-sm">Chưa chọn danh mục</span>
+            ) : (
+              bookData.categories.map((catId) => {
+                const cat = categories.find((c) => c._id === catId);
+                return (
+                  <span key={catId} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                    <Icon icon="mdi:tag" width="14" /> {cat ? cat.name : catId}
+                  </span>
+                );
+              })
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="bg-blue-50 border border-blue-300 text-blue-700 px-3 py-1 rounded hover:bg-blue-100 transition flex items-center gap-1"
           >
-            <option value="">-- Chọn danh mục --</option>
-            {categories.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            <Icon icon="mdi:plus" width="18" /> Chọn danh mục
+          </button>
+          {showCategoryModal && (
+            <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-white/40 backdrop-blur-sm">
+              <div className="w-full md:w-96 bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 animate-fade-in-up border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold text-blue-700 flex items-center gap-1">
+                    <Icon icon="mdi:shape" width="20" /> Chọn danh mục
+                  </span>
+                  <button onClick={() => setShowCategoryModal(false)} className="text-gray-500 hover:text-blue-600">
+                    <Icon icon="mdi:close" width="22" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm danh mục..."
+                  value={categorySearch}
+                  onChange={e => setCategorySearch(e.target.value)}
+                  className="w-full mb-3 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {filteredCategories.length === 0 ? (
+                    <div className="text-gray-400 text-sm">Không tìm thấy danh mục phù hợp</div>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer py-1">
+                        <input
+                          type="checkbox"
+                          checked={bookData.categories.includes(cat._id)}
+                          onChange={() => handleCategoryCheckbox(cat._id)}
+                          className="accent-blue-600"
+                        />
+                        <span>{cat.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition flex items-center justify-center gap-2"
+                >
+                  <Icon icon="mdi:check" width="20" /> Xong
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">

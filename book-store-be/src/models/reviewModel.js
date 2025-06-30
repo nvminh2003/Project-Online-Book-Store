@@ -7,7 +7,8 @@ const ReviewSchema = new mongoose.Schema({
     order: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
     rating: { type: Number, min: 1, max: 5 },
     comment: String,
-    isApproved: { type: Boolean, default: false }
+    images: [{ type: String }],
+    isHidden: { type: Boolean, default: false } // admin dùng để ẩn
 }, { timestamps: true });
 
 module.exports = mongoose.model("Review", ReviewSchema);

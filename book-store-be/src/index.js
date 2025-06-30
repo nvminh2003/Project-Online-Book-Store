@@ -10,6 +10,7 @@ dotenv.config();
 const connectDB = require("../dbConnect/db");
 const passport = require('./config/passport');
 const session = require('express-session');
+const updateOrderReviewIds = require('./utils/updateOrderReviewIds');
 
 const app = express();
 const port = process.env.PORT || 9999;
@@ -48,5 +49,8 @@ const server = http.createServer(app);
 // Chạy server
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-    connectDB();
+    connectDB().then(() => {
+        // Cập nhật reviewId cho các order cũ
+        updateOrderReviewIds();
+    });
 });

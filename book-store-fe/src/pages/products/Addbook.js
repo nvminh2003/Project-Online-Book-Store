@@ -3,6 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import { Icon } from '@iconify/react';
+import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 
 const AddBook = () => {
   const [bookData, setBookData] = useState({
@@ -26,15 +27,16 @@ const AddBook = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState([]);
-  const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
 
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập.");
+      notifyError("Bạn cần đăng nhập.");
       return navigate("/login");
     }
 
@@ -43,8 +45,7 @@ const AddBook = () => {
       const role = decoded.role;
 
       if (role !== "admindev" && role !== "superadmin") {
-
-        alert("Bạn không có quyền truy cập.");
+        notifyError("Bạn không có quyền truy cập.");
         return navigate("/");
       }
     } catch (err) {
@@ -122,18 +123,48 @@ const AddBook = () => {
 
     for (const item of requiredFields) {
       if (!bookData[item.field] || String(bookData[item.field]).trim() === "") {
-        alert(`Vui lòng nhập ${item.label}`);
+        notifyError(`Vui lòng nhập ${item.label}`);
         return;
       }
     }
 
     if (bookData.categories.length === 0) {
-      alert("Vui lòng chọn ít nhất một danh mục.");
+      notifyError("Vui lòng chọn ít nhất một danh mục.");
       return;
     }
 
     if (images.length === 0) {
-      alert("Vui lòng chọn ít nhất một ảnh sách.");
+      notifyError("Vui lòng chọn ít nhất một ảnh sách.");
+      return;
+    }
+
+    // Validate số dương
+    if (Number(bookData.publicationYear) <= 0) {
+      notifyError("Năm xuất bản phải là số dương.");
+      return;
+    }
+    if (Number(bookData.pageCount) <= 0) {
+      notifyError("Số trang phải là số dương.");
+      return;
+    }
+    if (Number(bookData.originalPrice) <= 0) {
+      notifyError("Giá gốc phải là số dương.");
+      return;
+    }
+    if (Number(bookData.sellingPrice) <= 0) {
+      notifyError("Giá bán phải là số dương.");
+      return;
+    }
+    if (Number(bookData.stockQuantity) <= 0) {
+      notifyError("Số lượng phải là số dương.");
+      return;
+    }
+    if (bookData.categories.length === 0) {
+      notifyError("Vui lòng chọn danh mục.");
+      return;
+    }
+    if (images.length === 0) {
+      notifyError("Vui lòng chọn ít nhất một ảnh sách.");
       return;
     }
 
@@ -160,7 +191,7 @@ const AddBook = () => {
         },
       });
 
-      setSuccessMsg("✅ Thêm sách thành công!");
+      notifySuccess("Thêm sách thành công!");
       setBookData({
         title: "",
         authors: "",
@@ -184,19 +215,38 @@ const AddBook = () => {
       }, 1500);
     } catch (error) {
       console.error("Upload lỗi:", error);
-      alert("Có lỗi xảy ra khi thêm sách.");
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        error.response.data.errors.forEach(err => {
+          notifyError(err);
+        });
+      } else if (error.response?.data?.message) {
+        notifyError(error.response.data.message);
+      } else {
+        notifyError("Có lỗi xảy ra khi thêm sách.");
+      }
     } finally {
       setUploading(false);
     }
   };
 
+  const handleCategoryCheckbox = (catId) => {
+    setBookData((prev) => {
+      const exists = prev.categories.includes(catId);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((id) => id !== catId)
+          : [...prev.categories, catId],
+      };
+    });
+  };
+
+  const filteredCategories = categoryOptions.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
-      {successMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          {successMsg}
-        </div>
-      )}
       <h2 className="text-2xl font-semibold mb-6 text-center text-blue-700">
         Thêm sách mới
       </h2>
@@ -352,7 +402,7 @@ const AddBook = () => {
           <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
             <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
-          <select
+          {/* <select
             value={bookData.categories[0] || ""}
             onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
             className="input-field"
@@ -363,7 +413,73 @@ const AddBook = () => {
                 {cat.name}
               </option>
             ))}
-          </select>
+          </select> */}
+          <div className="flex flex-wrap gap-2 mb-2">Add commentMore actions
+            {bookData.categories.length === 0 ? (
+              <span className="text-gray-400 text-sm">Chưa chọn danh mục</span>
+            ) : (
+              bookData.categories.map((catId) => {
+                const cat = categoryOptions.find((c) => c._id === catId);
+                return (
+                  <span key={catId} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                    <Icon icon="mdi:tag" width="14" /> {cat ? cat.name : catId}
+                  </span>
+                );
+              })
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="bg-blue-50 border border-blue-300 text-blue-700 px-3 py-1 rounded hover:bg-blue-100 transition flex items-center gap-1"
+          ><Icon icon="mdi:plus" width="18" /> Chọn danh mục
+          </button>
+          {/* Modal chọn danh mục */}Add commentMore actions
+          {showCategoryModal && (
+            <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-white/40 backdrop-blur-sm">
+              <div className="w-full md:w-96 bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 animate-fade-in-up border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold text-blue-700 flex items-center gap-1">
+                    <Icon icon="mdi:shape" width="20" /> Chọn danh mục
+                  </span>
+                  <button onClick={() => setShowCategoryModal(false)} className="text-gray-500 hover:text-blue-600">
+                    <Icon icon="mdi:close" width="22" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm danh mục..."
+                  value={categorySearch}
+                  onChange={e => setCategorySearch(e.target.value)}
+                  className="w-full mb-3 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                />
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {filteredCategories.length === 0 ? (
+                    <div className="text-gray-400 text-sm">Không tìm thấy danh mục phù hợp</div>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer py-1">
+                        <input
+                          type="checkbox"
+                          checked={bookData.categories.includes(cat._id)}
+                          onChange={() => handleCategoryCheckbox(cat._id)}
+                          className="accent-blue-600"
+                        />
+                        <span>{cat.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition flex items-center justify-center gap-2"
+                >
+                  <Icon icon="mdi:check" width="20" /> Xong
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex gap-6">
           <label className="flex items-center gap-2">
