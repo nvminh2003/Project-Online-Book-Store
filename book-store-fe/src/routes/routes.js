@@ -23,6 +23,7 @@ import UploadExcel from "../pages/products/UploadExcel";
 import CheckoutPage from "../pages/checkout/CheckoutPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
+import OrderHistoryPage from "../pages/checkout/OrderHistoryPage";
 
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
@@ -87,6 +88,10 @@ export const routes = [
     page: OrderCancelPage,
     isShowHeader: true,
   },
+
+  // Order Management Routes
+  { path: "/account/orders", page: OrderHistoryPage, isShowHeader: true },
+  { path: "/orders/:orderId", page: OrderSuccessPage, isShowHeader: true },
 
   // Auth Callback
   { path: "/auth/google/success", page: GoogleSuccess, isShowHeader: false },

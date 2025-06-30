@@ -135,7 +135,7 @@ const OrderSuccessPage = () => {
     ) || 0;
 
   return (
-    <MainLayout>
+    <>
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="bg-green-50 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-md mb-10 text-center">
           <svg
@@ -343,7 +343,7 @@ const OrderSuccessPage = () => {
       >
         <p>{modalContent.body}</p>
       </Modal>
-    </MainLayout>
+    </>
   );
 };
 

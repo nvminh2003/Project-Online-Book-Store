@@ -137,6 +137,22 @@ export const fetchOrderDetailAPI = async (orderId) => {
   return axios.get(`${API_URL}/orders/${orderId}`, config);
 };
 
+// Fetch user's own orders (for customer)
+export const getUserOrders = async ({ page = 1, limit = 10 } = {}) => {
+  try {
+    const token = getToken();
+    const response = await axios.get(`${API_URL}/orders/my-orders`, {
+      params: { page, limit },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // Also export as default for backward compatibility
 export default {
   getAllOrders,
@@ -149,4 +165,5 @@ export default {
   createOrderAPI,
   fetchOrderHistoryAPI,
   fetchOrderDetailAPI,
+  getUserOrders,
 };

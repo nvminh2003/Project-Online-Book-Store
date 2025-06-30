@@ -76,7 +76,7 @@ const Header = () => {
                 Tài khoản của tôi
               </Link>
               <Link
-                to="/orders"
+                to="/account/orders"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
               >
                 Lịch sử đơn hàng
@@ -316,7 +316,7 @@ const Header = () => {
                           Tài khoản của tôi
                         </Link>
                         <Link
-                          to="/orders"
+                          to="/account/orders"
                           className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
                         >
                           Lịch sử đơn hàng
