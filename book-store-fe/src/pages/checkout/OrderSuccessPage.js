@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import MainLayout from "../../components/layout/MainLayout";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
 import {
@@ -72,20 +71,20 @@ const OrderSuccessPage = () => {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center">
           <Spinner />
           <p className="mt-4 text-lg text-gray-600">
             Đang tải thông tin đơn hàng...
           </p>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (error) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center text-red-500">
           <h1 className="text-2xl font-semibold mb-4">Lỗi khi tải đơn hàng</h1>
           <p className="mb-6">{error}</p>
@@ -93,13 +92,13 @@ const OrderSuccessPage = () => {
             Về trang chủ
           </Button>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!order) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center">
           <p className="text-xl text-gray-700">
             Không tìm thấy thông tin đơn hàng đã đặt.
@@ -108,7 +107,7 @@ const OrderSuccessPage = () => {
             Về trang chủ
           </Button>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
