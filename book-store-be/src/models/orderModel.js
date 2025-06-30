@@ -32,6 +32,7 @@ const OrderSchema = new mongoose.Schema(
         book: { type: mongoose.Schema.Types.ObjectId, ref: "Book" },
         quantity: Number,
         price: Number,
+        reviewId: { type: mongoose.Schema.Types.ObjectId, ref: "Review" },
       },
     ],
   },
