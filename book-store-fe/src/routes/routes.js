@@ -211,4 +211,9 @@ export const routes = [
          page: EditBook,
         isShowHeader: true,
     },
+    {
+        path: "/wishlist",
+        page: require('../pages/account/WishlistPage').default,
+        isShowHeader: true,
+    },
 ];

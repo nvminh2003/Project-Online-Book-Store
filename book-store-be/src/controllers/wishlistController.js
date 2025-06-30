@@ -189,7 +189,5 @@ const checkBookInWishlist = async (req, res) => {
 module.exports = {
     getWishlist,
     addToWishlist,
-    removeFromWishlist,
-    clearWishlist,
-    checkBookInWishlist
+    removeFromWishlist
 };

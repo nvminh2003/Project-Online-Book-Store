@@ -10,7 +10,5 @@ router.use(checkAuthMiddleware);
 router.get('/', wishlistController.getWishlist);
 router.post('/add', wishlistController.addToWishlist);
 router.delete('/remove/:bookId', wishlistController.removeFromWishlist);
-router.delete('/clear', wishlistController.clearWishlist);
-router.get('/check/:bookId', wishlistController.checkBookInWishlist);
 
 module.exports = router;

@@ -10,7 +10,8 @@ const checkAuthMiddleware = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
         const user = await Account.findById(decoded.id).select('-password');
-
+        console.log("Decoded user ID:", decoded.id);
+        console.log("User found:", user);
         if (!user) {
             return res.status(401).json({
                 message: "User not found",
@@ -29,6 +30,7 @@ const checkAuthMiddleware = async (req, res, next) => {
         req.account = user;
         next();
     } catch (error) {
+        console.error("Authentication error:", error);
         return res.status(401).json({ message: "Invalid token" });
     }
 };

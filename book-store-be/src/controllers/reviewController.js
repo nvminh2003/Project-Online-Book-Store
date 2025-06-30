@@ -1,12 +1,24 @@
 const Review = require("../models/reviewModel");
 const Book = require("../models/bookModel");
 const User = require("../models/accountModel");
+const Order = require("../models/orderModel");
+
 
 // ========== USER ==========
 exports.addReview = async (req, res) => {
     try {
         const userId = req.account._id;
         const { book, rating, comment } = req.body;
+
+        // Check if user has purchased this book (completed order)
+        const hasPurchased = await Order.exists({
+            user: userId,
+            orderStatus: "completed",
+            items: { $elemMatch: { book } }
+        });
+        if (!hasPurchased) {
+            return res.status(403).json({ message: "Bạn cần mua sách này trước khi đánh giá." });
+        }
 
         const existing = await Review.findOne({ user: userId, book });
         if (existing) return res.status(400).json({ message: "You already reviewed this book." });
