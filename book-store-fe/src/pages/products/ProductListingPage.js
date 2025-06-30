@@ -91,12 +91,21 @@ const ProductDetailPage = () => {
         return [...books].sort(
           (a, b) => (b.publicationYear || 0) - (a.publicationYear || 0)
         );
+        return [...books].sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
       case "oldest":
         return [...books].sort(
           (a, b) => (a.publicationYear || 0) - (b.publicationYear || 0)
         );
+        return [...books].sort(
+          (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+        );
       default:
-        return books;
+        // Mặc định: sắp xếp theo ngày tạo mới nhất
+        return [...books].sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
     }
   };
 
