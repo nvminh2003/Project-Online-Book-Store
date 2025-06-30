@@ -4,7 +4,10 @@ const Book = require("../models/bookModel");
 const Cart = require("../models/cartModel");
 const DiscountCode = require("../models/discountCodeModel");
 const AdminActivityLog = require("../models/AdminActivityLog");
-const { sendOrderConfirmationEmail } = require("../utils/emailService");
+const {
+  sendOrderConfirmationEmail,
+  sendOrderCancellationEmail,
+} = require("../utils/emailService");
 const Account = require("../models/accountModel");
 const XLSX = require("xlsx");
 const fs = require("fs");
@@ -452,14 +455,11 @@ const createOrder = async (req, res) => {
         await cart.save();
         console.log("Cart cleared successfully after PayOS link creation");
 
-        // Gửi email (populate để có tên sản phẩm)
-        const user = await Account.findById(req.account._id);
-        const populatedOrder = await Order.findById(newOrder._id).populate(
-          "items.book"
+        // For PayOS orders, do NOT send email here
+        // Email will be sent after payment success/failure in handlePayosSuccess/handlePayosCancel
+        console.log(
+          "PayOS order created, email will be sent after payment completion"
         );
-        if (user?.email) {
-          await sendOrderConfirmationEmail(user.email, populatedOrder);
-        }
 
         return res.status(200).json({
           message: "PayOS payment link created",
@@ -988,6 +988,25 @@ const handlePayosSuccess = async (req, res) => {
       order.paymentStatus = "failed";
       await order.save();
 
+      // Send email notification about cancellation due to insufficient stock
+      const user = await Account.findById(order.user);
+      const populatedOrder = await Order.findById(order._id).populate(
+        "items.book"
+      );
+      if (user?.email) {
+        try {
+          await sendOrderCancellationEmail(user.email, populatedOrder);
+          console.log(
+            `[PayOS Success] Stock insufficient - cancellation email sent to ${user.email}`
+          );
+        } catch (emailError) {
+          console.error(
+            `[PayOS Success] Failed to send email to ${user.email}:`,
+            emailError
+          );
+        }
+      }
+
       console.error(
         `[PayOS Success] Stock insufficient for order ${orderId}:`,
         failedBooks
@@ -1003,6 +1022,23 @@ const handlePayosSuccess = async (req, res) => {
     }
 
     await order.save();
+
+    // Send confirmation email after successful payment
+    const user = await Account.findById(order.user);
+    const populatedOrder = await Order.findById(order._id).populate(
+      "items.book"
+    );
+    if (user?.email) {
+      try {
+        await sendOrderConfirmationEmail(user.email, populatedOrder);
+        console.log(`[PayOS Success] Confirmation email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error(
+          `[PayOS Success] Failed to send email to ${user.email}:`,
+          emailError
+        );
+      }
+    }
 
     const cart = await Cart.findOne({ user: order.user });
     if (cart) {
@@ -1054,6 +1090,24 @@ const handlePayosCancel = async (req, res) => {
     order.paymentStatus = "failed";
     order.orderStatus = "cancelled";
     await order.save();
+
+    // Send cancellation email notification
+    const user = await Account.findById(order.user);
+    const populatedOrder = await Order.findById(order._id).populate(
+      "items.book"
+    );
+    if (user?.email) {
+      try {
+        // Use dedicated cancellation email template
+        await sendOrderCancellationEmail(user.email, populatedOrder);
+        console.log(`[PayOS Cancel] Cancellation email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error(
+          `[PayOS Cancel] Failed to send email to ${user.email}:`,
+          emailError
+        );
+      }
+    }
 
     // For PayOS orders, stock was not deducted during order creation,
     // so no need to restore stock when cancelling PayOS payment
