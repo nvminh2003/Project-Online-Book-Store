@@ -18,193 +18,116 @@ const payos = new PayOS(
 );
 
 // Generate unique order code
+// const generateOrderCode = () => {
+//   // Use a safe positive integer, e.g. last 9 digits of timestamp + random
+//   const base = Number(Date.now().toString().slice(-9));
+//   const random = Math.floor(Math.random() * 1000);
+//   return base * 1000 + random; // Always a positive integer, < 9007199254740991
+// };
 const generateOrderCode = () => {
-  // Use a safe positive integer, e.g. last 9 digits of timestamp + random
-  const base = Number(Date.now().toString().slice(-9));
-  const random = Math.floor(Math.random() * 1000);
-  return base * 1000 + random; // Always a positive integer, < 9007199254740991
+  // PayOS requires orderCode to be a positive integer
+  // Use shorter timestamp (last 8 digits) + 2 digit random = max 10 digits
+  const timestamp = Date.now();
+  const timestampStr = timestamp.toString();
+  // Take last 8 digits of timestamp
+  const shortTimestamp = timestampStr.slice(-8);
+  // Add 2-digit random number
+  const random = Math.floor(Math.random() * 90) + 10; // 10-99
+  const orderCode = Number(shortTimestamp + random.toString());
+
+  console.log(
+    "Generated orderCode:",
+    orderCode,
+    "Length:",
+    orderCode.toString().length,
+    "String length:",
+    orderCode.toString().length
+  );
+  return orderCode;
 };
 
-// Create PayOS payment link
+// // Create PayOS payment link
+// const createPaymentLink = async (paymentData) => {
+//   const { orderCode, totalAmount, fullName, phone, orderId } = paymentData;
+
+//   const order = {
+//     amount: totalAmount,
+//     description: `Book order for ${fullName}`,
+//     orderCode: orderCode,
+//     returnUrl: `${process.env.FRONTEND_URL}/auth/checkout/success/${orderId}`,
+//     cancelUrl: `${process.env.FRONTEND_URL}/auth/checkout/cancel/${orderId}`,
+//     buyerName: fullName,
+//     buyerPhone: phone,
+//   };
+
+//   try {
+//     const paymentLinkResponse = await payos.createPaymentLink(order);
+//     return paymentLinkResponse.checkoutUrl;
+//   } catch (error) {
+//     throw new Error(`PayOS link creation failed: ${error.message}`);
+//   }
+// };
+// Create PayOS payment link following PayOS API documentation: https://payos.vn/docs/api/#operation/payment-request
 const createPaymentLink = async (paymentData) => {
   const { orderCode, totalAmount, fullName, phone, orderId } = paymentData;
 
-  const order = {
-    amount: totalAmount,
-    description: `Book order for ${fullName}`,
-    orderCode: orderCode,
+  // Create order data according to PayOS documentation
+  const payosOrderData = {
+    orderCode: orderCode, // Keep as number - PayOS accepts number
+    amount: Math.round(totalAmount), // Ensure amount is integer
+    description: `Don hang sach #${orderCode}`, // Avoid special characters
     returnUrl: `${process.env.FRONTEND_URL}/auth/checkout/success/${orderId}`,
     cancelUrl: `${process.env.FRONTEND_URL}/auth/checkout/cancel/${orderId}`,
-    buyerName: fullName,
-    buyerPhone: phone,
+    // Remove buyerName and buyerPhone as they might cause issues
   };
 
   try {
-    const paymentLinkResponse = await payos.createPaymentLink(order);
+    console.log("=== PayOS API Request ===");
+    console.log("PayOS Config:", {
+      clientId: process.env.PAYOS_CLIENT_ID ? "SET" : "NOT SET",
+      apiKey: process.env.PAYOS_API_KEY ? "SET" : "NOT SET",
+      checksumKey: process.env.PAYOS_CHECKSUM_KEY ? "SET" : "NOT SET",
+      frontendUrl: process.env.FRONTEND_URL,
+    });
+
+    console.log("PayOS Order Data:", JSON.stringify(payosOrderData, null, 2));
+    console.log("OrderCode validation:", {
+      value: orderCode,
+      type: typeof orderCode,
+      length: orderCode.toString().length,
+      isInteger: Number.isInteger(orderCode),
+      isPositive: orderCode > 0,
+      withinLimit: orderCode <= 9007199254740991,
+    });
+
+    const paymentLinkResponse = await payos.createPaymentLink(payosOrderData);
+
+    console.log("=== PayOS API Response ===");
+    console.log("Response Status: SUCCESS");
+    console.log("Response Data:", JSON.stringify(paymentLinkResponse, null, 2));
+    console.log("Checkout URL:", paymentLinkResponse.checkoutUrl);
+
+    if (!paymentLinkResponse || !paymentLinkResponse.checkoutUrl) {
+      throw new Error("Invalid PayOS response: Missing checkout URL");
+    }
+
     return paymentLinkResponse.checkoutUrl;
   } catch (error) {
+    console.error("=== PayOS API Error ===");
+    console.error("Error Type:", error.constructor.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Code:", error.code);
+    console.error("Error Status:", error.status);
+    console.error("Error Response:", error.response?.data);
+    console.error("Full Error Stack:", error.stack);
+    console.error(
+      "PayOS Request Data:",
+      JSON.stringify(payosOrderData, null, 2)
+    );
+
     throw new Error(`PayOS link creation failed: ${error.message}`);
   }
 };
-
-// Create Order
-// const createOrder = async (req, res) => {
-//   try {
-//     const { fullName, phone, address, discountCode, paymentMethod, note, items } = req.body;
-
-//     if (!fullName || !phone || !address || !paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
-//       return res.status(400).json({
-//         message: "Họ tên, số điện thoại, địa chỉ, phương thức thanh toán và danh sách sản phẩm là bắt buộc.",
-//         status: "Error",
-//       });
-//     }
-
-//     if (!["COD", "PAYOS"].includes(paymentMethod)) {
-//       return res.status(400).json({
-//         message: "Phương thức thanh toán không hợp lệ.",
-//         status: "Error",
-//       });
-//     }
-
-//     // Lấy danh sách book từ DB
-//     const bookIds = items.map(item => item.book);
-//     const books = await Book.find({ _id: { $in: bookIds } });
-//     const bookMap = new Map(books.map(book => [book._id.toString(), book]));
-
-//     let totalAmount = 0;
-//     const orderItems = [];
-
-//     for (const item of items) {
-//       const book = bookMap.get(item.book.toString());
-//       if (!book) {
-//         return res.status(400).json({
-//           message: `Sách với ID ${item.book} không tồn tại.`,
-//           status: "Error",
-//         });
-//       }
-
-//       if (book.stockQuantity < item.quantity) {
-//         return res.status(400).json({
-//           message: `Sách "${book.title}" không đủ số lượng trong kho.`,
-//           status: "Error",
-//         });
-//       }
-
-//       orderItems.push({
-//         book: book._id,
-//         quantity: item.quantity,
-//         price: book.sellingPrice
-//       });
-
-//       totalAmount += book.sellingPrice * item.quantity;
-//     }
-
-//     // Xử lý mã giảm giá
-//     let discountAmount = 0;
-//     let appliedDiscount = null;
-
-//     if (discountCode) {
-//       const discount = await DiscountCode.findOne({
-//         code: discountCode,
-//         isActive: true,
-//         startDate: { $lte: new Date() },
-//         endDate: { $gte: new Date() },
-//       });
-
-//       if (!discount) {
-//         return res.status(400).json({ message: "Mã giảm giá không hợp lệ hoặc đã hết hạn.", status: "Error" });
-//       }
-
-//       if (discount.maxUses && discount.usesCount >= discount.maxUses) {
-//         return res.status(400).json({ message: "Mã giảm giá đã đạt số lượt sử dụng tối đa.", status: "Error" });
-//       }
-
-//       appliedDiscount = discount;
-//       discountAmount = discount.type === "percent" ? (totalAmount * discount.value) / 100 : discount.value;
-//       discountAmount = Math.min(discountAmount, totalAmount); // Không vượt quá tổng
-//     }
-
-//     const shippingFee = 30000;
-//     const finalTotal = totalAmount - discountAmount + shippingFee;
-//     const orderCode = generateOrderCode();
-
-//     const newOrder = new Order({
-//       user: req.account._id,
-//       orderCode,
-//       fullName,
-//       phone,
-//       address,
-//       note,
-//       discountCode: appliedDiscount?.code || null,
-//       discountAmount,
-//       shippingFee,
-//       totalAmount: finalTotal,
-//       paymentMethod,
-//       paymentStatus: paymentMethod === "PAYOS" ? "awaiting_payment" : "pending",
-//       orderStatus: "pending",
-//       items: orderItems
-//     });
-
-//     await newOrder.save();
-
-//     // Trừ kho
-//     for (const item of orderItems) {
-//       await Book.updateOne({ _id: item.book }, { $inc: { stockQuantity: -item.quantity } });
-//     }
-
-//     if (appliedDiscount) {
-//       appliedDiscount.usesCount += 1;
-//       await appliedDiscount.save();
-//     }
-
-//     // Gửi email (populate để có tên sản phẩm)
-//     const user = await Account.findById(req.account._id);
-//     const populatedOrder = await Order.findById(newOrder._id).populate('items.book');
-//     if (user?.email) {
-//       await sendOrderConfirmationEmail(user.email, populatedOrder);
-//     }
-
-//     // Xử lý trả về
-//     if (paymentMethod === "PAYOS") {
-//       try {
-//         const checkoutUrl = await createPaymentLink({
-//           orderCode,
-//           totalAmount: finalTotal,
-//           fullName,
-//           phone,
-//           orderId: newOrder._id.toString(),
-//         });
-
-//         return res.status(200).json({
-//           message: "Tạo link thanh toán thành công",
-//           status: "Success",
-//           data: {
-//             checkoutUrl,
-//             orderId: newOrder._id,
-//           },
-//         });
-//       } catch (err) {
-//         return res.status(500).json({
-//           message: "Tạo đơn hàng thành công nhưng lỗi khi tạo link thanh toán.",
-//           status: "Error",
-//         });
-//       }
-//     }
-
-//     return res.status(201).json({
-//       message: "Tạo đơn hàng thành công",
-//       status: "Success",
-//       data: { orderId: newOrder._id },
-//     });
-
-//   } catch (error) {
-//     console.error("Lỗi khi tạo đơn hàng:", error);
-//     return res.status(500).json({
-//       message: `Lỗi máy chủ: ${error.message}`,
-//       status: "Error",
-//     });
-//   }
-// };
 
 const createOrder = async (req, res) => {
   try {
@@ -296,7 +219,11 @@ const createOrder = async (req, res) => {
       }
     }
 
-    const shippingFee = 30000;
+    // Calculate shipping fee: Free for orders >= 200k, otherwise 30k
+    const FREE_SHIPPING_THRESHOLD = 200000;
+    const STANDARD_SHIPPING_FEE = 30000;
+    const shippingFee =
+      totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
     const finalTotal = totalAmount - discountAmount + shippingFee;
     const orderCode = generateOrderCode();
 
@@ -312,19 +239,47 @@ const createOrder = async (req, res) => {
       shippingFee,
       totalAmount: finalTotal,
       paymentMethod,
-      paymentStatus: paymentMethod === "PAYOS" ? "awaiting_payment" : "pending",
+      paymentStatus: paymentMethod === "PAYOS" ? "pending" : "pending",
       orderStatus: "pending",
       items: orderItems,
     });
 
     await newOrder.save();
 
-    // Atomically update stock for each book
-    for (const item of orderItems) {
-      await Book.updateOne(
-        { _id: item.book },
-        { $inc: { stockQuantity: -item.quantity } }
-      );
+    // For COD orders, update stock immediately with atomic operations
+    // For PayOS orders, stock will be updated only when payment is successful
+    if (paymentMethod === "COD") {
+      // Use atomic bulkWrite to prevent race conditions
+      const bulkOps = orderItems.map((item) => ({
+        updateOne: {
+          filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
+          update: { $inc: { stockQuantity: -item.quantity } },
+        },
+      }));
+
+      const result = await Book.bulkWrite(bulkOps);
+
+      // Check if all stock updates were successful
+      if (result.modifiedCount !== orderItems.length) {
+        // Rollback: some books didn't have enough stock
+        // Find which books failed
+        const failedBooks = [];
+        for (const item of orderItems) {
+          const book = await Book.findById(item.book);
+          if (book.stockQuantity < item.quantity) {
+            failedBooks.push(book.title);
+          }
+        }
+
+        return res.status(400).json({
+          message: `Insufficient stock for: ${failedBooks.join(
+            ", "
+          )}. Please refresh your cart and try again.`,
+          status: "Error",
+        });
+      }
+
+      console.log(`Stock updated successfully for COD order: ${newOrder._id}`);
     }
 
     if (appliedDiscount) {
@@ -332,14 +287,25 @@ const createOrder = async (req, res) => {
       await appliedDiscount.save();
     }
 
-    // Clear the user's cart
-    cart.items = [];
-    cart.coupon = null;
-    cart.subtotal = 0;
-    await cart.save();
-
     if (paymentMethod === "PAYOS") {
       try {
+        console.log("=== PayOS Payment Request ===");
+        console.log("Order Details:", {
+          orderId: newOrder._id.toString(),
+          orderCode,
+          totalAmount: finalTotal,
+          fullName,
+          phone,
+          paymentMethod,
+          discountAmount,
+          shippingFee,
+          items: orderItems.map((item) => ({
+            bookId: item.book,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        });
+
         const checkoutUrl = await createPaymentLink({
           orderCode,
           totalAmount: finalTotal,
@@ -348,12 +314,20 @@ const createOrder = async (req, res) => {
           orderId: newOrder._id.toString(),
         });
 
-        // Gửi email (populate để có tên sản phẩm)
-        const user = await Account.findById(req.account._id);
-        const populatedOrder = await Order.findById(newOrder._id).populate('items.book');
-        if (user?.email) {
-          await sendOrderConfirmationEmail(user.email, populatedOrder);
-        }
+        console.log("PayOS Payment Link Created Successfully:", checkoutUrl);
+
+        // Only clear cart after successful PayOS link creation
+        cart.items = [];
+        cart.coupon = null;
+        cart.subtotal = 0;
+        await cart.save();
+        console.log("Cart cleared successfully after PayOS link creation");
+
+        // For PayOS orders, do NOT send email here
+        // Email will be sent after payment success/failure in handlePayosSuccess/handlePayosCancel
+        console.log(
+          "PayOS order created, email will be sent after payment completion"
+        );
 
         return res.status(200).json({
           message: "PayOS payment link created",
@@ -364,20 +338,41 @@ const createOrder = async (req, res) => {
           },
         });
       } catch (error) {
-        console.error(
-          "PayOS link creation failed after order creation:",
-          error
-        );
+        console.error("=== PayOS Error Details ===");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("Order ID that failed:", newOrder._id.toString());
+
+        // Don't clear cart if PayOS fails - keep the cart intact
+        console.log("Cart preserved due to PayOS error");
+
+        // Update order status to indicate payment link failure
+        newOrder.paymentStatus = "failed";
+        newOrder.orderStatus = "cancelled";
+        await newOrder.save();
+
         return res.status(500).json({
           message:
-            "Order created, but failed to generate payment link. Please contact support.",
+            "Failed to create PayOS payment link. Your cart has been preserved. Please try again or choose COD payment method.",
           status: "Error",
+          data: {
+            orderId: newOrder._id,
+            error: error.message,
+          },
         });
       }
     } else {
+      // For COD, clear cart immediately
+      cart.items = [];
+      cart.coupon = null;
+      cart.subtotal = 0;
+      await cart.save();
+
       // Gửi email (populate để có tên sản phẩm)
       const user = await Account.findById(req.account._id);
-      const populatedOrder = await Order.findById(newOrder._id).populate('items.book');
+      const populatedOrder = await Order.findById(newOrder._id).populate(
+        "items.book"
+      );
       if (user?.email) {
         await sendOrderConfirmationEmail(user.email, populatedOrder);
       }

@@ -1,10 +1,16 @@
+// Required models and libraries
 const Cart = require("../models/cartModel");
 const Book = require("../models/bookModel");
+const mongoose = require("mongoose");
 
 // Helper function to populate cart with book and user details
 const populateCart = async (cartId) => {
   return await Cart.findById(cartId)
-    .populate("items.book", "title sellingPrice images authors publisher")
+    .populate(
+      "items.book",
+      // Removed non-existent fields isPublished and isDeleted
+      "title sellingPrice images authors publisher stockQuantity"
+    )
     .populate("user", "email customerInfo.fullName");
 };
 
@@ -26,17 +32,49 @@ const getCart = async (req, res) => {
       await cart.save();
     }
 
-    cart = await populateCart(cart._id);
+    const populatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(cart.items);
+    if (!populatedCart) {
+      return res
+        .status(404)
+        .json({ message: "Cart not found", status: "Error" });
+    }
+
+    const originalItemCount = populatedCart.items.length;
+
+    // Filter out items that are unavailable (book doesn't exist or has zero stock)
+    const validItems = populatedCart.items.filter(
+      (item) => item.book && item.book.stockQuantity > 0
+    );
+
+    const itemsRemoved = originalItemCount !== validItems.length;
+    let message = "Get cart successfully";
+
+    // If items were removed, update the cart in the DB and set a message
+    if (itemsRemoved) {
+      cart.items = validItems.map((item) => ({
+        book: item.book._id,
+        quantity: item.quantity,
+      }));
+      await cart.save();
+      message =
+        "Cart updated. Some items were removed as they are no longer available.";
+    }
+
+    // Recalculate total with only valid items
+    const total = calculateTotal(validItems);
+
+    // The populated cart object to be returned
+    const cartToReturn = {
+      ...populatedCart.toObject(),
+      items: validItems, // Return the filtered list of items
+      total,
+    };
 
     return res.status(200).json({
-      message: "Get cart successfully",
+      message,
       status: "Success",
-      data: {
-        ...cart.toObject(),
-        total,
-      },
+      data: cartToReturn,
     });
   } catch (error) {
     console.error(error);
@@ -51,96 +89,99 @@ const getCart = async (req, res) => {
   }
 };
 
-// Add item to cart
+// Add multiple items to cart (atomic, gộp trùng, kiểm tra tồn kho, validate book)
 const addToCart = async (req, res) => {
   try {
-    const { bookId, quantity } = req.body;
+    // 1. Gộp các item trùng bookId
+    const items = Array.isArray(req.body.items) ? req.body.items : [];
+    if (items.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Items array is required", status: "Error" });
+    }
+    const normalizedItems = items.reduce((acc, curr) => {
+      const found = acc.find((i) => i.bookId === curr.bookId);
+      if (found) found.quantity += curr.quantity;
+      else acc.push({ ...curr });
+      return acc;
+    }, []);
 
-    if (!bookId || !quantity) {
-      return res.status(400).json({
-        message: "Book ID and quantity are required",
-        status: "Error",
-      });
+    // 2. Validate all items
+    for (const item of normalizedItems) {
+      if (!item.bookId || !item.quantity || item.quantity <= 0) {
+        return res.status(400).json({
+          message: "Each item must have bookId and quantity > 0",
+          status: "Error",
+        });
+      }
     }
 
-    if (quantity <= 0) {
-      return res.status(400).json({
-        message: "Quantity must be greater than 0",
-        status: "Error",
-      });
+    // 3. Lấy tất cả bookId và truy vấn 1 lần
+    const bookIds = normalizedItems.map((i) => i.bookId);
+    const books = await Book.find({ _id: { $in: bookIds } });
+    const bookMap = {};
+    books.forEach((b) => {
+      bookMap[b._id.toString()] = b;
+    });
+
+    // 4. Kiểm tra tồn kho, trạng thái, loại bỏ sách không hợp lệ
+    for (const item of normalizedItems) {
+      const book = bookMap[item.bookId];
+      if (!book) {
+        return res
+          .status(404)
+          .json({ message: `Book not found: ${item.bookId}`, status: "Error" });
+      }
+      // NOTE: Removed checks for isPublished and isDeleted fields as they do not exist on the book model.
+
+      if (book.stockQuantity < item.quantity) {
+        return res.status(400).json({
+          message: `Not enough stock for book: ${book.title}`,
+          status: "Error",
+        });
+      }
     }
 
-    // Check if book exists
-    const book = await Book.findById(bookId);
-    if (!book) {
-      return res.status(404).json({
-        message: "Book not found",
-        status: "Error",
-      });
-    }
-
-    // Check if book is in stock
-    if (book.stockQuantity < quantity) {
-      return res.status(400).json({
-        message: "Not enough stock available",
-        status: "Error",
-      });
-    }
-
+    // 5. Lấy hoặc tạo cart
     let cart = await Cart.findOne({ user: req.account._id });
+    if (!cart) cart = new Cart({ user: req.account._id, items: [] });
 
-    if (!cart) {
-      cart = new Cart({
-        user: req.account._id,
-        items: [{ book: bookId, quantity }],
-      });
-    } else {
-      // Check if book already in cart
+    // 6. Thêm/gộp từng item vào cart
+    for (const item of normalizedItems) {
+      const book = bookMap[item.bookId];
       const existingItem = cart.items.find(
-        (item) => item.book.toString() === bookId
+        (i) => i.book.toString() === item.bookId
       );
-
       if (existingItem) {
-        // Check if new total quantity exceeds stock
-        if (book.stockQuantity < existingItem.quantity + quantity) {
+        const newQuantity = existingItem.quantity + item.quantity;
+        if (book.stockQuantity < newQuantity) {
           return res.status(400).json({
-            message: "Not enough stock available",
+            message: `Not enough stock for book: ${book.title}`,
             status: "Error",
           });
         }
-        existingItem.quantity += quantity;
+        existingItem.quantity = newQuantity;
       } else {
-        cart.items.push({ book: bookId, quantity });
+        cart.items.push({ book: item.bookId, quantity: item.quantity });
       }
     }
 
     await cart.save();
 
     // Populate book details and calculate total
-    cart = await Cart.findById(cart._id)
-      .populate("items.book", "title sellingPrice images authors publisher")
-      .populate("user", "email customerInfo.fullName");
+    const populatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(cart.items);
+    // Filter for response consistency
+    const validItems = populatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(201).json({
       message: "Add to cart successfully",
       status: "Success",
-      data: {
-        ...cart.toObject(),
-        total,
-      },
+      data: { ...populatedCart.toObject(), items: validItems, total },
     });
   } catch (error) {
-    console.error(error);
-    const message =
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : error.message;
-    return res.status(500).json({
-      message,
-      status: "Error",
-    });
+    return res.status(400).json({ message: error.message, status: "Error" });
   }
 };
 
@@ -205,13 +246,16 @@ const updateCartItem = async (req, res) => {
 
     const updatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(updatedCart.items);
+    // Filter for response consistency
+    const validItems = updatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(200).json({
       message: "Update cart successfully",
       status: "Success",
       data: {
         ...updatedCart.toObject(),
+        items: validItems,
         total,
       },
     });
@@ -248,13 +292,16 @@ const removeFromCart = async (req, res) => {
 
     const updatedCart = await populateCart(cart._id);
 
-    const total = calculateTotal(updatedCart.items);
+    // Filter for response consistency
+    const validItems = updatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
 
     return res.status(200).json({
       message: "Remove from cart successfully",
       status: "Success",
       data: {
         ...updatedCart.toObject(),
+        items: validItems,
         total,
       },
     });
@@ -312,10 +359,77 @@ const clearCart = async (req, res) => {
   }
 };
 
+// Validate cart before checkout - check stock availability
+const validateCartForCheckout = async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ user: req.account._id }).populate({
+      path: "items.book",
+      select: "title sellingPrice images stockQuantity",
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({
+        message: "Cart is empty",
+        status: "Error",
+      });
+    }
+
+    const validationResults = [];
+    let hasErrors = false;
+
+    for (const item of cart.items) {
+      const book = item.book;
+      const result = {
+        bookId: book._id,
+        bookTitle: book.title,
+        requestedQuantity: item.quantity,
+        availableStock: book.stockQuantity,
+        isValid: true,
+        message: "",
+      };
+
+      if (!book) {
+        result.isValid = false;
+        result.message = "Book no longer exists";
+        hasErrors = true;
+      } else if (book.stockQuantity < item.quantity) {
+        result.isValid = false;
+        result.message = `Only ${book.stockQuantity} items available`;
+        hasErrors = true;
+      } else if (book.stockQuantity === 0) {
+        result.isValid = false;
+        result.message = "Out of stock";
+        hasErrors = true;
+      }
+
+      validationResults.push(result);
+    }
+
+    return res.status(200).json({
+      message: hasErrors
+        ? "Cart validation failed"
+        : "Cart is valid for checkout",
+      status: hasErrors ? "Error" : "Success",
+      data: {
+        isValid: !hasErrors,
+        validationResults,
+        totalItems: cart.items.length,
+        validItems: validationResults.filter((r) => r.isValid).length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
 module.exports = {
   getCart,
   addToCart,
   updateCartItem,
   removeFromCart,
   clearCart,
+  validateCartForCheckout,
 };

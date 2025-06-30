@@ -5,8 +5,10 @@ const { checkAuthMiddleware, authorizeRole } = require("../middleware/authMiddle
 const A = require('../utils/actionTypes');
 const checkPermission = require("../middleware/checkPermission");
 
-// --- PayOS webhook (no auth) ---
+// --- PayOS webhook and callbacks (no auth required) ---
 router.post("/payos/webhook", orderController.payosWebhook);
+router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
+router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
 
 // All order routes below require authentication
 router.use(checkAuthMiddleware);
@@ -25,6 +27,11 @@ router.get('/my-orders',
 );
 router.get('/:id/detail',
     authorizeRole(['adminbusiness', 'customer']),
+    orderController.getOrderById
+);
+router.get(
+    "/:id",
+    authorizeRole(["adminbusiness", "customer"]),
     orderController.getOrderById
 );
 
@@ -50,9 +57,4 @@ router.get(
     authorizeRole(['adminbusiness']),
     orderController.exportOrdersToExcel
 );
-
-// PayOS checkout success/cancel handlers
-router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
-router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
-
 module.exports = router;

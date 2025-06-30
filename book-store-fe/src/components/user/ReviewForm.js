@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import Icon from "../common/Icon";
 import Button from '../../components/common/Button';
 import AdminModal from '../admin/AdminModal';
 import reviewService from '../../services/reviewService';
 import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 import axios from "axios";
+import moment from 'moment';
 
 const ReviewForm = () => {
+    const formatDate = (date) => {
+        return moment(date).format('DD/MM/YYYY [lúc] HH:mm');
+    };
     const { orderId, reviewId, bookId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const productInfo = location.state?.book;
 
+    const [reviewCreatedAt, setReviewCreatedAt] = useState(null);
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(null);
     const [comment, setComment] = useState('');
@@ -37,6 +42,7 @@ const ReviewForm = () => {
                     const res = await reviewService.getReviewById(reviewId);
                     setRating(res.data.rating);
                     setComment(res.data.comment);
+                    setReviewCreatedAt(res.data.createdAt);
                     if (res.data.images && Array.isArray(res.data.images)) {
                         setPreviewUrls(res.data.images);
                     }
@@ -157,13 +163,23 @@ const ReviewForm = () => {
 
     return (
         <div className="max-w-xl mx-auto p-4 bg-white shadow-md rounded-md mt-8">
+            {/* Nút Quay về thông tin đơn hàng */}
+            <div className="mb-4">
+                <Link to={`/orders/${orderId}`} className="no-underline">
+                    <Button variant="outline" className="flex items-center gap-2">
+                        <Icon icon="tabler:arrow-left" width={18} height={18} />
+                        Quay về thông tin đơn hàng
+                    </Button>
+                </Link>
+            </div>
+
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">
                 {isReadOnly ? 'Xem đánh giá' : isEditMode ? 'Chỉnh sửa đánh giá' : 'Đánh giá sản phẩm'}
             </h2>
 
             {/* Thông tin sản phẩm */}
             {productInfo && (
-                <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded">
+                <div className="flex items-center gap-4 mb-2 p-3 bg-gray-50 rounded">
                     <img src={productInfo.image || '/default-book.jpg'} alt={productInfo.title} className="w-16 h-20 object-cover rounded border" />
                     <div>
                         <div className="font-semibold text-gray-800">{productInfo.title}</div>
@@ -266,6 +282,12 @@ const ReviewForm = () => {
                                 ))}
                             </div>
                         </div>
+                    )}
+
+                    {isReadOnly && reviewCreatedAt && (
+                        <p className="text-xs text-gray-500 mt-2">
+                            Đánh giá ngày {moment(reviewCreatedAt).format('DD/MM/YYYY [lúc] HH:mm')}
+                        </p>
                     )}
 
                     {/* Submit */}

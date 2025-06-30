@@ -8,7 +8,17 @@ const ReviewItem = ({ review }) => {
         rating = 0,
         comment = "",
         images = [],
+        createdAt,
     } = review;
+
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    };
 
     return (
         <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
@@ -44,6 +54,11 @@ const ReviewItem = ({ review }) => {
                         />
                     ))}
                 </div>
+            )}
+            {createdAt && (
+                <p className="text-xs text-gray-400 mt-2 mb-0">
+                    {formatDate(createdAt)}
+                </p>
             )}
         </div>
     );

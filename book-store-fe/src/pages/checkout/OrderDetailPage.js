@@ -128,6 +128,7 @@ const OrderDetailPage = () => {
           <h1 className="text-2xl font-semibold mb-4">Không tìm thấy đơn hàng</h1>
           <p className="text-gray-600 mb-4">Đơn hàng bạn tìm kiếm không tồn tại hoặc đã bị xóa</p>
           <Link to="/orders">
+            <Icon icon="tabler:arrow-left" width={18} height={18} />
             <Button>Quay lại lịch sử đơn hàng</Button>
           </Link>
         </div>

@@ -38,7 +38,7 @@ export const getAdminRoutes = (role) => {
             { path: '/admin', label: 'Dashboard', icon: 'mdi:view-dashboard' },
             { path: '/admin/discounts', label: 'Quản lý khuyến mãi', permission: 'CREATE_DISCOUNT', icon: 'streamline-freehand:discount-sale-sign' },
             { path: '/admin/orders', label: 'Quản lý đơn hàng', permission: 'CREATE_ORDER', icon: 'mdi:clipboard-list-outline' },
-            { path: '/admin/review', label: 'Quản lý đánh giá', permission: 'VIEW_REVIEW', icon: 'mdi:chart-bar' },
+            { path: '/admin/review', label: 'Quản lý đánh giá', permission: 'VIEW_REVIEW', icon: 'mdi:star-outline' },
             { path: '/admin/reports', label: 'Báo cáo doanh số', permission: 'VIEW_SALES_REPORT', icon: 'mdi:chart-bar' }
         ];
     }

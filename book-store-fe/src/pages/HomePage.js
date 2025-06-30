@@ -7,19 +7,21 @@ import logo from '../../src/assets/sction.webp';
 import sachmoi from '../../src/assets/sachmoi.jpg';
 import logo1 from '../../src/assets/section.jpg';
 import logo2 from '../../src/assets/logo3.webp';
+import { useCart } from "../contexts/CartContext";
+import { notifySuccess, notifyError } from "../components/common/ToastManager";
+import WishlistButton from "../components/wishlist/WishlistButton";
 const images = [logo, logo1, logo2];
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9999/api';
 
 const HomePage = () => {
-
+    const [book, setBook] = useState(null);
+    const [quantity, setQuantity] = useState(1);
     const [index, setIndex] = useState(0);
     const [featuredBooks, setFeaturedBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [toastMsg, setToastMsg] = useState("");
-    const [toastType, setToastType] = useState("success");
-
+    const { addToCart } = useCart();
     const navigate = useNavigate();
 
     // Tự động chuyển ảnh mỗi 5 giây
@@ -53,47 +55,37 @@ const HomePage = () => {
     const handleAddToCart = async (bookId) => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
-            setToastMsg("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-            setToastType("error");
+            notifyError("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
             setTimeout(() => navigate("/auth/login"), 1500);
             return;
         }
-        const payload = {
-            bookId,
-            quantity: 1,
-        };
+
+        const currentQuantity = Number(quantity);
+        if (isNaN(currentQuantity) || currentQuantity < 1) {
+            notifyError("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
+            return;
+        }
+
         try {
-            const response = await axios.post(
-                `${API_URL}/cart/add`,
-                payload,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-            if (response.data?.status === "Success") {
-                setToastMsg("Đã thêm vào giỏ hàng thành công!");
-                setToastType("success");
-                setTimeout(() => setToastMsg(""), 1500);
+            const result = await addToCart(bookId, currentQuantity);
+
+            if (result.success) {
+                notifySuccess("Đã thêm vào giỏ hàng thành công!");
             } else {
-                setToastMsg(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-                setToastType("error");
-                setTimeout(() => setToastMsg(""), 1500);
+                notifyError(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
             }
         } catch (err) {
-            console.error("Add to cart error:", err.response?.data || err.message);
-            setToastMsg(err.response?.data?.message || "Không thể thêm vào giỏ hàng.");
-            setToastType("error");
-            setTimeout(() => setToastMsg(""), 1500);
+            console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
+            notifyError(
+                err.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng."
+            );
         }
     };
 
     const handleAddToWishlist = async (bookId) => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
-            setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
-            setToastType("error");
+            notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
             setTimeout(() => navigate("/auth/login"), 1500);
             return;
         }
@@ -101,14 +93,11 @@ const HomePage = () => {
             await axios.post(`${API_URL}/wishlist/add`, { bookId }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setToastMsg("Đã thêm vào mục yêu thích!");
-            setToastType("success");
-            setTimeout(() => setToastMsg(""), 1500);
+            notifySuccess("Đã thêm vào mục yêu thích!");
         } catch (err) {
             console.error("Wishlist error:", err.response?.data || err.message);
-            setToastMsg(err.response?.data?.message || "Không thể thêm vào yêu thích.");
-            setToastType("error");
-            setTimeout(() => setToastMsg(""), 1500);
+            const message = err.response?.data?.message || "Không thể thêm vào yêu thích.";
+            notifyError(message);
         }
     };
 
@@ -138,12 +127,6 @@ const HomePage = () => {
 
     return (
         <div className="bg-white">
-            {/* Toast Notification */}
-            {toastMsg && (
-                <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
-                    {toastMsg}
-                </div>
-            )}
 
             {/* Hero Section */}
             <section className="relative h-[500px] overflow-hidden text-white">
@@ -237,29 +220,28 @@ const HomePage = () => {
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {featuredBooks.map(book => (
-                                    <div key={book._id} className="border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
-                                        <div className="aspect-[3/4] w-full overflow-hidden mb-3">
-                                            <img
-                                                src={book.images && book.images.length > 0 ? book.images[0] : 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                alt={book.title}
-                                                className="w-full h-full object-cover rounded-md cursor-pointer transition-transform duration-200 hover:scale-105"
-                                                onClick={() => handleViewDetail(book._id)}
-                                            />
+                                    <div key={book._id} className="flex flex-col h-full border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
+                                        <div>
+                                            <div className="aspect-[3/4] w-full overflow-hidden mb-3">
+                                                <img
+                                                    src={book.images && book.images.length > 0 ? book.images[0] : 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                    alt={book.title}
+                                                    className="w-full h-full object-cover rounded-md cursor-pointer transition-transform duration-200 hover:scale-105"
+                                                    onClick={() => handleViewDetail(book._id)}
+                                                />
+                                            </div>
+                                            <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-[40px]">{book.title}</h3>
+                                            <p className="text-sm text-gray-500 italic min-h-[20px]">{book.authors ? book.authors.join(', ') : "Tác giả không rõ"}</p>
+                                            <div className="mb-3 min-h-[32px]">
+                                                {book.originalPrice && book.originalPrice > book.sellingPrice && (
+                                                    <span className="text-sm text-gray-400 line-through mr-1">
+                                                        {formatPrice(book.originalPrice)}
+                                                    </span>
+                                                )}
+                                                <span className="text-lg font-bold text-red-600">{formatPrice(book.sellingPrice)}</span>
+                                            </div>
                                         </div>
-                                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-[40px]">{book.title}</h3>
-                                        <p className="text-sm text-gray-500 italic">{book.authors ? book.authors.join(', ') : "Tác giả không rõ"}</p>
-                                        {/* <p className="text-gray-800 font-medium mt-2">{formatPrice(book.sellingPrice)}</p> */}
-                                        <div className="mb-3">
-                                            {book.originalPrice && book.originalPrice > book.sellingPrice && (
-                                                <span className="text-sm text-gray-400 line-through mr-1">
-                                                    {formatPrice(book.originalPrice)}
-                                                </span>
-                                            )}
-                                            <span className="text-lg font-bold text-red-600">{formatPrice(book.sellingPrice)}</span>
-                                        </div>
-
-                                        {/* Action buttons */}
-                                        <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end">
+                                        <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
                                             {/* Thêm vào giỏ */}
                                             <button
                                                 onClick={(e) => {
@@ -271,19 +253,21 @@ const HomePage = () => {
                                             >
                                                 <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
                                             </button>
-
                                             {/* Yêu thích */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAddToWishlist(book._id);
+                                            <WishlistButton
+                                                bookId={book._id}
+                                                variant="icon-only"
+                                                onRequireLogin={() => {
+                                                    notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                                                    setTimeout(() => navigate("/auth/login"), 1500);
                                                 }}
-                                                className="bg-white border border-red-500 p-3 rounded-full hover:bg-red-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
-                                                title="Yêu thích"
-                                            >
-                                                <Icon icon="mdi:heart" width="20" height="20" color="#dc2626" />
-                                            </button>
-
+                                                onSuccessAdd={() => {
+                                                    notifySuccess("Thêm sản phẩm yêu thích thành công");
+                                                }}
+                                                onSuccessRemove={() => {
+                                                    notifyError("Đã xóa khỏi danh sách yêu thích");
+                                                }}
+                                            />
                                             {/* Xem chi tiết */}
                                             <button
                                                 onClick={(e) => {

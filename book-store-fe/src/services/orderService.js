@@ -6,20 +6,6 @@ const API_URL =
 const getToken = () => localStorage.getItem('accessToken') || localStorage.getItem('access_token');
 
 const orderService = {
-  // Tạo đơn hàng mới (customer)
-  createOrder: async (orderData) => {
-    try {
-      const token = getToken();
-      const response = await axios.post(`${API_URL}/orders`, orderData, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 
   // Lấy danh sách đơn hàng của user (customer)
   getUserOrders: async (params = {}) => {
@@ -129,13 +115,53 @@ const orderService = {
     }
   },
 
-  // Các hàm PayOS giữ nguyên
+  createOrderAPI: async (orderDetails) => {
+    const token = getToken();
+    const config = {
+      headers: { "Content-Type": "application/json" },
+    };
+    if (token) config.headers["Authorization"] = `Bearer ${token}`;
+    return axios.post(`${API_URL}/orders`, orderDetails, config);
+  },
+
+  // Fetch order history (paginated)
+  fetchOrderHistoryAPI: async ({ page = 1, limit = 10 } = {}) => {
+    const token = getToken();
+    const config = {
+      headers: { "Content-Type": "application/json" },
+      params: { page, limit },
+    };
+    if (token) config.headers["Authorization"] = `Bearer ${token}`;
+    return axios.get(`${API_URL}/orders`, config);
+  },
+
+  fetchOrderDetailAPI: async (orderId) => {
+    const token = getToken();
+    const config = {
+      headers: { "Content-Type": "application/json" },
+    };
+    if (token) config.headers["Authorization"] = `Bearer ${token}`;
+    return axios.get(`${API_URL}/orders/${orderId}`, config);
+  },
+
   payosCheckoutSuccess: async (orderId) => {
-    return axios.get(`${API_URL}/orders/payos/success/${orderId}`);
+    const token = getToken();
+    const config = {};
+    if (token) config.headers = { Authorization: `Bearer ${token}` };
+    return axios.get(`${API_URL}/orders/payos/success/${orderId}`, config);
   },
+
   payosCheckoutCancel: async (orderId) => {
-    return axios.get(`${API_URL}/orders/payos/cancel/${orderId}`);
+    const token = getToken();
+    const config = {};
+    if (token) config.headers = { Authorization: `Bearer ${token}` };
+    return axios.get(`${API_URL}/orders/payos/cancel/${orderId}`, config);
   },
+
+
+  // payosCheckoutCancel: async (orderId) => {
+  //   return axios.get(`${API_URL}/orders/payos/cancel/${orderId}`);
+  // },
 };
 
 export default orderService;

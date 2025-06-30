@@ -11,6 +11,7 @@ import ProfilePage from "../pages/account/ProfilePage";
 import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
 import GoogleSuccess from "../pages/auth/GoogleSuccess";
 import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
+import WishlistPage from "../pages/wishlist/WishlistPage";
 
 // Product Pages
 import ProductListingPage from "../pages/products/ProductListingPage";
@@ -20,9 +21,6 @@ import EditBook from "../pages/products/Editbook";
 import UploadExcel from "../pages/products/UploadExcel";
 
 // Checkout Pages
-import ShippingPage from "../pages/checkout/ShippingPage";
-import PaymentPage from "../pages/checkout/PaymentPage";
-import OrderReviewPage from "../pages/checkout/OrderReviewPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
 import OrderHistoryPage from "../pages/checkout/OrderHistoryPage";
@@ -48,12 +46,14 @@ import AboutUs from "../pages/AboutUs";
 import PaymentInfo from "../pages/PaymentInfo";
 import SalesPolicy from "../pages/SalesPolicy";
 import ReviewForm from "../components/user/ReviewForm";
+import CheckoutPage from "../pages/checkout/CheckoutPage";
 
 export const routes = [
   // Public Pages
   { path: "/", page: HomePage, isShowHeader: true },
   { path: "/auth/register", page: RegisterPage, isShowHeader: true },
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
+  { path: "/auth/cart", page: CartPage, isShowHeader: true },
   // { path: "/auth/cart", page: CartPage, isShowHeader: true },
   { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
   { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
@@ -73,17 +73,25 @@ export const routes = [
   { path: "/autoadd", page: UploadExcel, isShowHeader: true },
 
   // Checkout Routes
-  { path: "/auth/checkout/shipping", page: ShippingPage, isShowHeader: true },
-  { path: "/auth/checkout/payment", page: PaymentPage, isShowHeader: true },
-  { path: "/auth/checkout/review", page: OrderReviewPage, isShowHeader: true },
-  { path: "/auth/checkout/success/:orderId", page: OrderSuccessPage, isShowHeader: true },
-  { path: "/auth/checkout/cancel/:orderId", page: OrderCancelPage, isShowHeader: true },
+  { path: "/auth/checkout", page: CheckoutPage, isShowHeader: true },
+  {
+    path: "/auth/checkout/success/:orderId",
+    page: OrderSuccessPage,
+    isShowHeader: true,
+  },
+  {
+    path: "/auth/checkout/cancel/:orderId",
+    page: OrderCancelPage,
+    isShowHeader: true,
+  },
 
   { path: "/orders", page: OrderHistoryPage, isShowHeader: true },
   { path: "/orders/:id", page: OrderDetailPage, isShowHeader: true },
 
   { path: "/review/:orderId/:bookId", page: ReviewForm, isShowHeader: true },
   { path: "/review/:orderId/:bookId/:reviewId", page: ReviewForm, isShowHeader: true },
+
+  { path: "/auth/wishlist", page: WishlistPage, isShowHeader: true },
   // Auth Callback
   { path: "/auth/google/success", page: GoogleSuccess, isShowHeader: false },
 

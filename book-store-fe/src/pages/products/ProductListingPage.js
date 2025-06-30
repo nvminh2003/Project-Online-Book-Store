@@ -1,8 +1,11 @@
 // src/pages/HomePage.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { Icon } from '@iconify/react';
+import { useNavigate, useParams } from "react-router-dom";
+import { Icon } from "@iconify/react";
+import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import WishlistButton from "../../components/wishlist/WishlistButton";
+import { notifyError, notifySuccess } from "../../components/common/ToastManager";
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
@@ -16,8 +19,9 @@ const ProductDetailPage = () => {
   const [sortOption, setSortOption] = useState("default");
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("success"); // 'success' | 'error'
-
+  const { bookId } = useParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // Use the cart context
 
   useEffect(() => {
     fetchCategories();
@@ -78,7 +82,6 @@ const ProductDetailPage = () => {
         // return [...books].sort((a, b) => (a.publicationYear || 0) - (b.publicationYear || 0));
         return [...books].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
       default:
-        // return books;
         // Mặc định: sắp xếp theo ngày tạo mới nhất
         return [...books].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     }
@@ -105,26 +108,17 @@ const ProductDetailPage = () => {
       setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
-    const payload = {
-      bookId,
-      quantity: 1,
-    };
+
     try {
-      const response = await axios.post(
-        `${API_URL}/cart/add`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.data?.status === "Success") {
+      // Use the addToCart function from CartContext
+      const result = await addToCart(bookId, 1);
+
+      if (result.success) {
         setToastMsg("Đã thêm vào giỏ hàng thành công!");
         setToastType("success");
         setTimeout(() => setToastMsg(""), 1500);
       } else {
-        setToastMsg(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        setToastMsg(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
         setToastType("error");
         setTimeout(() => setToastMsg(""), 1500);
       }
@@ -141,13 +135,20 @@ const ProductDetailPage = () => {
     if (!token) {
       setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
       setToastType("error");
-      setTimeout(() => navigate("/auth/login"), 1500);
+      setTimeout(() => {
+        setToastMsg("");
+        navigate("/auth/login");
+      }, 1500);
       return;
     }
     try {
-      await axios.post(`${API_URL}/wishlist/add`, { bookId }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post(
+        `${API_URL}/wishlist/add`,
+        { bookId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setToastMsg("Đã thêm vào mục yêu thích!");
       setToastType("success");
       setTimeout(() => setToastMsg(""), 1500);
@@ -259,6 +260,7 @@ const ProductDetailPage = () => {
                   </div>
 
                   {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
+                  {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
                   <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
                     {/* Thêm vào giỏ */}
                     <button
@@ -273,16 +275,24 @@ const ProductDetailPage = () => {
                     </button>
 
                     {/* Yêu thích */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToWishlist(book._id);
+                    <WishlistButton
+                      bookId={book._id}
+                      variant="icon-only"
+                      onRequireLogin={() => {
+                        setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
+                        setToastType("error");
+                        setTimeout(() => {
+                          setToastMsg("");
+                          navigate("/auth/login");
+                        }, 1500);
                       }}
-                      className="bg-white border border-red-500 p-3 rounded-full hover:bg-red-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
-                      title="Yêu thích"
-                    >
-                      <Icon icon="mdi:heart" width="20" height="20" color="#dc2626" />
-                    </button>
+                      onSuccessAdd={() => {
+                        notifySuccess("Thêm sản phẩm yêu thích thành công");
+                      }}
+                      onSuccessRemove={() => {
+                        notifyError("Đã xóa khỏi danh sách yêu thích");
+                      }}
+                    />
 
                     {/* Xem chi tiết */}
                     <button
@@ -296,7 +306,6 @@ const ProductDetailPage = () => {
                       <Icon icon="mdi:eye" width="20" height="20" color="#7c3aed" />
                     </button>
                   </div>
-
                 </div>
               );
             })

@@ -6,6 +6,8 @@ import { Icon } from '@iconify/react';
 import ReviewList from "../account/ReviewList";
 import reviewService from "../../services/reviewService";
 import { notifySuccess, notifyError } from "../../components/common/ToastManager";
+import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import WishlistButton from "../../components/wishlist/WishlistButton";
 
 // --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
 // import { useDispatch } from "react-redux";
@@ -25,6 +27,7 @@ const ProductDetailPage = () => {
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const imageIntervalRef = useRef();
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // Use the cart context
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
 
   // Reviews state
@@ -139,35 +142,22 @@ const ProductDetailPage = () => {
       setQuantity(1);
       return;
     }
-    const payload = {
-      bookId: book._id,
-      quantity: currentQuantity,
-    };
     try {
-      const response = await axios.post(`${API_URL}/cart/add`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.data && response.data.status === "Success") {
+      // Use the addToCart function from CartContext instead of direct API call
+      const result = await addToCart(book._id, currentQuantity);
+
+      if (result.success) {
         notifySuccess("Đã thêm vào giỏ hàng thành công!");
       } else {
-        notifyError(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        notifyError(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
       }
     } catch (err) {
-      console.error(
-        "Lỗi khi thêm vào giỏ hàng:",
-        err.response?.data || err.message
-      );
+      console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
         "Không thể thêm sản phẩm vào giỏ hàng.";
       notifyError(errorMessage);
-      // if (err.response?.status === 401) {
-      //   localStorage.removeItem("accessToken");
-      //   navigate("/auth/login");
-      // }
     }
   };
 
@@ -395,13 +385,20 @@ const ProductDetailPage = () => {
               <Icon icon="mdi:cart" width="18" height="18" color="#2563eb" />
               Thêm vào giỏ hàng
             </button>
-            <button
-              onClick={handleAddToWishlist}
-              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
-            >
-              <Icon icon="mdi:heart" width="18" height="18" color="#2563eb" />
-              Yêu thích
-            </button>
+            <WishlistButton
+              bookId={bookId}
+              className="flex-1 font-semibold px-6 py-3 shadow-md hover:shadow-lg"
+              onRequireLogin={() => {
+                notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                setTimeout(() => navigate("/auth/login"), 1500);
+              }}
+              onSuccessAdd={() => {
+                notifySuccess("Thêm sản phẩm yêu thích thành công");
+              }}
+              onSuccessRemove={() => {
+                notifyError("Đã xóa khỏi danh sách yêu thích");
+              }}
+            />
             <button
               onClick={() => navigate(-1)}
               className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"

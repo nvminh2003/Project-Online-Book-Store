@@ -2,11 +2,12 @@
 import React, { useState } from "react";
 import CartSummary from "../../components/cart/CartSummary";
 import CartItem from "../../components/cart/CartItem";
-import EmptyCart from "../../components/cart/EmptyCart";
+import EmptyCart from "../../components/cart/EmptyItem";
 import Spinner from "../../components/common/Spinner";
 import Modal from "../../components/common/Modal";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../contexts/CartContext"; // Import useCart
+import { calculateShippingFee } from "../../constants/shipping";
 
 const CartPage = () => {
     const navigate = useNavigate();
@@ -75,7 +76,7 @@ const CartPage = () => {
         }, 0) || 0;
 
     const discountAmount = cart?.couponDetails?.discountAmountCalculated || 0;
-    const shippingFee = 0; // Placeholder for shipping logic
+    const shippingFee = calculateShippingFee(subtotal);
     const displayTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
     const token = localStorage.getItem("accessToken");
