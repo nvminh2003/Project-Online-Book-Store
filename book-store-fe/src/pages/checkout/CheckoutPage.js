@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import MainLayout from "../../components/layout/MainLayout";
 import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
 import Modal from "../../components/common/Modal";
@@ -435,19 +434,19 @@ const CheckoutPage = () => {
 
   if (loading || authLoading || cartLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex justify-center items-center h-64">
           <Spinner />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (error || cartError) {
     return (
-      <MainLayout>
+      <>
         <div className="text-center text-red-500">{error || cartError}</div>
-      </MainLayout>
+      </>
     );
   }
 
