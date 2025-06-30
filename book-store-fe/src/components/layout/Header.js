@@ -3,10 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from "../common/Icon";
 import logo from '../../assets/image.png';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from "../../contexts/CartContext";
+import { useWishlist } from "../../contexts/WishlistContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+  const { cartItemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,11 +26,11 @@ const Header = () => {
   const handleAdminClick = () => {
     setIsMenuOpen(false);
     if (user?.role === 'superadmin') {
-      navigate('/admin/users');
+      navigate('/admin');
     } else if (user?.role === 'admindev') {
-      navigate('/admin/books');
+      navigate('/admin');
     } else if (user?.role === 'adminbusiness') {
-      navigate('/admin/orders');
+      navigate('/admin');
     }
   };
 
@@ -238,14 +241,18 @@ const Header = () => {
 
             {/* Wishlist */}
             <Link
-              to="/wishlist"
-              className={`relative transition-colors ${isActivePath('/wishlist') ? 'text-blue-600' : 'text-black hover:text-red-500'
+              to="/auth/wishlist"
+              className={`relative transition-colors ${isActivePath("/wishlist")
+                ? "text-blue-600"
+                : "text-black hover:text-red-500"
                 }`}
             >
               <Icon icon="mdi:heart-outline" className="w-6 h-6" />
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                0
-              </span>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart */}
@@ -256,7 +263,7 @@ const Header = () => {
             >
               <Icon icon="mdi:cart-outline" className="w-6 h-6" />
               <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                0
+                {cartItemCount || 0}
               </span>
             </Link>
 
