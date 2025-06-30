@@ -54,7 +54,12 @@ const Discounts = () => {
         fetchDiscounts();
     }, []);
 
-    const filteredDiscounts = discounts.filter((discount) => {
+    let filteredDiscounts = [];
+
+if (dateFrom && dateTo && new Date(dateTo) < new Date(dateFrom)) {
+    toast.error('Ngày kết thúc không được nhỏ hơn ngày bắt đầu (bộ lọc)!');
+} else {
+    filteredDiscounts = discounts.filter((discount) => {
         const matchesKeyword = discount.code
             .toLowerCase()
             .includes(searchKeyword.toLowerCase());
@@ -73,6 +78,7 @@ const Discounts = () => {
             (dateTo === '' || new Date(discount.endDate) <= new Date(dateTo));
         return matchesKeyword && matchesStatus && matchesType && matchesValue && matchesDate;
     });
+}
 
     const totalPages = Math.ceil(filteredDiscounts.length / itemsPerPage);
     const paginatedDiscounts = filteredDiscounts.slice(
