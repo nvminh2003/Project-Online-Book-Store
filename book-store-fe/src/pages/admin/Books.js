@@ -89,12 +89,6 @@ const Books = () => {
         >
           Thêm sách
         </button>
-        <button
-      onClick={() => navigate("/autoadd")}
-      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
-    >
-      📥 Thêm sách từ Excel
-    </button>
       </div>
 
       <table className="min-w-full bg-white border">

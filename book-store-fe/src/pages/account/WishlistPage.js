@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL_BACKEND;
 
+
 const WishlistPage = () => {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,10 +13,12 @@ const WishlistPage = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
 
+
   const fetchWishlist = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_URL}/wishlist`, { headers:{ Authorization: `Bearer ${localStorage.getItem('accessToken')}` } });
+
       setWishlist(res.data.data.books || []);
       setError(null);
     } catch (err) {
@@ -27,6 +30,7 @@ const WishlistPage = () => {
   const handleRemove = async (bookId) => {
     try {
       await axios.delete(`${API_URL}/wishlist/remove/${bookId}`, { headers:{ Authorization: `Bearer ${localStorage.getItem('accessToken')}`}});
+
       setWishlist((prev) => prev.filter((book) => book._id !== bookId));
     } catch (err) {
       alert('Failed to remove book from wishlist');

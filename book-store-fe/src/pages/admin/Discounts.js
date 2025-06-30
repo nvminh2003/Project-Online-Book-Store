@@ -8,6 +8,7 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL_BACKEND;
 const token = localStorage.getItem('accessToken');
 
+
 const Discounts = () => {
     const [discounts, setDiscounts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ const Discounts = () => {
         endDate: '',
         maxUses: 0,
         isActive: 'active',
+
     });
     const [discountToDelete, setDiscountToDelete] = useState(null); // Discount cần xóa
 
@@ -127,6 +129,7 @@ const Discounts = () => {
         } catch (error) {
             console.error('Error updating discount:', error);
             toast.error(error.response?.data.errors[0]);
+
         }
     };
 
@@ -144,6 +147,7 @@ const Discounts = () => {
         } catch (error) {
             console.error('Error deleting discount:', error);
             toast.error('Lỗi khi xóa khuyến mãi!');
+
         }
     };
 
@@ -168,6 +172,7 @@ const Discounts = () => {
                 endDate: '',
                 maxUses: 0,
                 isActive: 'active',
+
             });
         }
         setIsModalOpen(true);
@@ -186,6 +191,7 @@ const Discounts = () => {
             endDate: '',
             maxUses: 0,
             isActive: 'active',
+
         });
     };
 
@@ -432,7 +438,7 @@ const Discounts = () => {
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-semibold mb-4">
                             {isEditing ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}
                         </h2>
@@ -558,6 +564,7 @@ const Discounts = () => {
             <ToastContainer position="top-right" autoClose={3000} />
 
         </AdminPageLayout>
+
     );
 };
 
