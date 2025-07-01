@@ -92,7 +92,7 @@ export const AdminActivityProvider = ({ children }) => {
             '/admin/discounts': 'VIEW_DISCOUNT',
             '/admin/orders': 'VIEW_ORDER',
             '/admin/review': 'VIEW_REVIEW',
-            '/admin/reports': 'VIEW_SALES_REPORT'
+            // '/admin/reports': 'VIEW_SALES_REPORT'
         };
 
         const requiredPermission = routePermissions[route];

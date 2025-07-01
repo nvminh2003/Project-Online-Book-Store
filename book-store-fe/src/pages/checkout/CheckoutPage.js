@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext"; // Use CartContext
 import orderService from "../../services/orderService";
 import accountService from "../../services/accountService";
+import { notifyError, notifySuccess } from "../../components/common/ToastManager";
 import {
   SHIPPING_CONFIG,
   calculateShippingFee,
@@ -20,7 +21,7 @@ const WARD_API = (districtId) =>
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
   const {
     cart,
     loading: cartLoading,
@@ -82,11 +83,17 @@ const CheckoutPage = () => {
   }, [cart, discountAmount, shippingFee]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/auth/login");
+      return;
+    }
+    // Chỉ cho phép customer đặt hàng
+    if (user && user.role !== "customer") {
+      notifyError("Chỉ khách hàng mới có quyền đặt hàng.");
+      navigate("/");
+      return;
+    }
     const fetchDataAndLocation = async () => {
-      if (!isAuthenticated) {
-        navigate("/auth/login");
-        return;
-      }
       try {
         setLoading(true);
         setError(null);
@@ -191,7 +198,7 @@ const CheckoutPage = () => {
     if (isAuthenticated) {
       fetchDataAndLocation();
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const validateField = (name, value) => {
     let error = "";

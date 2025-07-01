@@ -48,7 +48,7 @@ export const WishlistProvider = ({ children }) => {
         setError(null);
         const response = await wishlistService.getWishlist(params);
 
-        console.log("Wishlist response:", response); // Debug log
+        // console.log("Wishlist response:", response); // Debug log
 
         // The backend now returns books as an array of {_id, book: bookData, dateAdded}
         const books = response.data?.books || [];

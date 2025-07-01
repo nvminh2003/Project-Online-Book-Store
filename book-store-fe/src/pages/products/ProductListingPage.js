@@ -103,30 +103,22 @@ const ProductDetailPage = () => {
   const handleAddToCart = async (bookId) => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setToastMsg("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-      setToastType("error");
+      notifyError("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
       setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
 
     try {
-      // Use the addToCart function from CartContext
       const result = await addToCart(bookId, 1);
 
       if (result.success) {
-        setToastMsg("Đã thêm vào giỏ hàng thành công!");
-        setToastType("success");
-        setTimeout(() => setToastMsg(""), 1500);
+        notifySuccess("Đã thêm vào giỏ hàng thành công!");
       } else {
-        setToastMsg(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-        setToastType("error");
-        setTimeout(() => setToastMsg(""), 1500);
+        notifyError(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
       }
     } catch (err) {
       console.error("Add to cart error:", err.response?.data || err.message);
-      setToastMsg(err.response?.data?.message || "Không thể thêm vào giỏ hàng.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError(err.response?.data?.message || "Không thể thêm vào giỏ hàng.");
     }
   };
 

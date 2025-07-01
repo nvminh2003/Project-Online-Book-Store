@@ -136,7 +136,7 @@ const addToCart = async (req, res) => {
 
       if (book.stockQuantity < item.quantity) {
         return res.status(400).json({
-          message: `Not enough stock for book: ${book.title}`,
+          message: `Số lượng sách trong kho không đủ: ${book.title}`,
           status: "Error",
         });
       }
@@ -156,7 +156,7 @@ const addToCart = async (req, res) => {
         const newQuantity = existingItem.quantity + item.quantity;
         if (book.stockQuantity < newQuantity) {
           return res.status(400).json({
-            message: `Not enough stock for book: ${book.title}`,
+            message: `Số lượng sách trong kho không đủ: ${book.title}`,
             status: "Error",
           });
         }

@@ -134,6 +134,14 @@ const createOrder = async (req, res) => {
     const { fullName, phone, address, discountCode, paymentMethod, note } =
       req.body;
 
+    // Chỉ cho phép customer đặt đơn hàng
+    if (req.account.role !== "customer") {
+      return res.status(403).json({
+        message: "Chỉ khách hàng mới được phép đặt đơn hàng.",
+        status: "Error"
+      });
+    }
+
     if (!fullName || !phone || !address || !paymentMethod) {
       return res.status(400).json({
         message: "Full name, phone, address and payment method are required",
@@ -174,7 +182,7 @@ const createOrder = async (req, res) => {
 
       if (book.stockQuantity < item.quantity) {
         return res.status(400).json({
-          message: `Not enough stock for book: ${book.title}`,
+          message: `Số lượng sách trong kho không đủ: ${book.title}`,
           status: "Error",
         });
       }
@@ -825,7 +833,7 @@ const handlePayosSuccess = async (req, res) => {
     // const payosStatus = await payos.getOrderStatus(order.orderCode);
     // if (payosStatus.status !== 'PAID') { ... }
     order.paymentStatus = "paid";
-    order.orderStatus = "pending";
+    order.orderStatus = "confirmed";
     await order.save();
     // Reduce stock
     for (const item of order.items) {

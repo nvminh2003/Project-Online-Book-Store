@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Icon } from '@iconify/react'; // hoặc icon của bạn
 
 const AdminForm = ({
     fields,
@@ -7,9 +8,35 @@ const AdminForm = ({
     errors = {},
     className = ""
 }) => {
+    const [showPassword, setShowPassword] = useState(false);
+
     const renderField = (field) => {
         const commonClasses = "w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300";
         const errorClasses = errors[field.name] ? "border-red-500" : "border-gray-300";
+
+        if (field.type === 'password') {
+            return (
+                <div className="relative">
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        id={field.name}
+                        name={field.name}
+                        value={values[field.name] || ''}
+                        onChange={(e) => onChange(field.name, e.target.value)}
+                        className={`${commonClasses} ${errorClasses} pr-10`}
+                        placeholder={field.placeholder}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+                        tabIndex={-1}
+                    >
+                        <Icon icon={showPassword ? 'mdi:eye-off' : 'mdi:eye'} width="20" height="20" />
+                    </button>
+                </div>
+            );
+        }
 
         switch (field.type) {
             case 'textarea':
@@ -88,25 +115,29 @@ const AdminForm = ({
 
     return (
         <div className={`space-y-4 ${className}`}>
-            {fields.map((field) => (
-                <div key={field.name}>
-                    {field.type !== 'checkbox' && (
-                        <label
-                            htmlFor={field.name}
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            {field.label}
-                            {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-                    )}
-                    {renderField(field)}
-                    {errors[field.name] && (
-                        <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>
-                    )}
-                </div>
-            ))}
+            {fields.map((field) => {
+                if (field.show && !field.show(values)) return null;
+
+                return (
+                    <div key={field.name}>
+                        {field.type !== 'checkbox' && (
+                            <label
+                                htmlFor={field.name}
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                {field.label}
+                                {field.required && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                        )}
+                        {renderField(field)}
+                        {errors[field.name] && (
+                            <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 };
 
-export default AdminForm; 
+export default AdminForm;

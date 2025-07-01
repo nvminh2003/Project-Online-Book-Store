@@ -34,7 +34,7 @@ import AdminUsers from "../pages/admin/Users";
 import AdminOrders from "../pages/admin/Orders";
 import AdminBlog from "../pages/admin/Blog";
 import AdminReview from "../pages/admin/Reviews";
-import AdminReports from "../pages/admin/Reports";
+// import AdminReports from "../pages/admin/Reports";
 import AdminActivity from "../pages/admin/AdminActivity";
 
 // Blog Pages
@@ -195,17 +195,17 @@ export const routes = [
     ),
     isShowHeader: false,
   },
-  {
-    path: "/admin/reports",
-    page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
-        <AdminLayout>
-          <AdminReports />
-        </AdminLayout>
-      </ProtectedRoute>
-    ),
-    isShowHeader: false,
-  },
+  // {
+  //   path: "/admin/reports",
+  //   page: () => (
+  //     <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
+  //       <AdminLayout>
+  //         <AdminReports />
+  //       </AdminLayout>
+  //     </ProtectedRoute>
+  //   ),
+  //   isShowHeader: false,
+  // },
 
   // Not found fallback
   { path: "*", page: NotFoundPage },
