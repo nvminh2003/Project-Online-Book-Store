@@ -1,157 +1,401 @@
-import React, { useState } from 'react';
-import AdminPageLayout from '../../components/admin/AdminPageLayout';
-import { Icon } from '@iconify/react';
+import React, { useState, useEffect, useCallback } from "react";
+import AdminPageLayout from "../../components/admin/AdminPageLayout";
+import { Icon } from "@iconify/react";
+import {
+  getDiscountCodesAPI,
+  deleteDiscountCodeAPI,
+  bulkUpdateDiscountCodesAPI,
+} from "../../services/discountService";
+import DiscountForm from "../../components/admin/DiscountForm";
+import DiscountFilters from "../../components/admin/DiscountFilters";
+import DiscountTable from "../../components/admin/DiscountTable";
+import DiscountStats from "../../components/admin/DiscountStats";
+import Button from "../../components/common/Button";
+import Modal from "../../components/common/Modal";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import Toast from "../../components/common/Toast";
+import { formatPrice } from "../../utils/formatPrice";
 
 const Discounts = () => {
-    const [discounts, setDiscounts] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const [discounts, setDiscounts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState(null);
+  const [selectedDiscounts, setSelectedDiscounts] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkAction, setBulkAction] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [toast, setToast] = useState({ message: "", type: "" });
 
-    const handleAddDiscount = () => {
-        // TODO: Implement add discount functionality
-    };
+  // Pagination and filtering
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "",
+    type: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    limit: 10,
+  });
 
-    const handleEditDiscount = (discountId) => {
-        // TODO: Implement edit discount functionality
-    };
+  // Statistics
+  const [statistics, setStatistics] = useState(null);
 
-    const handleDeleteDiscount = (discountId) => {
-        // TODO: Implement delete discount functionality
-    };
+  // Fetch discount codes
+  const fetchDiscounts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {
+        page: currentPage,
+        ...filters,
+      };
 
-    return (
-        <AdminPageLayout
-            title="Quản lý khuyến mãi"
-            actions={
-                <button
-                    onClick={handleAddDiscount}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                >
-                    <Icon icon="mdi:plus" width="20" />
-                    Thêm khuyến mãi mới
-                </button>
-            }
-        >
-            <div className="p-6">
-                {/* Search and Filter */}
-                <div className="mb-6 flex gap-4">
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm khuyến mãi..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    />
-                    <select className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="active">Đang diễn ra</option>
-                        <option value="upcoming">Sắp diễn ra</option>
-                        <option value="ended">Đã kết thúc</option>
-                    </select>
-                </div>
+      const response = await getDiscountCodesAPI(params);
 
-                {/* Discounts Table */}
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tên khuyến mãi
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Loại
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Giá trị
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Thời gian
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Trạng thái
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Thao tác
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {discounts.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                        Chưa có khuyến mãi nào
-                                    </td>
-                                </tr>
-                            ) : (
-                                discounts.map((discount) => (
-                                    <tr key={discount.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {discount.name}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {discount.type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {discount.type === 'percentage'
-                                                ? `${discount.value}%`
-                                                : `${discount.value.toLocaleString('vi-VN')}đ`}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(discount.startDate).toLocaleDateString('vi-VN')} - {new Date(discount.endDate).toLocaleDateString('vi-VN')}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${discount.status === 'active'
-                                                ? 'bg-green-100 text-green-800'
-                                                : discount.status === 'upcoming'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                {discount.status === 'active'
-                                                    ? 'Đang diễn ra'
-                                                    : discount.status === 'upcoming'
-                                                        ? 'Sắp diễn ra'
-                                                        : 'Đã kết thúc'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button
-                                                onClick={() => handleEditDiscount(discount.id)}
-                                                className="text-blue-600 hover:text-blue-900 mr-4"
-                                            >
-                                                <Icon icon="mdi:pencil" width="20" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteDiscount(discount.id)}
-                                                className="text-red-600 hover:text-red-900"
-                                            >
-                                                <Icon icon="mdi:delete" width="20" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+      if (response.status === "Success") {
+        setDiscounts(response.data.discountCodes);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalCount(response.data.pagination.total);
+        setStatistics(response.data.statistics);
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Failed to fetch discount codes"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, filters]);
 
-                {/* Pagination */}
-                <div className="mt-4 flex justify-between items-center">
-                    <div className="text-sm text-gray-700">
-                        Hiển thị <span className="font-medium">1</span> đến{' '}
-                        <span className="font-medium">10</span> của{' '}
-                        <span className="font-medium">20</span> kết quả
-                    </div>
-                    <div className="flex gap-2">
-                        <button className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
-                            Trước
-                        </button>
-                        <button className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
-                            Sau
-                        </button>
-                    </div>
-                </div>
+  useEffect(() => {
+    fetchDiscounts();
+  }, [fetchDiscounts]);
+
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleAddDiscount = () => {
+    setEditingDiscount(null);
+    setShowForm(true);
+  };
+
+  const handleEditDiscount = (discount) => {
+    setEditingDiscount(discount);
+    setShowForm(true);
+  };
+
+  const handleFormSuccess = (updatedDiscount) => {
+    setShowForm(false);
+    setEditingDiscount(null);
+
+    // Optimistic update for better UX
+    if (updatedDiscount) {
+      if (editingDiscount) {
+        // Update existing discount in the list
+        setDiscounts((prev) =>
+          prev.map((discount) =>
+            discount._id === updatedDiscount._id ? updatedDiscount : discount
+          )
+        );
+      } else {
+        // Add new discount to the beginning of the list
+        setDiscounts((prev) => [updatedDiscount, ...prev.slice(0, -1)]);
+        setTotalCount((prev) => prev + 1);
+      }
+    }
+
+    // Fetch fresh data in background
+    fetchDiscounts();
+
+    // Show success toast
+    setToast({
+      message: editingDiscount
+        ? "Discount code updated successfully!"
+        : "Discount code created successfully!",
+      type: "success",
+    });
+  };
+
+  const handleDeleteDiscount = (discountId) => {
+    setDeletingId(discountId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteLoading) return;
+
+    setDeleteLoading(true);
+    try {
+      await deleteDiscountCodeAPI(deletingId);
+
+      // Optimistic update - remove from list immediately
+      setDiscounts((prev) =>
+        prev.filter((discount) => discount._id !== deletingId)
+      );
+      setTotalCount((prev) => prev - 1);
+
+      setShowDeleteConfirm(false);
+      setDeletingId(null);
+
+      // Fetch fresh data in background
+      fetchDiscounts();
+
+      // Show success toast
+      setToast({
+        message: "Discount code deleted successfully!",
+        type: "success",
+      });
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Failed to delete discount code"
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleBulkAction = (action) => {
+    if (selectedDiscounts.length === 0) {
+      alert("Please select at least one discount code");
+      return;
+    }
+    setBulkAction(action);
+    setShowBulkConfirm(true);
+  };
+
+  const confirmBulkAction = async () => {
+    if (bulkLoading) return;
+
+    setBulkLoading(true);
+    try {
+      await bulkUpdateDiscountCodesAPI(selectedDiscounts, bulkAction);
+
+      // Optimistic update based on action
+      if (bulkAction === "delete") {
+        setDiscounts((prev) =>
+          prev.filter((discount) => !selectedDiscounts.includes(discount._id))
+        );
+        setTotalCount((prev) => prev - selectedDiscounts.length);
+      } else if (bulkAction === "activate" || bulkAction === "deactivate") {
+        const isActive = bulkAction === "activate";
+        setDiscounts((prev) =>
+          prev.map((discount) =>
+            selectedDiscounts.includes(discount._id)
+              ? { ...discount, isActive }
+              : discount
+          )
+        );
+      }
+
+      setShowBulkConfirm(false);
+      setBulkAction("");
+      setSelectedDiscounts([]);
+
+      // Fetch fresh data in background
+      fetchDiscounts();
+
+      // Show success toast
+      setToast({
+        message: `Bulk ${bulkAction} completed successfully!`,
+        type: "success",
+      });
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to perform bulk action");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleSelectDiscount = (discountId) => {
+    setSelectedDiscounts((prev) => {
+      if (prev.includes(discountId)) {
+        return prev.filter((id) => id !== discountId);
+      } else {
+        return [...prev, discountId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDiscounts.length === discounts.length) {
+      setSelectedDiscounts([]);
+    } else {
+      setSelectedDiscounts(discounts.map((d) => d._id));
+    }
+  };
+
+  const getStatusBadge = (discount) => {
+    const now = new Date();
+    const startDate = new Date(discount.startDate);
+    const endDate = new Date(discount.endDate);
+
+    if (!discount.isActive) {
+      return { label: "Inactive", color: "bg-gray-100 text-gray-800" };
+    } else if (now > endDate) {
+      return { label: "Expired", color: "bg-red-100 text-red-800" };
+    } else if (now < startDate) {
+      return { label: "Upcoming", color: "bg-yellow-100 text-yellow-800" };
+    } else {
+      return { label: "Active", color: "bg-green-100 text-green-800" };
+    }
+  };
+
+  return (
+    <AdminPageLayout
+      title="Discount Code Management"
+      actions={
+        <div className="flex gap-3">
+          {selectedDiscounts.length > 0 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("activate")}
+              >
+                <Icon icon="mdi:check" width="16" className="mr-1" />
+                Activate
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("deactivate")}
+              >
+                <Icon icon="mdi:pause" width="16" className="mr-1" />
+                Deactivate
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("delete")}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Icon icon="mdi:delete" width="16" className="mr-1" />
+                Delete
+              </Button>
             </div>
-        </AdminPageLayout>
-    );
+          )}
+          <Button
+            onClick={handleAddDiscount}
+            className="flex items-center gap-2"
+          >
+            <Icon icon="mdi:plus" width="20" />
+            Add Discount Code
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Statistics */}
+        {statistics && <DiscountStats statistics={statistics} />}
+
+        {/* Filters */}
+        <DiscountFilters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          loading={loading}
+        />
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
+        {/* Discount Table */}
+        <DiscountTable
+          discounts={discounts}
+          loading={loading}
+          selectedDiscounts={selectedDiscounts}
+          onSelectDiscount={handleSelectDiscount}
+          onSelectAll={handleSelectAll}
+          onEdit={handleEditDiscount}
+          onDelete={handleDeleteDiscount}
+          getStatusBadge={getStatusBadge}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          onPageChange={handlePageChange}
+        />
+      </div>
+
+      {/* Discount Form Modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editingDiscount ? "Edit Discount Code" : "Create Discount Code"}
+        size="lg"
+      >
+        <DiscountForm
+          discount={editingDiscount}
+          onSuccess={handleFormSuccess}
+          onCancel={() => setShowForm(false)}
+        />
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Discount Code"
+        message="Are you sure you want to delete this discount code? This action cannot be undone."
+        confirmText={deleteLoading ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        type="danger"
+        loading={deleteLoading}
+      />
+
+      {/* Bulk Action Confirmation */}
+      <ConfirmDialog
+        isOpen={showBulkConfirm}
+        onClose={() => setShowBulkConfirm(false)}
+        onConfirm={confirmBulkAction}
+        title={`Bulk ${bulkAction}`}
+        message={`Are you sure you want to ${bulkAction} ${selectedDiscounts.length} discount code(s)?`}
+        confirmText={
+          bulkLoading
+            ? "Processing..."
+            : bulkAction === "delete"
+            ? "Delete"
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        type={bulkAction === "delete" ? "danger" : "primary"}
+        loading={bulkLoading}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "" })}
+      />
+    </AdminPageLayout>
+  );
 };
 
-export default Discounts; 
+export default Discounts;

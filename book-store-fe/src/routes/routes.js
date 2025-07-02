@@ -30,6 +30,7 @@ import OrderDetailPage from "../pages/checkout/OrderDetailPage";
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
 import AdminDiscounts from "../pages/admin/Discounts";
+import AdminDiscountAnalytics from "../pages/admin/DiscountAnalytics";
 import AdminUsers from "../pages/admin/Users";
 import AdminOrders from "../pages/admin/Orders";
 import AdminBlog from "../pages/admin/Blog";
@@ -55,9 +56,17 @@ export const routes = [
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
   { path: "/auth/cart", page: CartPage, isShowHeader: true },
   // { path: "/auth/cart", page: CartPage, isShowHeader: true },
-  { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
+  {
+    path: "/auth/forgot-password",
+    page: ForgotPasswordPage,
+    isShowHeader: true,
+  },
   { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
-  { path: "/auth/change-password", page: ChangePasswordPage, isShowHeader: true },
+  {
+    path: "/auth/change-password",
+    page: ChangePasswordPage,
+    isShowHeader: true,
+  },
   { path: "/reset-password", page: ResetPasswordPage, isShowHeader: true },
   { path: "/about", page: AboutUs, isShowHeader: true },
   { path: "/payment-info", page: PaymentInfo, isShowHeader: true },
@@ -89,7 +98,11 @@ export const routes = [
   { path: "/orders/:id", page: OrderDetailPage, isShowHeader: true },
 
   { path: "/review/:orderId/:bookId", page: ReviewForm, isShowHeader: true },
-  { path: "/review/:orderId/:bookId/:reviewId", page: ReviewForm, isShowHeader: true },
+  {
+    path: "/review/:orderId/:bookId/:reviewId",
+    page: ReviewForm,
+    isShowHeader: true,
+  },
 
   { path: "/auth/wishlist", page: WishlistPage, isShowHeader: true },
   // Auth Callback
@@ -99,7 +112,9 @@ export const routes = [
   {
     path: "/admin",
     page: () => (
-      <ProtectedRoute requiredRole={["admindev", "adminbusiness", "superadmin"]}>
+      <ProtectedRoute
+        requiredRole={["admindev", "adminbusiness", "superadmin"]}
+      >
         <AdminLayout>
           <RoleBasedDashboard />
         </AdminLayout>
@@ -121,7 +136,10 @@ export const routes = [
   {
     path: "/admin/categories",
     page: () => (
-      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_CATEGORY">
+      <ProtectedRoute
+        requiredRole="admindev"
+        requiredPermission="VIEW_CATEGORY"
+      >
         <AdminLayout>
           <AdminCategories />
         </AdminLayout>
@@ -132,9 +150,26 @@ export const routes = [
   {
     path: "/admin/discounts",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_DISCOUNT">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_DISCOUNT"
+      >
         <AdminLayout>
           <AdminDiscounts />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
+  {
+    path: "/admin/discount-analytics",
+    page: () => (
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_DISCOUNT_ANALYTICS"
+      >
+        <AdminLayout>
+          <AdminDiscountAnalytics />
         </AdminLayout>
       </ProtectedRoute>
     ),
@@ -154,7 +189,10 @@ export const routes = [
   {
     path: "/admin/view-admin-activity",
     page: () => (
-      <ProtectedRoute requiredRole="superadmin" requiredPermission="VIEW_ADMIN_ACTIVITY">
+      <ProtectedRoute
+        requiredRole="superadmin"
+        requiredPermission="VIEW_ADMIN_ACTIVITY"
+      >
         <AdminLayout>
           <AdminActivity />
         </AdminLayout>
@@ -165,7 +203,10 @@ export const routes = [
   {
     path: "/admin/orders",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_ORDER">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_ORDER"
+      >
         <AdminLayout>
           <AdminOrders />
         </AdminLayout>
@@ -176,7 +217,10 @@ export const routes = [
   {
     path: "/admin/review",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_REVIEW">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_REVIEW"
+      >
         <AdminLayout>
           <AdminReview />
         </AdminLayout>
@@ -198,7 +242,10 @@ export const routes = [
   {
     path: "/admin/reports",
     page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
+      <ProtectedRoute
+        requiredRole="adminbusiness"
+        requiredPermission="VIEW_SALES_REPORT"
+      >
         <AdminLayout>
           <AdminReports />
         </AdminLayout>

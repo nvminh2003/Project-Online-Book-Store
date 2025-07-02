@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
 import Modal from "../../components/common/Modal";
+import DiscountCodeInput from "../../components/cart/DiscountCodeInput";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext"; // Use CartContext
 import orderService from "../../services/orderService";
@@ -21,12 +22,7 @@ const WARD_API = (districtId) =>
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const {
-    cart,
-    loading: cartLoading,
-    error: cartError,
-    applyCoupon,
-  } = useCart();
+  const { cart, loading: cartLoading, error: cartError } = useCart();
 
   const [loading, setLoading] = useState(true); // For profile/location fetching
   const [error, setError] = useState(null); // For profile/location errors
@@ -51,7 +47,6 @@ const CheckoutPage = () => {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("COD");
-  const [couponCode, setCouponCode] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -279,20 +274,6 @@ const CheckoutPage = () => {
     }
   };
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode) {
-      openModal("Thông báo", "Vui lòng nhập mã giảm giá.");
-      return;
-    }
-    const result = await applyCoupon(couponCode);
-    if (result.success) {
-      openModal("Thành công", "Áp dụng mã giảm giá thành công!");
-      setCouponCode("");
-    } else {
-      openModal("Lỗi", result.message || "Mã giảm giá không hợp lệ.");
-    }
-  };
-
   const validateForm = () => {
     const newErrors = {};
     const fieldsToValidate = [
@@ -415,7 +396,8 @@ const CheckoutPage = () => {
       ) {
         openModal(
           "Lỗi Cổng Thanh Toán PayOS",
-          `Có lỗi khi tạo liên kết thanh toán PayOS: ${err.response?.data?.message || err.message
+          `Có lỗi khi tạo liên kết thanh toán PayOS: ${
+            err.response?.data?.message || err.message
           }. Giỏ hàng của bạn vẫn được giữ nguyên. Vui lòng thử lại hoặc chọn phương thức thanh toán khi nhận hàng (COD).`
         );
       } else if (
@@ -430,7 +412,7 @@ const CheckoutPage = () => {
         openModal(
           "Đặt hàng thất bại",
           err.response?.data?.message ||
-          "Không thể tạo đơn hàng. Vui lòng thử lại sau."
+            "Không thể tạo đơn hàng. Vui lòng thử lại sau."
         );
       }
     } finally {
@@ -486,8 +468,9 @@ const CheckoutPage = () => {
                     value={shippingInfo.fullName}
                     onChange={handleShippingChange}
                     placeholder="Họ và tên"
-                    className={`p-2 border rounded w-full ${formErrors.fullName ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.fullName ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                   {formErrors.fullName && (
                     <p className="text-red-500 text-xs mt-1">
@@ -509,8 +492,9 @@ const CheckoutPage = () => {
                     value={shippingInfo.phone}
                     onChange={handleShippingChange}
                     placeholder="Số điện thoại"
-                    className={`p-2 border rounded w-full ${formErrors.phone ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.phone ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                   {formErrors.phone && (
                     <p className="text-red-500 text-xs mt-1">
@@ -533,8 +517,9 @@ const CheckoutPage = () => {
                     value={shippingInfo.address}
                     onChange={handleShippingChange}
                     placeholder="Địa chỉ (số nhà, tên đường)"
-                    className={`p-2 border rounded w-full ${formErrors.address ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.address ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                   {formErrors.address && (
                     <p className="text-red-500 text-xs mt-1">
@@ -556,8 +541,9 @@ const CheckoutPage = () => {
                     name="city"
                     value={shippingInfo.city}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${formErrors.city ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.city ? "border-red-500" : "border-gray-300"
+                    }`}
                     disabled={loadingLocations.cities}
                   >
                     <option value="">
@@ -591,8 +577,9 @@ const CheckoutPage = () => {
                     name="district"
                     value={shippingInfo.district}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${formErrors.district ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.district ? "border-red-500" : "border-gray-300"
+                    }`}
                     disabled={loadingLocations.districts || !shippingInfo.city}
                   >
                     <option value="">
@@ -626,8 +613,9 @@ const CheckoutPage = () => {
                     name="ward"
                     value={shippingInfo.ward}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${formErrors.ward ? "border-red-500" : "border-gray-300"
-                      }`}
+                    className={`p-2 border rounded w-full ${
+                      formErrors.ward ? "border-red-500" : "border-gray-300"
+                    }`}
                     disabled={loadingLocations.wards || !shippingInfo.district}
                   >
                     <option value="">
@@ -731,16 +719,9 @@ const CheckoutPage = () => {
                 ))}
               </div>
               <hr className="my-4" />
-              {/* <div className="flex justify-between">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="Nhập mã giảm giá"
-                  className="p-2 border rounded w-full mr-2"
-                />
-                <Button onClick={handleApplyCoupon}>Áp dụng</Button>
-              </div> */}
+              <div className="mb-4">
+                <DiscountCodeInput />
+              </div>
               <hr className="my-4" />
               {/* Free shipping notification */}
               {(() => {
@@ -754,10 +735,11 @@ const CheckoutPage = () => {
 
                 return (
                   <div
-                    className={`p-3 rounded-lg mb-4 ${isEligible
-                      ? "bg-green-50 border border-green-200"
-                      : "bg-blue-50 border border-blue-200"
-                      }`}
+                    className={`p-3 rounded-lg mb-4 ${
+                      isEligible
+                        ? "bg-green-50 border border-green-200"
+                        : "bg-blue-50 border border-blue-200"
+                    }`}
                   >
                     {isEligible ? (
                       <div className="flex items-center text-green-700">
@@ -831,10 +813,11 @@ const CheckoutPage = () => {
               <Button
                 onClick={handlePlaceOrder}
                 disabled={isPlacingOrder || !cart?.items?.length}
-                className={`w-full mt-6 flex items-center justify-center gap-2 font-bold text-white py-3 rounded-md transition-colors duration-300 ${isPlacingOrder || !cart?.items?.length
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-rose-600 hover:bg-blue-700"
-                  }`}
+                className={`w-full mt-6 flex items-center justify-center gap-2 font-bold text-white py-3 rounded-md transition-colors duration-300 ${
+                  isPlacingOrder || !cart?.items?.length
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-rose-600 hover:bg-blue-700"
+                }`}
               >
                 {isPlacingOrder ? (
                   <>

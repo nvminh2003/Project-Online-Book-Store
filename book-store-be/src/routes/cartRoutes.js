@@ -14,5 +14,6 @@ router.delete("/items/:bookId", cartController.removeFromCart);
 router.delete("/clear", cartController.clearCart);
 router.post("/validate-checkout", cartController.validateCartForCheckout);
 router.post("/coupon", cartController.applyCouponToCart);
+router.delete("/coupon", cartController.removeCouponFromCart);
 
 module.exports = router;

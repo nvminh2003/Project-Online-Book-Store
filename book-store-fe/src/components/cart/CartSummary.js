@@ -5,17 +5,14 @@ import {
   SHIPPING_CONFIG,
   calculateShippingFee,
 } from "../../constants/shipping";
+import DiscountCodeInput from "./DiscountCodeInput";
 
 const CartSummary = ({
   subtotal,
   discountAmount,
   shippingFee,
   total,
-  couponCode,
-  onCouponCodeChange,
-  onApplyCoupon,
   onProceedToCheckout,
-  applyingCoupon,
 }) => {
   // Calculate how much more needed for free shipping
   const amountNeededForFreeShipping = Math.max(
@@ -37,10 +34,11 @@ const CartSummary = ({
         </div>
         {/* Free shipping notification */}
         <div
-          className={`p-3 rounded-lg ${isEligibleForFreeShipping
-            ? "bg-green-50 border border-green-200"
-            : "bg-blue-50 border border-blue-200"
-            }`}
+          className={`p-3 rounded-lg ${
+            isEligibleForFreeShipping
+              ? "bg-green-50 border border-green-200"
+              : "bg-blue-50 border border-blue-200"
+          }`}
         >
           {isEligibleForFreeShipping ? (
             <div className="flex items-center text-green-700">
@@ -109,31 +107,7 @@ const CartSummary = ({
       </div>
 
       <div className="mt-6">
-        <label
-          htmlFor="coupon"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          Mã giảm giá
-        </label>
-        {/* <div className="flex">
-          <input
-            type="text"
-            id="coupon"
-            name="coupon"
-            value={couponCode}
-            onChange={(e) => onCouponCodeChange(e.target.value)}
-            className="flex-grow p-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
-            placeholder="Nhập mã giảm giá"
-            disabled={applyingCoupon}
-          />
-          <button
-            onClick={onApplyCoupon}
-            disabled={applyingCoupon || !couponCode.trim()}
-            className="bg-gray-700 text-white px-4 py-2 rounded-r-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {applyingCoupon ? "Đang xử lý..." : "Áp dụng"}
-          </button>
-        </div> */}
+        <DiscountCodeInput />
       </div>
 
       <button
@@ -144,7 +118,10 @@ const CartSummary = ({
       </button>
 
       <div className="mt-6 text-center">
-        <Link to="/" className="text-sm text-blue-500 hover:text-blue-700 no-underline">
+        <Link
+          to="/"
+          className="text-sm text-blue-500 hover:text-blue-700 no-underline"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4 inline mr-1"

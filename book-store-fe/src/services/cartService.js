@@ -47,6 +47,10 @@ export const applyCouponToCartAPI = async (couponCode) => {
   );
 };
 
+export const removeCouponFromCartAPI = async () => {
+  return axios.delete(`${API_BASE_URL}/cart/coupon`, getAxiosConfig());
+};
+
 export const clearCartAPI = async () => {
   return axios.delete(`${API_BASE_URL}/cart/clear`, getAxiosConfig());
 };
