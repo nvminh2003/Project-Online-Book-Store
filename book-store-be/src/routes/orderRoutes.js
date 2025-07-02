@@ -29,11 +29,11 @@ router.get(
   authorizeRole(["customer"]),
   orderController.getUserOrders
 );
-router.get(
-  "/:id/detail",
-  authorizeRole(["adminbusiness", "customer"]),
-  orderController.getOrderById
-);
+// router.get(
+//   "/:id/detail",
+//   authorizeRole(["adminbusiness", "customer"]),
+//   orderController.getOrderById
+// );
 router.get(
   "/:id",
   authorizeRole(["adminbusiness", "customer"]),

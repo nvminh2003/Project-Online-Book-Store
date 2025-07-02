@@ -425,6 +425,111 @@ const validateCartForCheckout = async (req, res) => {
   }
 };
 
+// Apply coupon to cart
+const applyCouponToCart = async (req, res) => {
+  try {
+    const { couponCode } = req.body;
+
+    if (!couponCode) {
+      return res.status(400).json({
+        message: "Coupon code is required",
+        status: "Error",
+      });
+    }
+
+    // Get cart
+    const cart = await Cart.findOne({ user: req.account._id }).populate({
+      path: "items.book",
+      select: "title sellingPrice images stockQuantity",
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({
+        message: "Cart is empty",
+        status: "Error",
+      });
+    }
+
+    // Validate discount code
+    const DiscountCode = require("../models/discountCodeModel");
+    const discountCode = await DiscountCode.findOne({
+      code: couponCode,
+      isActive: true,
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() },
+    });
+
+    if (!discountCode) {
+      return res.status(404).json({
+        message: "Invalid or expired discount code",
+        status: "Error",
+      });
+    }
+
+    // Check if code has reached max uses
+    if (
+      discountCode.maxUses &&
+      discountCode.usesCount >= discountCode.maxUses
+    ) {
+      return res.status(400).json({
+        message: "Discount code has reached maximum uses",
+        status: "Error",
+      });
+    }
+
+    // Calculate cart subtotal
+    const subtotal = cart.items.reduce((total, item) => {
+      const price = item.book?.sellingPrice || 0;
+      const quantity = item.quantity || 0;
+      return total + price * quantity;
+    }, 0);
+
+    // Calculate discount amount
+    let discountAmount = 0;
+    if (discountCode.type === "percent") {
+      discountAmount = Math.round((subtotal * discountCode.value) / 100);
+    } else if (discountCode.type === "fixed") {
+      discountAmount = discountCode.value;
+    }
+
+    // Ensure discount doesn't exceed subtotal
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    // Update cart with coupon details
+    cart.coupon = discountCode.code;
+    cart.couponDetails = {
+      code: discountCode.code,
+      type: discountCode.type,
+      value: discountCode.value,
+      discountAmountCalculated: discountAmount,
+    };
+
+    await cart.save();
+
+    // Return updated cart
+    const populatedCart = await populateCart(cart._id);
+    const validItems = populatedCart.items.filter((item) => item.book);
+    const total = calculateTotal(validItems);
+
+    return res.status(200).json({
+      message: "Coupon applied successfully",
+      status: "Success",
+      data: {
+        ...populatedCart.toObject(),
+        items: validItems,
+        total,
+        couponDetails: cart.couponDetails,
+      },
+    });
+  } catch (error) {
+    console.error("Apply coupon error:", error);
+    return res.status(500).json({
+      message: error.message,
+      status: "Error",
+    });
+  }
+};
+
 module.exports = {
   getCart,
   addToCart,
@@ -432,4 +537,5 @@ module.exports = {
   removeFromCart,
   clearCart,
   validateCartForCheckout,
+  applyCouponToCart,
 };

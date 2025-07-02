@@ -355,7 +355,16 @@ const createOrder = async (req, res) => {
       }
     }
 
-    const shippingFee = 0; // Miễn phí vận chuyển
+    // Calculate shipping fee: Free for orders >= 200k, otherwise 30k
+    const FREE_SHIPPING_THRESHOLD = 200000;
+    const STANDARD_SHIPPING_FEE = 30000;
+    const shippingFee =
+      totalAmount >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+
+    console.log(
+      `Shipping calculation: subtotal=${totalAmount}, threshold=${FREE_SHIPPING_THRESHOLD}, fee=${shippingFee}`
+    );
+
     const finalTotal = totalAmount - discountAmount + shippingFee;
     const orderCode = generateOrderCode();
 

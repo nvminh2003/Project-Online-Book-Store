@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Icon } from "@iconify/react";
 import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import WishlistButton from "../../components/wishlist/WishlistButton";
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api"; // Đảm bảo có /api nếu backend có prefix
@@ -386,31 +387,25 @@ const ProductDetailPage = () => {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={handleAddToCart}
-              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform hover:scale-105"
             >
-              <Icon icon="mdi:cart" width="18" height="18" color="#2563eb" />
+              <Icon icon="mdi:cart-plus" className="w-5 h-5" />
               Thêm vào giỏ hàng
             </button>
-            <button
-              onClick={handleAddToWishlist}
-              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
-            >
-              <Icon icon="mdi:heart" width="18" height="18" color="#2563eb" />
-              Yêu thích
-            </button>
+
+            <WishlistButton
+              bookId={bookId}
+              className="flex-1 font-semibold px-6 py-3 shadow-md hover:shadow-lg"
+            />
+
             <button
               onClick={() => navigate(-1)}
-              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 transform hover:scale-105"
             >
-              <Icon
-                icon="mdi:arrow-left"
-                width="18"
-                height="18"
-                color="#2563eb"
-              />
+              <Icon icon="mdi:arrow-left" className="w-5 h-5" />
               Quay lại
             </button>
           </div>

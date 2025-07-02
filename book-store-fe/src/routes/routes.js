@@ -19,6 +19,9 @@ import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
 import UploadExcel from "../pages/products/UploadExcel";
 
+// Wishlist Pages
+import WishlistPage from "../pages/wishlist/WishlistPage";
+
 // Checkout Pages
 import CheckoutPage from "../pages/checkout/CheckoutPage";
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
@@ -51,6 +54,7 @@ export const routes = [
   { path: "/auth/register", page: RegisterPage, isShowHeader: true },
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
   { path: "/auth/cart", page: CartPage, isShowHeader: true },
+  { path: "/auth/wishlist", page: WishlistPage, isShowHeader: true },
   {
     path: "/auth/forgot-password",
     page: ForgotPasswordPage,

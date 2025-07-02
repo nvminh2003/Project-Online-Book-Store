@@ -4,6 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import WishlistButton from "../../components/wishlist/WishlistButton";
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
@@ -145,35 +146,6 @@ const ProductDetailPage = () => {
       console.error("Add to cart error:", err.response?.data || err.message);
       setToastMsg(
         err.response?.data?.message || "Không thể thêm vào giỏ hàng."
-      );
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
-    }
-  };
-
-  const handleAddToWishlist = async (bookId) => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
-      setToastType("error");
-      setTimeout(() => navigate("/auth/login"), 1500);
-      return;
-    }
-    try {
-      await axios.post(
-        `${API_URL}/wishlist/add`,
-        { bookId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setToastMsg("Đã thêm vào mục yêu thích!");
-      setToastType("success");
-      setTimeout(() => setToastMsg(""), 1500);
-    } catch (err) {
-      console.error("Wishlist error:", err.response?.data || err.message);
-      setToastMsg(
-        err.response?.data?.message || "Không thể thêm vào yêu thích."
       );
       setToastType("error");
       setTimeout(() => setToastMsg(""), 1500);
@@ -359,21 +331,15 @@ const ProductDetailPage = () => {
                         color="#2563eb"
                       />
                     </button>
-                    <button
+
+                    <WishlistButton
+                      bookId={book._id}
+                      variant="icon-only"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAddToWishlist(book._id);
                       }}
-                      className="bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200"
-                      title="Yêu thích"
-                    >
-                      <Icon
-                        icon="mdi:heart"
-                        width="24"
-                        height="24"
-                        color="#2563eb"
-                      />
-                    </button>
+                    />
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

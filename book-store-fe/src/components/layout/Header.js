@@ -4,12 +4,14 @@ import Icon from "../common/Icon";
 import logo from "../../assets/image.png";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
+import { useWishlist } from "../../contexts/WishlistContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuth();
   const { cartItemCount } = useCart(); // Sử dụng useCart để lấy số lượng sản phẩm
+  const { wishlistCount } = useWishlist(); // Sử dụng useWishlist để lấy số lượng wishlist
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -244,7 +246,7 @@ const Header = () => {
 
             {/* Wishlist */}
             <Link
-              to="/wishlist"
+              to="/auth/wishlist"
               className={`relative transition-colors ${
                 isActivePath("/wishlist")
                   ? "text-blue-600"
@@ -252,10 +254,11 @@ const Header = () => {
               }`}
             >
               <Icon icon="mdi:heart-outline" className="w-6 h-6" />
-              {/* Wishlist count badge hidden for now until we implement wishlist functionality */}
-              {/* <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                0
-              </span> */}
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart */}

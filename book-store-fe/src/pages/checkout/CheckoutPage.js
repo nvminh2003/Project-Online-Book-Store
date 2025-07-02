@@ -7,6 +7,10 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext"; // Use CartContext
 import { createOrderAPI } from "../../services/orderService";
 import accountService from "../../services/accountService";
+import {
+  SHIPPING_CONFIG,
+  calculateShippingFee,
+} from "../../constants/shipping";
 
 const PROVINCE_API = "https://open.oapi.vn/location/provinces?page=0&size=100";
 const DISTRICT_API = (provinceId) =>
@@ -63,10 +67,13 @@ const CheckoutPage = () => {
     setIsModalOpen(false);
   };
 
-  const shippingFee = 0; // Miễn phí vận chuyển
-
   const discountAmount = useMemo(() => {
     return cart?.couponDetails?.discountAmountCalculated || 0;
+  }, [cart]);
+
+  const shippingFee = useMemo(() => {
+    const subtotal = cart?.subtotal || 0;
+    return calculateShippingFee(subtotal);
   }, [cart]);
 
   const finalTotal = useMemo(() => {
@@ -742,6 +749,74 @@ const CheckoutPage = () => {
                 <Button onClick={handleApplyCoupon}>Áp dụng</Button>
               </div>
               <hr className="my-4" />
+
+              {/* Free shipping notification */}
+              {(() => {
+                const subtotal = cart?.subtotal || 0;
+                const amountNeeded = Math.max(
+                  0,
+                  SHIPPING_CONFIG.FREE_SHIPPING_THRESHOLD - subtotal
+                );
+                const isEligible =
+                  subtotal >= SHIPPING_CONFIG.FREE_SHIPPING_THRESHOLD;
+
+                return (
+                  <div
+                    className={`p-3 rounded-lg mb-4 ${
+                      isEligible
+                        ? "bg-green-50 border border-green-200"
+                        : "bg-blue-50 border border-blue-200"
+                    }`}
+                  >
+                    {isEligible ? (
+                      <div className="flex items-center text-green-700">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          🎉 Bạn được miễn phí vận chuyển!
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-blue-700">
+                        <div className="flex items-center mb-1">
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span className="text-sm font-medium">
+                            🚚 Miễn phí ship cho đơn từ{" "}
+                            {SHIPPING_CONFIG.FREE_SHIPPING_THRESHOLD.toLocaleString(
+                              "vi-VN"
+                            )}
+                            đ
+                          </span>
+                        </div>
+                        <span className="text-xs">
+                          Mua thêm {amountNeeded.toLocaleString("vi-VN")}đ để
+                          được miễn phí vận chuyển
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <p>Tạm tính</p>
