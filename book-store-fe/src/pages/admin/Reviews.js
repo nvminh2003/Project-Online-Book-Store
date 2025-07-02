@@ -1,120 +1,222 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+// pages/Review.jsx
+import React, { useEffect, useState } from 'react';
+import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import AdminSearch from '../../components/admin/AdminSearch';
+import AdminTable from '../../components/admin/AdminTable';
+import AdminPagination from '../../components/admin/AdminPagination';
+import AdminModal from '../../components/admin/AdminModal';
+import Icon from '../../components/common/Icon';
+import reviewService from '../../services/reviewService';
+import { notifyError, notifySuccess } from '../../components/common/ToastManager';
 
-const API_URL = process.env.REACT_APP_API_URL_BACKEND;
+const Review = () => {
+    const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const [keyword, setKeyword] = useState('');
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [reviewToDelete, setReviewToDelete] = useState(null);
+    const [filters, setFilters] = useState({
+        status: '',
+        rating: '',
+        bookId: '',
+        userId: ''
+    });
 
-const Reviews = () => {
-  const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchReviews = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("accessToken");
-
-      const res = await axios.get(`${API_URL}/reviews/all`, {
-        headers: {Authorization: `Bearer ${token}`},
-      });
-
-      setReviews(res.data);
-    } catch (err) {
-      console.error("Lỗi khi tải đánh giá:", err);
-      alert("Không thể tải danh sách đánh giá.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleVisibility = async (reviewId, currentStatus) => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      const newVisibility = currentStatus === "visible" ? "hidden" : "visible";
-
-      await axios.put(
-        `${API_URL}/reviews/${reviewId}/visibility`,
-        {visibility: newVisibility},
-        {
-          headers: {Authorization: `Bearer ${token}`},
+    const fetchReviews = async () => {
+        setLoading(true);
+        try {
+            const params = {
+                page: currentPage,
+                limit: 10,
+                keyword,
+                ...filters
+            };
+            const res = await reviewService.getAllReviews(currentPage, 10, params);
+            setReviews(res.data.reviews);
+            setTotalPages(res.data.pagination.totalPages);
+            setTotalItems(res.data.pagination.total);
+        } catch (error) {
+            console.error('Failed to fetch reviews:', error);
+            notifyError('Không thể tải danh sách đánh giá');
+        } finally {
+            setLoading(false);
         }
-      );
+    };
 
-      fetchReviews(); // refresh list
-    } catch (err) {
-      if (err.response?.status === 403) {
-        alert("Bạn không có quyền thực hiện hành động này.");
-      } else {
-        console.error("Lỗi khi cập nhật trạng thái hiển thị:", err);
-        alert("Không thể thay đổi trạng thái hiển thị.");
-      }
-    }
-  };
+    useEffect(() => {
+        fetchReviews();
+    }, [currentPage, filters]);
 
-  useEffect(() => {
-    fetchReviews();
-  }, []);
+    const handleFilterChange = (field, value) => {
+        setFilters(prev => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
+    };
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Quản lý đánh giá</h1>
+    const handleToggleVisibility = async (reviewId) => {
+        try {
+            await reviewService.toggleReviewVisibility(reviewId);
+            notifySuccess('Cập nhật trạng thái đánh giá thành công');
+            fetchReviews(); // Refresh data
+        } catch (error) {
+            console.error('Failed to toggle review visibility:', error);
+            notifyError('Không thể cập nhật trạng thái đánh giá');
+        }
+    };
 
-      {loading ? (
-        <p className="text-gray-500">Đang tải...</p>
-      ) : (
-        <div className="overflow-auto rounded-md border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-100 text-left">
-            <tr>
-              <th className="px-4 py-2">STT</th>
-              <th className="px-4 py-2">Người dùng</th>
-              <th className="px-4 py-2">Sách</th>
-              <th className="px-4 py-2">Số sao</th>
-              <th className="px-4 py-2">Bình luận</th>
-              <th className="px-4 py-2">Trạng thái</th>
-              <th className="px-4 py-2">Hành động</th>
-            </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-            {reviews.map((r, index) => (
-              <tr key={r._id} className="hover:bg-gray-50">
-                <td className="px-4 py-2">{index + 1}</td>
-                <td className="px-4 py-2">
-                  {r.user?.info?.fullName || r.user?.name || "Ẩn danh"}
-                </td>
-                <td className="px-4 py-2">{r.book?.title || "Không rõ"}</td>
-                <td className="px-4 py-2 text-yellow-500">{"⭐".repeat(r.rating)}</td>
-                <td className="px-4 py-2 max-w-md whitespace-pre-wrap break-words">
-                  {r.comment}
-                </td>
-                <td className="px-4 py-2 capitalize">{r.visibility}</td>
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => toggleVisibility(r._id, r.visibility)}
-                    className={`px-3 py-1 rounded text-white text-xs ${
-                      r.visibility === "visible"
-                        ? "bg-yellow-600 hover:bg-yellow-700"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                  >
-                    {r.visibility === "visible" ? "Ẩn" : "Hiện"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {reviews.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center p-4 text-gray-500">
-                  Không có đánh giá nào.
-                </td>
-              </tr>
-            )}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+    const confirmDeleteReview = async () => {
+        if (!reviewToDelete) return;
+        try {
+            await reviewService.deleteReview(reviewToDelete._id);
+            notifySuccess('Xóa đánh giá thành công');
+            fetchReviews();
+        } catch (error) {
+            console.error('Failed to delete review:', error);
+            notifyError('Không thể xóa đánh giá');
+        } finally {
+            setIsConfirmModalOpen(false);
+            setReviewToDelete(null);
+        }
+    };
+
+    const columns = [
+        {
+            label: 'Sách',
+            key: 'bookTitle',
+            render: (item) => <span>{item.book?.title || 'N/A'}</span>
+        },
+        {
+            label: 'Người đánh giá',
+            key: 'userName',
+            render: (item) => <span>{item.user?.info?.fullName || item.user?.email}</span>
+        },
+        {
+            label: 'Sao',
+            key: 'rating',
+            render: (item) => <span className="text-yellow-500">{'★'.repeat(item.rating)}</span>
+        },
+        {
+            label: 'Nội dung',
+            key: 'comment',
+            render: (item) => <span className="line-clamp-2 max-w-[250px]">{item.comment}</span>
+        },
+        {
+            label: 'Ảnh',
+            key: 'images',
+            render: (item) => item.images?.length > 0 ? <span>{item.images.length} ảnh</span> : '-'
+        },
+        {
+            label: 'Trạng thái',
+            key: 'isHidden',
+            render: (item) => item.isHidden ? <span className="text-red-500">Đã ẩn</span> : <span className="text-green-600">Hiển thị</span>
+        },
+        {
+            label: 'Thao tác',
+            key: 'actions',
+            render: (item) => (
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleToggleVisibility(item._id)}
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        {item.isHidden ? 'Hiện' : 'Ẩn'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setReviewToDelete(item);
+                            setIsConfirmModalOpen(true);
+                        }}
+                        className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                        Xóa
+                    </button>
+
+                </div>
+            )
+        }
+    ];
+
+    return (
+        <AdminPageLayout title="Quản lý đánh giá">
+            <div className="p-6">
+                <AdminSearch
+                    placeholder="Tìm kiếm theo nội dung"
+                    value={keyword}
+                    onChange={setKeyword}
+                    onSearch={() => fetchReviews()}
+                    filters={[
+                        {
+                            placeholder: 'Tất cả trạng thái',
+                            value: filters.status,
+                            onChange: (v) => handleFilterChange('status', v),
+                            options: [
+                                { label: 'Hiển thị', value: 'visible' },
+                                { label: 'Đã ẩn', value: 'hidden' }
+                            ]
+                        },
+                        {
+                            placeholder: 'Tất cả sao',
+                            value: filters.rating,
+                            onChange: (v) => handleFilterChange('rating', v),
+                            options: [
+                                ...([1, 2, 3, 4, 5].map(s => ({ label: `${s} sao`, value: s })))
+                            ]
+                        }
+                    ]}
+                />
+
+                <AdminTable
+                    columns={columns}
+                    data={reviews}
+                    loading={loading}
+                />
+
+                <AdminPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={10}
+                    onPageChange={setCurrentPage}
+                />
+
+                {/* Xác nhận xóa review */}
+                <AdminModal
+                    isOpen={isConfirmModalOpen}
+                    onClose={() => {
+                        setIsConfirmModalOpen(false);
+                        setReviewToDelete(null);
+                    }}
+                    title="Xác nhận xóa đánh giá"
+                >
+                    <p className="text-gray-700 mb-4">
+                        Bạn có chắc chắn muốn xóa đánh giá này của người dùng
+                        <span className="font-semibold"> {reviewToDelete?.user?.info?.fullName || reviewToDelete?.user?.email}</span> không?
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsConfirmModalOpen(false);
+                                setReviewToDelete(null);
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="button"
+                            onClick={confirmDeleteReview}
+                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                        >
+                            Xóa
+                        </button>
+                    </div>
+                </AdminModal>
+            </div>
+        </AdminPageLayout>
+    );
 };
 
-
-
-export default Reviews
+export default Review;

@@ -97,6 +97,8 @@ const getAllDiscountCodes = async (req, res) => {
             query.startDate = { $lte: new Date() };
             query.endDate = { $gte: new Date() };
         }
+        console.log("Filter query:", query);
+
 
         const discountCodes = await DiscountCode.find(query)
             .populate('books', 'title price')

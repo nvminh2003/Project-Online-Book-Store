@@ -5,7 +5,7 @@ import Spinner from "../../components/common/Spinner";
 import Modal from "../../components/common/Modal";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext"; // Use CartContext
-import { createOrderAPI } from "../../services/orderService";
+import orderService from "../../services/orderService";
 import accountService from "../../services/accountService";
 import {
   SHIPPING_CONFIG,
@@ -67,13 +67,13 @@ const CheckoutPage = () => {
     setIsModalOpen(false);
   };
 
-  const discountAmount = useMemo(() => {
-    return cart?.couponDetails?.discountAmountCalculated || 0;
-  }, [cart]);
-
   const shippingFee = useMemo(() => {
     const subtotal = cart?.subtotal || 0;
     return calculateShippingFee(subtotal);
+  }, [cart]);
+
+  const discountAmount = useMemo(() => {
+    return cart?.couponDetails?.discountAmountCalculated || 0;
   }, [cart]);
 
   const finalTotal = useMemo(() => {
@@ -362,7 +362,7 @@ const CheckoutPage = () => {
       console.log("=== Frontend Order Request ===");
       console.log("Order data being sent:", orderData);
 
-      const res = await createOrderAPI(orderData);
+      const res = await orderService.createOrderAPI(orderData);
 
       console.log("=== Frontend Order Response ===");
       console.log("Full response:", res);
@@ -415,8 +415,7 @@ const CheckoutPage = () => {
       ) {
         openModal(
           "Lỗi Cổng Thanh Toán PayOS",
-          `Có lỗi khi tạo liên kết thanh toán PayOS: ${
-            err.response?.data?.message || err.message
+          `Có lỗi khi tạo liên kết thanh toán PayOS: ${err.response?.data?.message || err.message
           }. Giỏ hàng của bạn vẫn được giữ nguyên. Vui lòng thử lại hoặc chọn phương thức thanh toán khi nhận hàng (COD).`
         );
       } else if (
@@ -431,7 +430,7 @@ const CheckoutPage = () => {
         openModal(
           "Đặt hàng thất bại",
           err.response?.data?.message ||
-            "Không thể tạo đơn hàng. Vui lòng thử lại sau."
+          "Không thể tạo đơn hàng. Vui lòng thử lại sau."
         );
       }
     } finally {
@@ -487,9 +486,8 @@ const CheckoutPage = () => {
                     value={shippingInfo.fullName}
                     onChange={handleShippingChange}
                     placeholder="Họ và tên"
-                    className={`p-2 border rounded w-full ${
-                      formErrors.fullName ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.fullName ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                   {formErrors.fullName && (
                     <p className="text-red-500 text-xs mt-1">
@@ -511,9 +509,8 @@ const CheckoutPage = () => {
                     value={shippingInfo.phone}
                     onChange={handleShippingChange}
                     placeholder="Số điện thoại"
-                    className={`p-2 border rounded w-full ${
-                      formErrors.phone ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.phone ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                   {formErrors.phone && (
                     <p className="text-red-500 text-xs mt-1">
@@ -536,9 +533,8 @@ const CheckoutPage = () => {
                     value={shippingInfo.address}
                     onChange={handleShippingChange}
                     placeholder="Địa chỉ (số nhà, tên đường)"
-                    className={`p-2 border rounded w-full ${
-                      formErrors.address ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.address ? "border-red-500" : "border-gray-300"
+                      }`}
                   />
                   {formErrors.address && (
                     <p className="text-red-500 text-xs mt-1">
@@ -560,9 +556,8 @@ const CheckoutPage = () => {
                     name="city"
                     value={shippingInfo.city}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${
-                      formErrors.city ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.city ? "border-red-500" : "border-gray-300"
+                      }`}
                     disabled={loadingLocations.cities}
                   >
                     <option value="">
@@ -596,9 +591,8 @@ const CheckoutPage = () => {
                     name="district"
                     value={shippingInfo.district}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${
-                      formErrors.district ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.district ? "border-red-500" : "border-gray-300"
+                      }`}
                     disabled={loadingLocations.districts || !shippingInfo.city}
                   >
                     <option value="">
@@ -632,9 +626,8 @@ const CheckoutPage = () => {
                     name="ward"
                     value={shippingInfo.ward}
                     onChange={handleShippingChange}
-                    className={`p-2 border rounded w-full ${
-                      formErrors.ward ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`p-2 border rounded w-full ${formErrors.ward ? "border-red-500" : "border-gray-300"
+                      }`}
                     disabled={loadingLocations.wards || !shippingInfo.district}
                   >
                     <option value="">
@@ -738,7 +731,7 @@ const CheckoutPage = () => {
                 ))}
               </div>
               <hr className="my-4" />
-              <div className="flex justify-between">
+              {/* <div className="flex justify-between">
                 <input
                   type="text"
                   value={couponCode}
@@ -747,9 +740,8 @@ const CheckoutPage = () => {
                   className="p-2 border rounded w-full mr-2"
                 />
                 <Button onClick={handleApplyCoupon}>Áp dụng</Button>
-              </div>
+              </div> */}
               <hr className="my-4" />
-
               {/* Free shipping notification */}
               {(() => {
                 const subtotal = cart?.subtotal || 0;
@@ -762,11 +754,10 @@ const CheckoutPage = () => {
 
                 return (
                   <div
-                    className={`p-3 rounded-lg mb-4 ${
-                      isEligible
-                        ? "bg-green-50 border border-green-200"
-                        : "bg-blue-50 border border-blue-200"
-                    }`}
+                    className={`p-3 rounded-lg mb-4 ${isEligible
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-blue-50 border border-blue-200"
+                      }`}
                   >
                     {isEligible ? (
                       <div className="flex items-center text-green-700">
@@ -816,12 +807,12 @@ const CheckoutPage = () => {
                   </div>
                 );
               })()}
-
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <p>Tạm tính</p>
                   <p>{(cart?.subtotal || 0).toLocaleString()}đ</p>
                 </div>
+
                 <div className="flex justify-between">
                   <p>Phí vận chuyển</p>
                   <p>{shippingFee.toLocaleString()}đ</p>
@@ -840,9 +831,19 @@ const CheckoutPage = () => {
               <Button
                 onClick={handlePlaceOrder}
                 disabled={isPlacingOrder || !cart?.items?.length}
-                className="w-full mt-6"
+                className={`w-full mt-6 flex items-center justify-center gap-2 font-bold text-white py-3 rounded-md transition-colors duration-300 ${isPlacingOrder || !cart?.items?.length
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-rose-600 hover:bg-blue-700"
+                  }`}
               >
-                {isPlacingOrder ? <Spinner /> : "ĐẶT HÀNG"}
+                {isPlacingOrder ? (
+                  <>
+                    <Spinner size="sm" color="white" />
+                    <span>Đang xử lý...</span>
+                  </>
+                ) : (
+                  "ĐẶT HÀNG"
+                )}
               </Button>
             </div>
           </div>

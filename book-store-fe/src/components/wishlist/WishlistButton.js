@@ -1,60 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useWishlist } from "../../contexts/WishlistContext";
 import Button from "../common/Button";
 import { Icon } from "@iconify/react";
 
-const WishlistButton = ({ bookId, className = "", variant = "default" }) => {
+const WishlistButton = ({ bookId, className = "", variant = "default", onRequireLogin, onSuccessAdd, onSuccessRemove }) => {
   const {
     addToWishlist,
     removeFromWishlist,
-    isInWishlist,
-    loading,
     wishlistItems,
+    loading,
     fetchWishlist,
   } = useWishlist();
-  const [inWishlist, setInWishlist] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    checkWishlistStatus();
-  }, [bookId, wishlistItems]);
+  // Check wishlist status from local context only
+  const inWishlist = wishlistItems.some(
+    (item) => item.book && item.book._id === bookId
+  );
 
-  const checkWishlistStatus = async () => {
-    try {
-      // First check from local state
-      const localCheck = wishlistItems.some(
-        (item) => item.book && item.book._id === bookId
-      );
-
-      if (localCheck) {
-        setInWishlist(true);
-      } else {
-        // Fallback to API check
-        const result = await isInWishlist(bookId);
-        setInWishlist(result);
+  const handleToggleWishlist = async (e) => {
+    e?.stopPropagation && e.stopPropagation();
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      if (onRequireLogin) {
+        onRequireLogin();
       }
-    } catch (err) {
-      console.error("Failed to check wishlist status:", err);
+      return;
     }
-  };
-
-  const handleToggleWishlist = async () => {
     try {
       setActionLoading(true);
-
       if (inWishlist) {
         await removeFromWishlist(bookId);
-        setInWishlist(false);
+        if (onSuccessRemove) onSuccessRemove();
       } else {
         await addToWishlist(bookId);
-        setInWishlist(true);
-        // Refresh wishlist to update header count
         await fetchWishlist();
+        if (onSuccessAdd) onSuccessAdd();
       }
     } catch (err) {
       console.error("Failed to toggle wishlist:", err);
-      // Revert state on error
-      setInWishlist(!inWishlist);
     } finally {
       setActionLoading(false);
     }
@@ -66,9 +50,8 @@ const WishlistButton = ({ bookId, className = "", variant = "default" }) => {
       <button
         onClick={handleToggleWishlist}
         disabled={loading || actionLoading}
-        className={`bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200 ${
-          inWishlist ? "!border-red-500 !text-red-500 hover:!bg-red-50" : ""
-        } ${className}`}
+        className={`bg-white border border-blue-500 text-blue-600 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-xl shadow-lg flex items-center justify-center transition-all duration-200 ${inWishlist ? "!border-red-500 !text-red-500 hover:!bg-red-50" : ""
+          } ${className}`}
         title={
           inWishlist
             ? "Xóa khỏi danh sách yêu thích"
@@ -78,15 +61,15 @@ const WishlistButton = ({ bookId, className = "", variant = "default" }) => {
         {actionLoading ? (
           <Icon
             icon="mdi:loading"
-            width="24"
-            height="24"
+            width="20"
+            height="20"
             className="animate-spin"
           />
         ) : (
           <Icon
             icon={inWishlist ? "mdi:heart" : "mdi:heart-outline"}
-            width="24"
-            height="24"
+            width="20"
+            height="20"
             color={inWishlist ? "#ef4444" : "#2563eb"}
           />
         )}
@@ -99,11 +82,10 @@ const WishlistButton = ({ bookId, className = "", variant = "default" }) => {
       variant={inWishlist ? "primary" : "outline"}
       onClick={handleToggleWishlist}
       disabled={loading || actionLoading}
-      className={`flex items-center space-x-2 transition-all duration-200 ${
-        inWishlist
-          ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
-          : "border-gray-300 hover:border-red-300 hover:text-red-500"
-      } ${className}`}
+      className={`flex items-center space-x-2 transition-all duration-200 ${inWishlist
+        ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
+        : "border-gray-300 hover:border-red-300 hover:text-red-500"
+        } ${className}`}
     >
       {actionLoading ? (
         <Icon icon="mdi:loading" className="h-5 w-5 animate-spin" />
@@ -117,8 +99,8 @@ const WishlistButton = ({ bookId, className = "", variant = "default" }) => {
         {actionLoading
           ? "Processing..."
           : inWishlist
-          ? "In Wishlist"
-          : "Add to Wishlist"}
+            ? "In Wishlist"
+            : "Add to Wishlist"}
       </span>
     </Button>
   );

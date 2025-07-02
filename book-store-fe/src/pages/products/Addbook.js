@@ -3,6 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import { Icon } from '@iconify/react';
+import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 
 const AddBook = () => {
   const [bookData, setBookData] = useState({
@@ -26,19 +27,16 @@ const AddBook = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState([]);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("error"); // 'success' | 'error
+  const navigate = useNavigate();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
-  const navigate = useNavigate();
 
   const apiUrl = process.env.REACT_APP_API_URL_BACKEND;
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập.");
+      notifyError("Bạn cần đăng nhập.");
       return navigate("/login");
     }
 
@@ -47,8 +45,7 @@ const AddBook = () => {
       const role = decoded.role;
 
       if (role !== "admindev" && role !== "superadmin") {
-
-        alert("Bạn không có quyền truy cập.");
+        notifyError("Bạn không có quyền truy cập.");
         return navigate("/");
       }
     } catch (err) {
@@ -108,7 +105,8 @@ const AddBook = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // VALIDATE TRƯỚC
+
+    // ✅ VALIDATE TRƯỚC
     const requiredFields = [
       { field: "title", label: "Tiêu đề" },
       { field: "authors", label: "Tác giả" },
@@ -122,39 +120,58 @@ const AddBook = () => {
       { field: "sellingPrice", label: "Giá bán" },
       { field: "stockQuantity", label: "Số lượng" },
     ];
+
     for (const item of requiredFields) {
       if (!bookData[item.field] || String(bookData[item.field]).trim() === "") {
-        setToastMsg(`Vui lòng nhập ${item.label}`);
-        setToastType("error");
-        setTimeout(() => setToastMsg(""), 1500);
+        notifyError(`Vui lòng nhập ${item.label}`);
         return;
       }
     }
+
+    if (bookData.categories.length === 0) {
+      notifyError("Vui lòng chọn ít nhất một danh mục.");
+      return;
+    }
+
+    if (images.length === 0) {
+      notifyError("Vui lòng chọn ít nhất một ảnh sách.");
+      return;
+    }
+
     // Validate số dương
     if (Number(bookData.publicationYear) <= 0) {
-      setToastMsg("Năm xuất bản phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Năm xuất bản phải là số dương.");
+      return;
     }
     if (Number(bookData.pageCount) <= 0) {
-      setToastMsg("Số trang phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Số trang phải là số dương.");
+      return;
     }
     if (Number(bookData.originalPrice) <= 0) {
-      setToastMsg("Giá gốc phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Giá gốc phải là số dương.");
+      return;
     }
     if (Number(bookData.sellingPrice) <= 0) {
-      setToastMsg("Giá bán phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Giá bán phải là số dương.");
+      return;
     }
     if (Number(bookData.stockQuantity) <= 0) {
-      setToastMsg("Số lượng phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Số lượng phải là số dương.");
+      return;
     }
     if (bookData.categories.length === 0) {
-      setToastMsg("Vui lòng chọn danh mục."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Vui lòng chọn danh mục.");
+      return;
     }
     if (images.length === 0) {
-      setToastMsg("Vui lòng chọn ít nhất một ảnh sách."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
+      notifyError("Vui lòng chọn ít nhất một ảnh sách.");
+      return;
     }
+
     try {
       setUploading(true);
       const imageUrls = await uploadImagesToCloudinary();
+
       const payload = {
         ...bookData,
         authors: bookData.authors.split(",").map((a) => a.trim()),
@@ -165,13 +182,16 @@ const AddBook = () => {
         stockQuantity: Number(bookData.stockQuantity),
         images: imageUrls,
       };
+
       const token = localStorage.getItem("accessToken");
+
       await axios.post(`${apiUrl}/books`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setSuccessMsg("✅ Thêm sách thành công!");
+
+      notifySuccess("Thêm sách thành công!");
       setBookData({
         title: "",
         authors: "",
@@ -195,9 +215,15 @@ const AddBook = () => {
       }, 1500);
     } catch (error) {
       console.error("Upload lỗi:", error);
-      setToastMsg("Có lỗi xảy ra khi thêm sách.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        error.response.data.errors.forEach(err => {
+          notifyError(err);
+        });
+      } else if (error.response?.data?.message) {
+        notifyError(error.response.data.message);
+      } else {
+        notifyError("Có lỗi xảy ra khi thêm sách.");
+      }
     } finally {
       setUploading(false);
     }
@@ -221,11 +247,6 @@ const AddBook = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto bg-white rounded-xl shadow-md">
-      {toastMsg && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
-          {toastMsg}
-        </div>
-      )}
       <h2 className="text-2xl font-semibold mb-6 text-center text-blue-700">
         Thêm sách mới
       </h2>
@@ -381,7 +402,19 @@ const AddBook = () => {
           <label className="block text-gray-600 font-medium mb-1 flex items-center gap-1">
             <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
-          <div className="flex flex-wrap gap-2 mb-2">
+          {/* <select
+            value={bookData.categories[0] || ""}
+            onChange={e => setBookData(prev => ({ ...prev, categories: e.target.value ? [e.target.value] : [] }))}
+            className="input-field"
+          >
+            <option value="">-- Chọn danh mục --</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.name}
+              </option>
+            ))}
+          </select> */}
+          <div className="flex flex-wrap gap-2 mb-2">Add commentMore actions
             {bookData.categories.length === 0 ? (
               <span className="text-gray-400 text-sm">Chưa chọn danh mục</span>
             ) : (
@@ -399,10 +432,9 @@ const AddBook = () => {
             type="button"
             onClick={() => setShowCategoryModal(true)}
             className="bg-blue-50 border border-blue-300 text-blue-700 px-3 py-1 rounded hover:bg-blue-100 transition flex items-center gap-1"
-          >
-            <Icon icon="mdi:plus" width="18" /> Chọn danh mục
+          ><Icon icon="mdi:plus" width="18" /> Chọn danh mục
           </button>
-          {/* Modal chọn danh mục */}
+          {/* Modal chọn danh mục */}Add commentMore actions
           {showCategoryModal && (
             <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-white/40 backdrop-blur-sm">
               <div className="w-full md:w-96 bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 animate-fade-in-up border border-gray-200">

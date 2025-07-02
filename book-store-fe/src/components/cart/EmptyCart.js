@@ -28,7 +28,7 @@ const EmptyCart = ({
       {showButton && (
         <Link
           to="/" // Hoặc trang sản phẩm '/products'
-          className="inline-block bg-blue-500 text-white px-8 py-3 rounded-md font-semibold hover:bg-blue-600 transition duration-150"
+          className="inline-block bg-blue-500 text-white px-8 py-3 rounded-md font-semibold hover:bg-blue-600 transition duration-150 no-underline"
         >
           Khám phá sách ngay
         </Link>

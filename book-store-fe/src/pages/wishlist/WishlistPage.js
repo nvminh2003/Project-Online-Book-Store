@@ -5,9 +5,11 @@ import { useCart } from "../../contexts/CartContext";
 import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
 import Pagination from "../../components/common/Pagination";
-import WishlistFilters from "../../components/wishlist/WishlistFilters";
+// import WishlistFilters from "../../components/wishlist/WishlistFilters";
 import { formatPrice } from "../../utils/formatPrice";
 import { Icon } from "@iconify/react";
+import wishlistService from "../../services/wishlistService";
+import { notifySuccess, notifyError } from "../../components/common/ToastManager";
 
 const WishlistPage = () => {
   const navigate = useNavigate();
@@ -18,8 +20,9 @@ const WishlistPage = () => {
     fetchWishlist,
     removeFromWishlist,
     moveToCart,
+    removeMultipleFromWishlist,
   } = useWishlist();
-  const { addToCart } = useCart();
+  const { addToCart, fetchCart } = useCart();
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -60,15 +63,6 @@ const WishlistPage = () => {
     }
   };
 
-  const handleFilterChange = (newFilters) => {
-    if (typeof newFilters === "function") {
-      setFilters(newFilters);
-    } else {
-      setFilters((prev) => ({ ...prev, ...newFilters }));
-    }
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
   const handlePageChange = (page) => {
     setPagination((prev) => ({ ...prev, page }));
   };
@@ -99,10 +93,9 @@ const WishlistPage = () => {
 
     setActionLoading((prev) => ({ ...prev, removeSelected: true }));
     try {
-      await Promise.all(
-        selectedItems.map((bookId) => removeFromWishlist(bookId))
-      );
+      await removeMultipleFromWishlist(selectedItems);
       setSelectedItems([]);
+      await loadWishlist();
     } catch (error) {
       console.error("Failed to remove selected items:", error);
     } finally {
@@ -115,10 +108,37 @@ const WishlistPage = () => {
     setActionLoading((prev) => ({ ...prev, [bookId]: true }));
     try {
       await moveToCart(bookId);
+      await loadWishlist();
+      await fetchCart();
     } catch (error) {
-      console.error("Failed to move to cart:", error);
+      // Hiển thị lỗi cụ thể từ BE cho người dùng
+      notifyError(error.message || "Không thể chuyển vào giỏ hàng");
     } finally {
       setActionLoading((prev) => ({ ...prev, [bookId]: false }));
+    }
+  };
+
+  const handleMoveSelectedToCart = async () => {
+    if (selectedItems.length === 0) return;
+    setActionLoading((prev) => ({ ...prev, moveSelectedToCart: true }));
+    try {
+      const res = await wishlistService.moveMultipleToCart(selectedItems);
+      if (res.status === "Success" || res.status === "Warning") {
+        notifySuccess(res.message || "Đã chuyển vào giỏ hàng");
+        setSelectedItems([]);
+        await loadWishlist();
+        await fetchCart();
+        if (typeof window !== 'undefined' && window.location) {
+          // Optionally reload cart count in header
+          window.dispatchEvent(new Event('cart-updated'));
+        }
+      } else {
+        notifyError(res.message || "Chuyển vào giỏ hàng thất bại");
+      }
+    } catch (err) {
+      notifyError(err.message || "Chuyển vào giỏ hàng thất bại");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, moveSelectedToCart: false }));
     }
   };
 
@@ -129,7 +149,7 @@ const WishlistPage = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-[1400px] mx-auto px-4 py-8">
         <div className="flex justify-center items-center min-h-[400px]">
           <Spinner size="lg" />
         </div>
@@ -139,7 +159,7 @@ const WishlistPage = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-[1400px] mx-auto px-4 py-8">
         <div className="text-center text-red-600">
           <p className="text-lg mb-4">Failed to load wishlist</p>
           <Button onClick={loadWishlist}>Try Again</Button>
@@ -149,7 +169,7 @@ const WishlistPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-[1400px] mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Wishlist</h1>
         <Button
@@ -158,21 +178,21 @@ const WishlistPage = () => {
           className="flex items-center gap-2 hover:bg-gray-50 transition-colors"
         >
           <Icon icon="mdi:arrow-left" className="w-4 h-4" />
-          Continue Shopping
+          Tiếp tục mua sắm
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
+        {/* <div className="lg:col-span-1">
           <WishlistFilters
             filters={filters}
             onFiltersChange={handleFilterChange}
           />
-        </div>
+        </div> */}
 
         <div className="lg:col-span-3">
           {wishlistItems.filter((item) => item.book && item.book._id).length ===
-          0 ? (
+            0 ? (
             <div className="text-center py-16 bg-white rounded-xl shadow-lg border border-gray-100">
               <div className="max-w-md mx-auto">
                 <Icon
@@ -208,9 +228,9 @@ const WishlistPage = () => {
                           type="checkbox"
                           checked={
                             selectedItems.length ===
-                              wishlistItems.filter(
-                                (item) => item.book && item.book._id
-                              ).length &&
+                            wishlistItems.filter(
+                              (item) => item.book && item.book._id
+                            ).length &&
                             wishlistItems.filter(
                               (item) => item.book && item.book._id
                             ).length > 0
@@ -229,27 +249,50 @@ const WishlistPage = () => {
                         </span>
                       </label>
                       {selectedItems.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRemoveSelected}
-                          disabled={actionLoading.removeSelected}
-                          className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 transition-colors"
-                        >
-                          {actionLoading.removeSelected ? (
-                            <div className="flex items-center gap-2">
-                              <Spinner size="sm" />
-                              <span>Removing...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Icon icon="mdi:delete" className="w-4 h-4" />
-                              <span>
-                                Remove Selected ({selectedItems.length})
-                              </span>
-                            </div>
-                          )}
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemoveSelected}
+                            disabled={actionLoading.removeSelected}
+                            className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 transition-colors"
+                          >
+                            {actionLoading.removeSelected ? (
+                              <div className="flex items-center gap-2">
+                                <Spinner size="sm" />
+                                <span>Removing...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Icon icon="mdi:delete" className="w-4 h-4" />
+                                <span>
+                                  Remove Selected ({selectedItems.length})
+                                </span>
+                              </div>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleMoveSelectedToCart}
+                            disabled={actionLoading.moveSelectedToCart}
+                            className="text-blue-600 border-blue-300 hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                          >
+                            {actionLoading.moveSelectedToCart ? (
+                              <div className="flex items-center gap-2">
+                                <Spinner size="sm" />
+                                <span>Moving...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <Icon icon="mdi:cart-arrow-down" className="w-4 h-4" />
+                                <span>
+                                  Move Selected to Cart ({selectedItems.length})
+                                </span>
+                              </div>
+                            )}
+                          </Button>
+                        </>
                       )}
                     </div>
                     <div className="text-sm font-medium text-gray-600 bg-blue-50 px-3 py-1 rounded-full">
@@ -331,8 +374,8 @@ const WishlistPage = () => {
                               Added{" "}
                               {item.dateAdded
                                 ? new Date(item.dateAdded).toLocaleDateString(
-                                    "vi-VN"
-                                  )
+                                  "vi-VN"
+                                )
                                 : "N/A"}
                             </p>
                           </div>
@@ -350,18 +393,16 @@ const WishlistPage = () => {
                                     ? "mdi:check-circle"
                                     : "mdi:alert-circle"
                                 }
-                                className={`w-4 h-4 ${
-                                  (item.book.stockQuantity || 0) > 0
-                                    ? "text-green-500"
-                                    : "text-red-500"
-                                }`}
+                                className={`w-4 h-4 ${(item.book.stockQuantity || 0) > 0
+                                  ? "text-green-500"
+                                  : "text-red-500"
+                                  }`}
                               />
                               <span
-                                className={`font-medium ${
-                                  (item.book.stockQuantity || 0) > 0
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                }`}
+                                className={`font-medium ${(item.book.stockQuantity || 0) > 0
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                                  }`}
                               >
                                 {(item.book.stockQuantity || 0) > 0
                                   ? "In Stock"
@@ -414,24 +455,24 @@ const WishlistPage = () => {
                   {wishlistItems.some(
                     (item) => !item.book || !item.book._id
                   ) && (
-                    <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-r-lg">
-                      <div className="flex items-center">
-                        <Icon
-                          icon="mdi:alert-circle"
-                          className="w-6 h-6 text-yellow-500 mr-3 flex-shrink-0"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-yellow-800">
-                            Some items are no longer available
-                          </p>
-                          <p className="text-xs text-yellow-700 mt-1">
-                            These items have been hidden from your wishlist as
-                            they may have been removed from our catalog.
-                          </p>
+                      <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-r-lg">
+                        <div className="flex items-center">
+                          <Icon
+                            icon="mdi:alert-circle"
+                            className="w-6 h-6 text-yellow-500 mr-3 flex-shrink-0"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-yellow-800">
+                              Some items are no longer available
+                            </p>
+                            <p className="text-xs text-yellow-700 mt-1">
+                              These items have been hidden from your wishlist as
+                              they may have been removed from our catalog.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
 

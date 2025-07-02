@@ -84,6 +84,15 @@ const wishlistService = {
     );
     return response.data;
   },
+
+  // Remove multiple books from wishlist
+  removeMultipleFromWishlist: async (bookIds) => {
+    const response = await axios.delete(
+      `${API_BASE_URL}/wishlist/remove-multiple`,
+      { data: { bookIds }, ...getAxiosConfig() }
+    );
+    return response.data;
+  },
 };
 
 export default wishlistService;

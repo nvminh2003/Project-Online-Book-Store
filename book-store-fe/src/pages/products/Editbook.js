@@ -3,23 +3,22 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Spinner from "../../components/common/Spinner";
-import { Icon } from "@iconify/react";
+import { Icon } from '@iconify/react';
+import { notifySuccess, notifyError } from '../../components/common/ToastManager';
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
 const EditBook = () => {
-  const { id: bookIdParam } = useParams();
+  const { id: bookIdParam } = useParams(); // Đổi tên để không trùng với bookId trong state nếu có
   const navigate = useNavigate();
+  // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
 
   const [bookData, setBookData] = useState(null); // Sẽ chứa toàn bộ object sách, bao gồm _id
   const [categories, setCategories] = useState([]);
   const [newImages, setNewImages] = useState([]); // File objects cho ảnh mới
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState(""); // Thêm state cho thông báo thành công
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("error"); // 'success' | 'error'
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
 
@@ -37,10 +36,10 @@ const EditBook = () => {
             authors: Array.isArray(book.authors)
               ? book.authors
               : book.authors
-              ? String(book.authors)
+                ? String(book.authors)
                   .split(",")
                   .map((s) => s.trim())
-              : [],
+                : [],
             publisher: book.publisher || "",
             publicationYear: book.publicationYear || "",
             pageCount: book.pageCount || "",
@@ -62,7 +61,7 @@ const EditBook = () => {
         console.error("Lỗi khi tải sách:", err);
         setError(
           "Không thể tải dữ liệu sách. " +
-            (err.response?.data?.message || err.message)
+          (err.response?.data?.message || err.message)
         );
       } finally {
         setLoading(false);
@@ -83,10 +82,11 @@ const EditBook = () => {
     };
     fetchCategories();
   }, []);
-  // ✅ HÀM MỚI: xử lý khi chọn ảnh mới
+  //  HÀM MỚI: xử lý khi chọn ảnh mới
   const handleImageChange = (e) => {
     setNewImages(Array.from(e.target.files));
   };
+
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -104,7 +104,7 @@ const EditBook = () => {
     setBookData((prev) => ({ ...prev, authors: authorsArray }));
   };
 
-  const filteredCategories = categories.filter((cat) =>
+  const filteredCategories = categories.filter(cat =>
     cat.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
   const handleCategoryCheckbox = (catId) => {
@@ -130,83 +130,38 @@ const EditBook = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!bookData) return;
-    // VALIDATE TRƯỚC
-    const requiredFields = [
-      { field: "title", label: "Tiêu đề" },
-      { field: "authors", label: "Tác giả" },
-      { field: "publisher", label: "NXB" },
-      { field: "publicationYear", label: "Năm xuất bản" },
-      { field: "pageCount", label: "Số trang" },
-      { field: "coverType", label: "Loại bìa" },
-      { field: "description", label: "Mô tả" },
-      { field: "isbn", label: "ISBN" },
-      { field: "originalPrice", label: "Giá gốc" },
-      { field: "sellingPrice", label: "Giá bán" },
-      { field: "stockQuantity", label: "Số lượng" },
-    ];
-    for (const item of requiredFields) {
-      if (!bookData[item.field] || String(bookData[item.field]).trim() === "") {
-        setToastMsg(`Vui lòng nhập ${item.label}`);
-        setToastType("error");
-        setTimeout(() => setToastMsg(""), 1500);
-        return;
-      }
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      notifyError("Vui lòng đăng nhập để thực hiện hành động này.");
+      navigate("/auth/login");
+      return;
     }
+
+    // Validate số dương
     if (Number(bookData.publicationYear) <= 0) {
-      setToastMsg("Năm xuất bản phải là số dương.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Năm xuất bản phải là số dương.");
       return;
     }
     if (Number(bookData.pageCount) <= 0) {
-      setToastMsg("Số trang phải là số dương.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Số trang phải là số dương.");
       return;
     }
     if (Number(bookData.originalPrice) <= 0) {
-      setToastMsg("Giá gốc phải là số dương.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Giá gốc phải là số dương.");
       return;
     }
     if (Number(bookData.sellingPrice) <= 0) {
-      setToastMsg("Giá bán phải là số dương.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Giá bán phải là số dương.");
       return;
     }
     if (Number(bookData.stockQuantity) <= 0) {
-      setToastMsg("Số lượng phải là số dương.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError("Số lượng phải là số dương.");
       return;
     }
-    if (!bookData.categories || bookData.categories.length === 0) {
-      setToastMsg("Vui lòng chọn danh mục.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
-      return;
-    }
-    // Phải có ít nhất 1 ảnh (cũ hoặc mới)
-    if (
-      newImages.length === 0 &&
-      (!bookData.images || bookData.images.length === 0)
-    ) {
-      setToastMsg("Vui lòng chọn ít nhất một ảnh sách.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
-      return;
-    }
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      setToastMsg("Vui lòng đăng nhập để thực hiện hành động này.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
-      setTimeout(() => navigate("/auth/login"), 1500);
-      return;
-    }
+
     let finalImageUrls = bookData.images;
+
     try {
       // Nếu có ảnh mới, upload và thay toàn bộ
       if (newImages.length > 0) {
@@ -222,9 +177,11 @@ const EditBook = () => {
             return res.data.secure_url;
           })
         );
-        finalImageUrls = uploadedNewImageUrls; // ✅ Ghi đè toàn bộ ảnh cũ bằng ảnh mới
+        finalImageUrls = uploadedNewImageUrls; //  Ghi đè toàn bộ ảnh cũ bằng ảnh mới
       }
+
       const { _id, ...dataToUpdate } = bookData;
+
       const updatePayload = {
         ...dataToUpdate,
         images: finalImageUrls,
@@ -234,87 +191,29 @@ const EditBook = () => {
         sellingPrice: Number(bookData.sellingPrice),
         stockQuantity: Number(bookData.stockQuantity),
       };
+
       await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccessMsg("✅ Cập nhật sách thành công!");
-      setToastType("success");
+
+      notifySuccess(" Cập nhật sách thành công!");
       setTimeout(() => {
-        setSuccessMsg("");
         navigate("/admin/books");
       }, 1500);
     } catch (err) {
-      console.error(
-        "Lỗi khi cập nhật sách:",
-        err.response?.data || err.message
-      );
-      setToastMsg(
-        "❌ Đã xảy ra lỗi khi cập nhật sách: " +
-          (err.response?.data?.message || err.message)
-      );
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
+      // Hiển thị message lỗi chi tiết từ BE
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        err.response.data.errors.forEach(error => {
+          notifyError(error);
+        });
+      } else if (err.response?.data?.message) {
+        notifyError(err.response.data.message);
+      } else {
+        notifyError("❌ Đã xảy ra lỗi khi cập nhật sách: " + err.message);
+      }
     }
   };
-
-  // --- KẾT THÚC HÀM GỬI FORM ---
-
-  // --- VÍ DỤ HÀM THÊM VÀO GIỎ HÀNG TỪ TRANG EDIT (NẾU CẦN) ---
-  // const handleAddToCartFromEditPage = async () => {
-  //   if (!bookData || !bookData._id) {
-  //     alert("Không có thông tin sách để thêm vào giỏ.");
-  //     return;
-  //   }
-
-  //   const token = localStorage.getItem("accessToken");
-  //   if (!token) {
-  //     alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-  //     navigate("/auth/login");
-  //     return;
-  //   }
-
-  //   const payload = {
-  //     bookId: bookData._id, // ID của sách đang được edit
-  //     quantity: 1, // Mặc định thêm 1, hoặc bạn có thể thêm input số lượng
-  //   };
-
-  //   console.log("EditBook - Add to cart payload:", payload);
-  //   console.log("EditBook - Token:", token);
-
-  //   try {
-  //     const response = await axios.post(
-  //       `${API_URL}/cart/add`,
-  //       payload, // Payload đã đúng
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }
-  //     );
-  //     console.log("EditBook - Add to cart response:", response.data);
-  //     if (response.data && response.data.status === "Success") {
-  //       alert("Đã thêm vào giỏ hàng thành công!");
-  //       // Khi dùng Redux:
-  //       // dispatch(addItemToCartAPI(payload));
-  //     } else {
-  //       alert(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
-  //     }
-  //   } catch (err) {
-  //     console.error(
-  //       "EditBook - Lỗi khi thêm vào giỏ hàng:",
-  //       err.response?.data || err.message
-  //     );
-  //     const errorMessage =
-  //       err.response?.data?.message ||
-  //       err.message ||
-  //       "Không thể thêm sản phẩm vào giỏ hàng.";
-  //     alert(errorMessage);
-  //     if (err.response?.status === 401) {
-  //       // Xử lý token không hợp lệ
-  //     }
-  //   }
-  // };
-  // --- KẾT THÚC VÍ DỤ HÀM THÊM VÀO GIỎ HÀNG ---
 
   if (loading)
     return (
@@ -328,22 +227,6 @@ const EditBook = () => {
 
   return (
     <>
-      {successMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-          {successMsg}
-        </div>
-      )}
-      {toastMsg && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${
-            toastType === "success"
-              ? "bg-green-100 border border-green-400 text-green-700"
-              : "bg-red-100 border border-red-400 text-red-700"
-          }`}
-        >
-          {toastMsg}
-        </div>
-      )}
       <form
         onSubmit={handleSubmit}
         className="p-6 max-w-3xl mx-auto bg-white shadow-xl rounded-xl space-y-6 my-8"
@@ -354,16 +237,8 @@ const EditBook = () => {
         </h2>
         {/* Tiêu đề */}
         <div>
-          <label
-            htmlFor="title"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon
-              icon="mdi:book-open-page-variant"
-              width="20"
-              className="text-blue-500"
-            />{" "}
-            Tiêu đề sách:
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:book-open-page-variant" width="20" className="text-blue-500" /> Tiêu đề sách:
           </label>
           <input
             id="title"
@@ -377,16 +252,8 @@ const EditBook = () => {
         </div>
         {/* Tác giả */}
         <div>
-          <label
-            htmlFor="authors"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon
-              icon="mdi:account-multiple"
-              width="20"
-              className="text-blue-500"
-            />{" "}
-            Tác giả (phân cách bằng dấu phẩy "," ):
+          <label htmlFor="authors" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:account-multiple" width="20" className="text-blue-500" /> Tác giả (phân cách bằng dấu phẩy "," ):
           </label>
           <input
             id="authors"
@@ -397,12 +264,8 @@ const EditBook = () => {
           />
         </div>
         <div>
-          <label
-            htmlFor="publisher"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon icon="mdi:domain" width="20" className="text-blue-500" /> Nhà
-            xuất bản:
+          <label htmlFor="publisher" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:domain" width="20" className="text-blue-500" /> Nhà xuất bản:
           </label>
           <input
             id="publisher"
@@ -415,12 +278,8 @@ const EditBook = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label
-              htmlFor="publicationYear"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-            >
-              <Icon icon="mdi:calendar" width="20" className="text-blue-500" />{" "}
-              Năm xuất bản:
+            <label htmlFor="publicationYear" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Icon icon="mdi:calendar" width="20" className="text-blue-500" /> Năm xuất bản:
             </label>
             <input
               id="publicationYear"
@@ -432,16 +291,8 @@ const EditBook = () => {
             />
           </div>
           <div>
-            <label
-              htmlFor="pageCount"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-            >
-              <Icon
-                icon="mdi:file-document-outline"
-                width="20"
-                className="text-blue-500"
-              />{" "}
-              Số trang:
+            <label htmlFor="pageCount" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Icon icon="mdi:file-document-outline" width="20" className="text-blue-500" /> Số trang:
             </label>
             <input
               id="pageCount"
@@ -454,16 +305,8 @@ const EditBook = () => {
           </div>
         </div>
         <div>
-          <label
-            htmlFor="coverType"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon
-              icon="mdi:book-variant"
-              width="20"
-              className="text-blue-500"
-            />{" "}
-            Loại bìa:
+          <label htmlFor="coverType" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:book-variant" width="20" className="text-blue-500" /> Loại bìa:
           </label>
           <input
             id="coverType"
@@ -475,12 +318,8 @@ const EditBook = () => {
           />
         </div>
         <div>
-          <label
-            htmlFor="isbn"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon icon="mdi:barcode" width="20" className="text-blue-500" />{" "}
-            ISBN:
+          <label htmlFor="isbn" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:barcode" width="20" className="text-blue-500" /> ISBN:
           </label>
           <input
             id="isbn"
@@ -493,12 +332,8 @@ const EditBook = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label
-              htmlFor="originalPrice"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-            >
-              <Icon icon="mdi:cash" width="20" className="text-blue-500" /> Giá
-              gốc:
+            <label htmlFor="originalPrice" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Icon icon="mdi:cash" width="20" className="text-blue-500" /> Giá gốc:
             </label>
             <input
               id="originalPrice"
@@ -511,16 +346,8 @@ const EditBook = () => {
             />
           </div>
           <div>
-            <label
-              htmlFor="sellingPrice"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-            >
-              <Icon
-                icon="mdi:cash-multiple"
-                width="20"
-                className="text-blue-500"
-              />{" "}
-              Giá bán:
+            <label htmlFor="sellingPrice" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Icon icon="mdi:cash-multiple" width="20" className="text-blue-500" /> Giá bán:
             </label>
             <input
               id="sellingPrice"
@@ -533,12 +360,8 @@ const EditBook = () => {
             />
           </div>
           <div>
-            <label
-              htmlFor="stockQuantity"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-            >
-              <Icon icon="mdi:warehouse" width="20" className="text-blue-500" />{" "}
-              Số lượng kho:
+            <label htmlFor="stockQuantity" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Icon icon="mdi:warehouse" width="20" className="text-blue-500" /> Số lượng kho:
             </label>
             <input
               id="stockQuantity"
@@ -551,10 +374,7 @@ const EditBook = () => {
           </div>
         </div>
         <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
             <Icon icon="mdi:text" width="20" className="text-blue-500" /> Mô tả:
           </label>
           <textarea
@@ -567,24 +387,17 @@ const EditBook = () => {
           />
         </div>
         <div>
-          <label
-            htmlFor="categories"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh
-            mục:
+          <label htmlFor="categories" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:shape" width="20" className="text-blue-500" /> Danh mục:
           </label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {!bookData.categories || bookData.categories.length === 0 ? (
+          <div className="flex flex-wrap gap-2 mb-2">Add commentMore actions
+            {(!bookData.categories || bookData.categories.length === 0) ? (
               <span className="text-gray-400 text-sm">Chưa chọn danh mục</span>
             ) : (
               bookData.categories.map((catId) => {
                 const cat = categories.find((c) => c._id === catId);
                 return (
-                  <span
-                    key={catId}
-                    className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1"
-                  >
+                  <span key={catId} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1">
                     <Icon icon="mdi:tag" width="14" /> {cat ? cat.name : catId}
                   </span>
                 );
@@ -605,10 +418,7 @@ const EditBook = () => {
                   <span className="font-semibold text-blue-700 flex items-center gap-1">
                     <Icon icon="mdi:shape" width="20" /> Chọn danh mục
                   </span>
-                  <button
-                    onClick={() => setShowCategoryModal(false)}
-                    className="text-gray-500 hover:text-blue-600"
-                  >
+                  <button onClick={() => setShowCategoryModal(false)} className="text-gray-500 hover:text-blue-600">
                     <Icon icon="mdi:close" width="22" />
                   </button>
                 </div>
@@ -616,20 +426,15 @@ const EditBook = () => {
                   type="text"
                   placeholder="Tìm kiếm danh mục..."
                   value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
+                  onChange={e => setCategorySearch(e.target.value)}
                   className="w-full mb-3 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
                 />
                 <div className="max-h-60 overflow-y-auto space-y-2">
                   {filteredCategories.length === 0 ? (
-                    <div className="text-gray-400 text-sm">
-                      Không tìm thấy danh mục phù hợp
-                    </div>
+                    <div className="text-gray-400 text-sm">Không tìm thấy danh mục phù hợp</div>
                   ) : (
                     filteredCategories.map((cat) => (
-                      <label
-                        key={cat._id}
-                        className="flex items-center gap-2 cursor-pointer py-1"
-                      >
+                      <label key={cat._id} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
                           checked={bookData.categories.includes(cat._id)}
@@ -654,12 +459,7 @@ const EditBook = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <Icon
-              icon="mdi:image-multiple"
-              width="20"
-              className="text-blue-500"
-            />{" "}
-            Ảnh hiện tại:
+            <Icon icon="mdi:image-multiple" width="20" className="text-blue-500" /> Ảnh hiện tại:
           </label>
           {bookData.images && bookData.images.length > 0 ? (
             <div className="flex flex-wrap gap-3 mt-1">
@@ -677,12 +477,8 @@ const EditBook = () => {
           )}
         </div>
         <div>
-          <label
-            htmlFor="newImages"
-            className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"
-          >
-            <Icon icon="mdi:upload" width="20" className="text-blue-500" /> Nếu
-            bạn chọn ảnh mới, ảnh cũ sẽ bị xóa và thay bằng ảnh mới.
+          <label htmlFor="newImages" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+            <Icon icon="mdi:upload" width="20" className="text-blue-500" /> Nếu bạn chọn ảnh mới, ảnh cũ sẽ bị xóa và thay bằng ảnh mới.
           </label>
           <input
             id="newImages"
@@ -711,8 +507,7 @@ const EditBook = () => {
               onChange={handleChange}
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <Icon icon="mdi:star" width="18" className="text-yellow-400" /> Nổi
-            bật
+            <Icon icon="mdi:star" width="18" className="text-yellow-400" /> Nổi bật
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -722,8 +517,7 @@ const EditBook = () => {
               onChange={handleChange}
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <Icon icon="mdi:new-box" width="18" className="text-green-500" />{" "}
-            Sách mới
+            <Icon icon="mdi:new-box" width="18" className="text-green-500" /> Sách mới
           </label>
         </div>
         <div className="flex justify-end gap-4 pt-4">

@@ -1,15 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/common/Icon';
+import productService from '../services/bookService';
+import axios from 'axios';
 import logo from '../../src/assets/sction.webp';
 import sachmoi from '../../src/assets/sachmoi.jpg';
 import logo1 from '../../src/assets/section.jpg';
 import logo2 from '../../src/assets/logo3.webp';
+import { useCart } from "../contexts/CartContext";
+import { notifySuccess, notifyError } from "../components/common/ToastManager";
+import WishlistButton from "../components/wishlist/WishlistButton";
 const images = [logo, logo1, logo2];
 
-const HomePage = () => {
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9999/api';
 
+const HomePage = () => {
+    const [book, setBook] = useState(null);
+    const [quantity, setQuantity] = useState(1);
     const [index, setIndex] = useState(0);
+    const [featuredBooks, setFeaturedBooks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const { addToCart } = useCart();
+    const navigate = useNavigate();
 
     // Tự động chuyển ảnh mỗi 5 giây
     useEffect(() => {
@@ -19,13 +32,78 @@ const HomePage = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Dữ liệu mẫu
-    const featuredBooks = [
-        { id: 1, title: 'Sách Tâm Lý Học', imageUrl: 'https://bizweb.dktcdn.net/thumb/large/100/488/330/products/2-4c0bab5a-9034-4817-a5e7-857fe79fb818.png?v=1743401428910', price: '150.000đ' },
-        { id: 2, title: 'Tiểu Thuyết Lịch Sử', imageUrl: 'https://binhbanbook.com/wp-content/uploads/2024/05/z5474847723128_73f4c2e7c20e91d5d233d789218024b7.jpg', price: '250.000đ' },
-        { id: 3, title: 'Khoa Học Viễn Tưởng', imageUrl: 'https://baodanang.vn/dataimages/202306/original/images1702941_1.gif', price: '180.000đ' },
-        { id: 4, title: 'Sách Kinh Tế', imageUrl: 'https://ims.baoyenbai.com.vn/NewsImg/10_2023/302753_23-10-cuon-sach.jpg', price: '320.000đ' },
-    ];
+    // Fetch featured books from API
+    useEffect(() => {
+        const fetchFeaturedBooks = async () => {
+            try {
+                setLoading(true);
+                const response = await productService.getFeaturedBooks(8);
+                setFeaturedBooks(response.data);
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching featured books:', err);
+                setError('Không thể tải sách nổi bật. Vui lòng thử lại sau.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFeaturedBooks();
+    }, []);
+
+    // Event handlers for action buttons
+    const handleAddToCart = async (bookId) => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            notifyError("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
+            setTimeout(() => navigate("/auth/login"), 1500);
+            return;
+        }
+
+        const currentQuantity = Number(quantity);
+        if (isNaN(currentQuantity) || currentQuantity < 1) {
+            notifyError("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
+            return;
+        }
+
+        try {
+            const result = await addToCart(bookId, currentQuantity);
+
+            if (result.success) {
+                notifySuccess("Đã thêm vào giỏ hàng thành công!");
+            } else {
+                notifyError(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+            }
+        } catch (err) {
+            console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
+            notifyError(
+                err.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng."
+            );
+        }
+    };
+
+    const handleAddToWishlist = async (bookId) => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+            setTimeout(() => navigate("/auth/login"), 1500);
+            return;
+        }
+        try {
+            await axios.post(`${API_URL}/wishlist/add`, { bookId }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            notifySuccess("Đã thêm vào mục yêu thích!");
+        } catch (err) {
+            console.error("Wishlist error:", err.response?.data || err.message);
+            const message = err.response?.data?.message || "Không thể thêm vào yêu thích.";
+            notifyError(message);
+        }
+    };
+
+    const handleViewDetail = (bookId) => {
+        navigate(`/detailbook/${bookId}`);
+    };
 
     const benefits = [
         { icon: 'mdi:truck-fast-outline', title: 'Giao hàng nhanh', description: 'Giao hàng toàn quốc, nhanh chóng và tin cậy.' },
@@ -39,8 +117,17 @@ const HomePage = () => {
         { quote: 'Nhờ có những cuốn sách ở đây, tôi đã học hỏi được nhiều điều và phát triển bản thân. Cảm ơn!', author: 'Trần Thị B' },
     ];
 
+    // Format price function
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(price);
+    };
+
     return (
         <div className="bg-white">
+
             {/* Hero Section */}
             <section className="relative h-[500px] overflow-hidden text-white">
                 {/* Các ảnh xếp chồng lên nhau */}
@@ -60,7 +147,7 @@ const HomePage = () => {
                     <h1 className="text-4xl md:text-6xl font-bold mb-4">Khám Phá Thế Giới Tri Thức</h1>
                     <p className="text-lg md:text-xl mb-8">Nơi mỗi trang sách mở ra một chân trời mới.</p>
                     <a
-                        href="/products"
+                        href="/getbook"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition no-underline"
                     >
                         Xem Sách Ngay
@@ -99,12 +186,12 @@ const HomePage = () => {
                             <p className="text-gray-600 mb-6">
                                 Khám phá những đầu sách mới nhất vừa được cập nhật. Từ những tác phẩm kinh điển đến các bestseller hiện đại, chúng tôi luôn mang đến những lựa chọn tuyệt vời nhất cho bạn.
                             </p>
-                            <Link
+                            {/* <Link
                                 to="/products?filter=new-arrivals"
                                 className="bg-black text-white font-bold text-lg py-2 px-6 inline-block text-center no-underline hover:bg-blue-600 transition-colors duration-300"
                             >
                                 Xem Thêm
-                            </Link>
+                            </Link> */}
                         </div>
                     </div>
                 </div>
@@ -115,46 +202,99 @@ const HomePage = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">Sách nổi bật</h2>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {featuredBooks.map(book => (
-                            <div key={book.id} className="border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
-                                <div className="aspect-[3/4] w-full overflow-hidden mb-3">
-                                    <img
-                                        src={book.imageUrl}
-                                        alt={book.title}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <h3 className="font-semibold text-base text-gray-900">{book.title}</h3>
-                                <p className="text-sm text-gray-500 mt-1">{book.author || "Tác giả không rõ"}</p>
-                                <p className="text-gray-800 font-medium mt-2">{book.price}</p>
-                                <button
-                                    className="mt-2 inline-flex items-center justify-center px-4 py-2 border border-yellow-600 text-yellow-600 rounded-md hover:bg-yellow-600 hover:text-white transition-colors duration-200"
-                                >
-                                    <svg
-                                        className="w-4 h-4 mr-2"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-1.2 6M17 13l1.2 6M6 19a1 1 0 100 2 1 1 0 000-2zm12 0a1 1 0 100 2 1 1 0 000-2z" />
-                                    </svg>
-                                    Thêm vào giỏ
-                                </button>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12">
+                            <p className="text-red-600 mb-4">{error}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                            >
+                                Thử lại
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {featuredBooks.map(book => (
+                                    <div key={book._id} className="flex flex-col h-full border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
+                                        <div>
+                                            <div className="aspect-[3/4] w-full overflow-hidden mb-3">
+                                                <img
+                                                    src={book.images && book.images.length > 0 ? book.images[0] : 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                    alt={book.title}
+                                                    className="w-full h-full object-cover rounded-md cursor-pointer transition-transform duration-200 hover:scale-105"
+                                                    onClick={() => handleViewDetail(book._id)}
+                                                />
+                                            </div>
+                                            <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-[40px]">{book.title}</h3>
+                                            <p className="text-sm text-gray-500 italic min-h-[20px]">{book.authors ? book.authors.join(', ') : "Tác giả không rõ"}</p>
+                                            <div className="mb-3 min-h-[32px]">
+                                                {book.originalPrice && book.originalPrice > book.sellingPrice && (
+                                                    <span className="text-sm text-gray-400 line-through mr-1">
+                                                        {formatPrice(book.originalPrice)}
+                                                    </span>
+                                                )}
+                                                <span className="text-lg font-bold text-red-600">{formatPrice(book.sellingPrice)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
+                                            {/* Thêm vào giỏ */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddToCart(book._id);
+                                                }}
+                                                className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                                                title="Thêm vào giỏ hàng"
+                                            >
+                                                <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
+                                            </button>
+                                            {/* Yêu thích */}
+                                            <WishlistButton
+                                                bookId={book._id}
+                                                variant="icon-only"
+                                                onRequireLogin={() => {
+                                                    notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                                                    setTimeout(() => navigate("/auth/login"), 1500);
+                                                }}
+                                                onSuccessAdd={() => {
+                                                    notifySuccess("Thêm sản phẩm yêu thích thành công");
+                                                }}
+                                                onSuccessRemove={() => {
+                                                    notifyError("Đã xóa khỏi danh sách yêu thích");
+                                                }}
+                                            />
+                                            {/* Xem chi tiết */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleViewDetail(book._id);
+                                                }}
+                                                className="bg-white border border-purple-500 p-3 rounded-full hover:bg-purple-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                                                title="Xem chi tiết"
+                                            >
+                                                <Icon icon="mdi:eye" width="20" height="20" color="#7c3aed" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
 
-                    {/* Link "Xem thêm" */}
-                    <div className="text-center mt-10">
-                        <Link
-                            to="/products"
-                            className="bg-black text-white font-bold text-lg py-2 px-6 inline-block text-center no-underline hover:bg-blue-600 transition-colors duration-300"
-                        >
-                            Xem thêm
-                        </Link>
-                    </div>
+                            {/* Link "Xem thêm" */}
+                            <div className="text-center mt-10">
+                                <Link
+                                    to="/getbook"
+                                    className="bg-black text-white font-bold text-lg py-2 px-6 inline-block text-center no-underline hover:bg-blue-600 transition-colors duration-300"
+                                >
+                                    Xem thêm
+                                </Link>
+                            </div>
+                        </>
+                    )}
                 </div>
             </section>
 

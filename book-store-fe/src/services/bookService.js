@@ -24,5 +24,42 @@ const productService = {
         }
     },
 
+    // Get featured books for homepage
+    getFeaturedBooks: async (limit = 8) => {
+        try {
+            const response = await axios.get(`${API_URL}/books/featured`, {
+                params: { limit }
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Get new arrival books for homepage
+    getNewArrivalBooks: async (limit = 8) => {
+        try {
+            const response = await axios.get(`${API_URL}/books/new-arrivals`, {
+                params: { limit }
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Search books
+    searchBooks: async (query, params = {}) => {
+        try {
+            const response = await axios.get(`${API_URL}/books/search`, {
+                params: { query, ...params }
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
 
 }
+
+export default productService;

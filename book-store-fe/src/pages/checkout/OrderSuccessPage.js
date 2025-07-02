@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
-import {
-  fetchOrderDetailAPI,
-  payosCheckoutSuccess,
-} from "../../services/orderService";
+import orderService from "../../services/orderService";
 import { useCart } from "../../contexts/CartContext";
 import Modal from "../../components/common/Modal";
 
@@ -38,12 +35,12 @@ const OrderSuccessPage = () => {
           localStorage.getItem("pendingOrderId") === orderId;
         if (isPendingPayOS) {
           localStorage.removeItem("pendingOrderId");
-          await payosCheckoutSuccess(orderId);
+          await orderService.payosCheckoutSuccess(orderId);
           console.log("PayOS payment marked as successful for order:", orderId);
         }
 
         // Fetch order details
-        const response = await fetchOrderDetailAPI(orderId);
+        const response = await orderService.fetchOrderDetailAPI(orderId);
         setOrder(response.data.data);
 
         // Clear cart after successful order
@@ -195,53 +192,51 @@ const OrderSuccessPage = () => {
                 {paymentMethod === "COD"
                   ? "Thanh toán khi nhận hàng"
                   : paymentMethod === "PAYOS"
-                  ? "Thanh toán qua PayOS"
-                  : paymentMethod}
+                    ? "Thanh toán qua PayOS"
+                    : paymentMethod}
               </p>
               <p>
                 <strong>Trạng thái thanh toán:</strong>
                 <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    paymentStatus === "paid"
-                      ? "bg-green-100 text-green-700"
-                      : paymentStatus === "failed"
+                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${paymentStatus === "paid"
+                    ? "bg-green-100 text-green-700"
+                    : paymentStatus === "failed"
                       ? "bg-red-100 text-red-700"
                       : "bg-yellow-100 text-yellow-700"
-                  }`}
+                    }`}
                 >
                   {paymentStatus === "pending"
                     ? "Chờ thanh toán"
                     : paymentStatus === "paid"
-                    ? "Đã thanh toán"
-                    : paymentStatus === "failed"
-                    ? "Thất bại"
-                    : paymentStatus === "awaiting_payment"
-                    ? "Chờ thanh toán"
-                    : paymentStatus}
+                      ? "Đã thanh toán"
+                      : paymentStatus === "failed"
+                        ? "Thất bại"
+                        : paymentStatus === "awaiting_payment"
+                          ? "Chờ thanh toán"
+                          : paymentStatus}
                 </span>
               </p>
               <p className="mt-1">
                 <strong>Trạng thái đơn hàng:</strong>
                 <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    orderStatus === "completed"
-                      ? "bg-green-100 text-green-700"
-                      : orderStatus === "cancelled"
+                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${orderStatus === "completed"
+                    ? "bg-green-100 text-green-700"
+                    : orderStatus === "cancelled"
                       ? "bg-red-100 text-red-700"
                       : orderStatus === "confirmed"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
                 >
                   {orderStatus === "pending"
                     ? "Chờ xử lý"
                     : orderStatus === "confirmed"
-                    ? "Đã xác nhận"
-                    : orderStatus === "completed"
-                    ? "Hoàn thành"
-                    : orderStatus === "cancelled"
-                    ? "Đã hủy"
-                    : orderStatus}
+                      ? "Đã xác nhận"
+                      : orderStatus === "completed"
+                        ? "Hoàn thành"
+                        : orderStatus === "cancelled"
+                          ? "Đã hủy"
+                          : orderStatus}
                 </span>
               </p>
             </div>
@@ -319,14 +314,14 @@ const OrderSuccessPage = () => {
         <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
           <Button
             onClick={() => navigate("/")}
-            variant="outline"
+            variant="secondary"
             className="w-full sm:w-auto"
           >
             Tiếp tục mua sắm
           </Button>
           <Button
-            onClick={() => navigate("/account/orders")}
-            variant="primary"
+            onClick={() => navigate(`/orders/${orderId}`)}
+            variant="info"
             className="w-full sm:w-auto"
           >
             Xem lịch sử đơn hàng

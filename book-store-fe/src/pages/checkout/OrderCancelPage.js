@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Button from "../../components/common/Button";
 import Spinner from "../../components/common/Spinner";
-import { payosCheckoutCancel } from "../../services/orderService";
+import orderService from "../../services/orderService";
 
 const OrderCancelPage = () => {
   const { orderId } = useParams();
@@ -20,7 +20,7 @@ const OrderCancelPage = () => {
 
       try {
         setLoading(true);
-        await payosCheckoutCancel(orderId);
+        await orderService.payosCheckoutCancel(orderId);
         setOrderUpdated(true);
         console.log("Order cancelled successfully");
       } catch (err) {

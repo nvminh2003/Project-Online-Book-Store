@@ -4,9 +4,10 @@ import { routes } from "./routes/routes";
 import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminActivityProvider } from "./contexts/AdminActivityContext";
+import { ToastManager } from "./components/common/ToastManager";
+import ScrollToTop from "./components/common/ScrollToTop";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
-import { ToastManager } from "./components/common/ToastManager";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <CartProvider>
           <WishlistProvider>
             <Router>
+              <ScrollToTop />
               <ToastManager />
               <Routes>
                 {routes.map((route) => {
@@ -40,5 +42,6 @@ function App() {
     </AuthProvider>
   );
 }
+
 
 export default App;

@@ -1,8 +1,9 @@
 // src/components/cart/CartSummary.js
 import React from "react";
 import { Link } from "react-router-dom"; // Import Link
-import SHIPPING_CONFIG, {
-  formatShippingMessage,
+import {
+  SHIPPING_CONFIG,
+  calculateShippingFee,
 } from "../../constants/shipping";
 
 const CartSummary = ({
@@ -23,6 +24,7 @@ const CartSummary = ({
   );
   const isEligibleForFreeShipping =
     subtotal >= SHIPPING_CONFIG.FREE_SHIPPING_THRESHOLD;
+
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-4 mb-4">
@@ -33,14 +35,12 @@ const CartSummary = ({
           <span>Tạm tính</span>
           <span>{subtotal.toLocaleString("vi-VN")}đ</span>
         </div>
-
         {/* Free shipping notification */}
         <div
-          className={`p-3 rounded-lg ${
-            isEligibleForFreeShipping
-              ? "bg-green-50 border border-green-200"
-              : "bg-blue-50 border border-blue-200"
-          }`}
+          className={`p-3 rounded-lg ${isEligibleForFreeShipping
+            ? "bg-green-50 border border-green-200"
+            : "bg-blue-50 border border-blue-200"
+            }`}
         >
           {isEligibleForFreeShipping ? (
             <div className="flex items-center text-green-700">
@@ -88,7 +88,6 @@ const CartSummary = ({
             </div>
           )}
         </div>
-
         {shippingFee > 0 && (
           <div className="flex justify-between">
             <span>Phí vận chuyển</span>
@@ -116,7 +115,7 @@ const CartSummary = ({
         >
           Mã giảm giá
         </label>
-        <div className="flex">
+        {/* <div className="flex">
           <input
             type="text"
             id="coupon"
@@ -134,7 +133,7 @@ const CartSummary = ({
           >
             {applyingCoupon ? "Đang xử lý..." : "Áp dụng"}
           </button>
-        </div>
+        </div> */}
       </div>
 
       <button
@@ -145,7 +144,7 @@ const CartSummary = ({
       </button>
 
       <div className="mt-6 text-center">
-        <Link to="/" className="text-sm text-blue-500 hover:text-blue-700">
+        <Link to="/" className="text-sm text-blue-500 hover:text-blue-700 no-underline">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4 inline mr-1"

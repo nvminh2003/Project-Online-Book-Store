@@ -85,28 +85,19 @@ export const WishlistProvider = ({ children }) => {
   const addToWishlist = useCallback(
     async (bookId) => {
       if (!isAuthenticated) {
-        setError("Please login to add items to wishlist");
         return;
       }
-
       try {
         setLoading(true);
-        setError(null);
         const response = await wishlistService.addToWishlist(bookId);
-
-        // Update count immediately
         setWishlistCount(response.data.totalWishlistItems || wishlistCount + 1);
-
-        // Optionally refresh the full wishlist to sync with UI
         setTimeout(() => {
           fetchWishlist();
         }, 100);
-
         return response;
       } catch (err) {
         const errorMessage =
           err.response?.data?.message || "Failed to add to wishlist";
-        setError(errorMessage);
         throw new Error(errorMessage);
       } finally {
         setLoading(false);
@@ -119,24 +110,17 @@ export const WishlistProvider = ({ children }) => {
   const removeFromWishlist = useCallback(
     async (bookId) => {
       if (!isAuthenticated) return;
-
       try {
         setLoading(true);
-        setError(null);
         const response = await wishlistService.removeFromWishlist(bookId);
-
-        // Update local state
         setWishlistItems((prevItems) =>
           prevItems.filter((item) => item.book?._id !== bookId)
         );
         setWishlistCount((prevCount) => Math.max(0, prevCount - 1));
-
         return response;
       } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to remove from wishlist"
-        );
         console.error("Remove from wishlist error:", err);
+        throw new Error(err.response?.data?.message || "Failed to remove from wishlist");
       } finally {
         setLoading(false);
       }
@@ -148,28 +132,20 @@ export const WishlistProvider = ({ children }) => {
   const moveToCart = useCallback(
     async (bookId, quantity = 1) => {
       if (!isAuthenticated) return;
-
       try {
         setLoading(true);
-        setError(null);
         const response = await wishlistService.moveToCart(bookId, quantity);
-
-        // Update local state
         setWishlistItems((prevItems) =>
           prevItems.filter((item) => item.book?._id !== bookId)
         );
         setWishlistCount((prevCount) => Math.max(0, prevCount - 1));
-
-        // Refresh cart to update cart count in header
         if (fetchCart) {
           await fetchCart();
         }
-
         return response;
       } catch (err) {
         const errorMessage =
           err.response?.data?.message || "Failed to move to cart";
-        setError(errorMessage);
         throw new Error(errorMessage);
       } finally {
         setLoading(false);
@@ -210,6 +186,28 @@ export const WishlistProvider = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  // Remove multiple from wishlist
+  const removeMultipleFromWishlist = useCallback(
+    async (bookIds) => {
+      if (!isAuthenticated) return;
+      try {
+        setLoading(true);
+        const response = await wishlistService.removeMultipleFromWishlist(bookIds);
+        setWishlistItems((prevItems) =>
+          prevItems.filter((item) => !bookIds.includes(item.book?._id))
+        );
+        setWishlistCount((prevCount) => Math.max(0, prevCount - bookIds.length));
+        return response;
+      } catch (err) {
+        console.error("Remove multiple from wishlist error:", err);
+        throw new Error(err.response?.data?.message || "Failed to remove selected from wishlist");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isAuthenticated]
+  );
+
   const value = {
     wishlistItems,
     wishlistCount,
@@ -222,6 +220,7 @@ export const WishlistProvider = ({ children }) => {
     isInWishlist,
     clearWishlist,
     setError,
+    removeMultipleFromWishlist,
   };
 
   return (
