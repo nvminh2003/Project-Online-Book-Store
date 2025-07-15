@@ -353,11 +353,12 @@ const uploadBooksFromExcel = async (req, res) => {
     const errors = [];
 
     for (const [idx, book] of books.entries()) {
+      const excelRow = idx + 2; // Hàng đầu tiên là header, dữ liệu bắt đầu từ hàng 2
       // Validate đủ trường
       const missingFields = requiredFields.filter(f => !book[f] || (Array.isArray(book[f]) ? book[f].length === 0 : String(book[f]).trim() === ""));
       if (missingFields.length > 0) {
         errors.push({
-          index: idx,
+          row: excelRow,
           title: book.title || "(Không có tiêu đề)",
           error: `Thiếu trường: ${missingFields.join(", ")}`
         });
@@ -367,12 +368,12 @@ const uploadBooksFromExcel = async (req, res) => {
       // Kiểm tra ISBN trùng
       const isbn = String(book.isbn).trim();
       if (!isbn) {
-        errors.push({ index: idx, title: book.title || "(Không có tiêu đề)", error: "ISBN không hợp lệ" });
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "ISBN không hợp lệ" });
         continue;
       }
       const existed = await Book.findOne({ isbn });
       if (existed) {
-        errors.push({ index: idx, title: book.title || "(Không có tiêu đề)", error: "ISBN đã tồn tại" });
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "ISBN đã tồn tại" });
         continue;
       }
 
@@ -384,7 +385,7 @@ const uploadBooksFromExcel = async (req, res) => {
         imageArray = book.images.map((img) => String(img).trim()).filter(Boolean);
       }
       if (!Array.isArray(imageArray) || imageArray.length === 0) {
-        errors.push({ index: idx, title: book.title || "(Không có tiêu đề)", error: "Ảnh sách không hợp lệ" });
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Ảnh sách không hợp lệ" });
         continue;
       }
 
@@ -397,7 +398,7 @@ const uploadBooksFromExcel = async (req, res) => {
         const foundCategories = await Category.find({ slug: { $in: categorySlugs } });
         categoryIds = foundCategories.map((cat) => cat._id);
         if (categoryIds.length === 0) {
-          errors.push({ index: idx, title: book.title || "(Không có tiêu đề)", error: "Không tìm thấy danh mục hợp lệ" });
+          errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Không tìm thấy danh mục hợp lệ" });
           continue;
         }
       }
@@ -415,7 +416,7 @@ const uploadBooksFromExcel = async (req, res) => {
         isNaN(sellingPrice) || sellingPrice <= 0 ||
         isNaN(stockQuantity) || stockQuantity < 0
       ) {
-        errors.push({ index: idx, title: book.title || "(Không có tiêu đề)", error: "Giá trị số không hợp lệ" });
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Giá trị số không hợp lệ" });
         continue;
       }
 

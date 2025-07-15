@@ -70,6 +70,16 @@ const AddBook = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Kiểm tra realtime cho các trường số dương
+    const positiveNumberFields = ["publicationYear", "pageCount", "originalPrice", "sellingPrice", "stockQuantity"];
+    if (positiveNumberFields.includes(name)) {
+      const num = Number(value);
+      if (value !== "" && (isNaN(num) || num <= 0)) {
+        setToastMsg("Giá trị phải là số dương.");
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 1500);
+      }
+    }
     setBookData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,

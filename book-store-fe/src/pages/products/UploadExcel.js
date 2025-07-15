@@ -79,7 +79,7 @@ const UploadExcel = () => {
           setTimeout(() => {
             setErrorPopup({
               count: errors.length,
-              details: errors.map(e => `- [${e.index + 1}] ${e.title}: ${e.error}`).join("\n")
+              details: errors.map(e => `- [${e.row}] ${e.title}: ${e.error}`).join("\n")
             });
           }, 500);
         }
