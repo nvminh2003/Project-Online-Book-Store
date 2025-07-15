@@ -154,6 +154,26 @@ const EditBook = () => {
         return;
       }
     }
+    // Kiểm tra ISBN trùng với sách khác (ngoại trừ sách đang sửa)
+    try {
+      const res = await axios.get(`${API_URL}/books?isbn=${encodeURIComponent(bookData.isbn)}`);
+      let booksWithSameIsbn = [];
+      if (Array.isArray(res.data?.data)) {
+        booksWithSameIsbn = res.data.data;
+      } else if (res.data?.data && typeof res.data.data === 'object' && res.data.data._id) {
+        booksWithSameIsbn = [res.data.data];
+      } // nếu null/undefined/không phải object hoặc object không có _id thì giữ là []
+      booksWithSameIsbn = booksWithSameIsbn.filter(b => b && String(b._id) !== String(bookData._id));
+      if (booksWithSameIsbn.length > 0) {
+        setToastMsg("❌ ISBN đã tồn tại cho một sách khác. Vui lòng nhập ISBN khác.");
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 2000);
+        return;
+      }
+    } catch (err) {
+      // Nếu lỗi API, vẫn cho phép tiếp tục (hoặc có thể báo lỗi tuỳ ý)
+      console.error("Lỗi kiểm tra ISBN:", err);
+    }
     if (Number(bookData.publicationYear) <= 0) {
       setToastMsg("Năm xuất bản phải là số dương."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
     }
@@ -215,7 +235,7 @@ const EditBook = () => {
       await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccessMsg("✅ Cập nhật sách thành công!");
+      setSuccessMsg(" Cập nhật sách thành công!");
       setToastType("success");
       setTimeout(() => {
         setSuccessMsg("");
@@ -223,7 +243,7 @@ const EditBook = () => {
       }, 1500);
     } catch (err) {
       console.error("Lỗi khi cập nhật sách:", err.response?.data || err.message);
-      setToastMsg("❌ Đã xảy ra lỗi khi cập nhật sách: " + (err.response?.data?.message || err.message));
+      setToastMsg(" Đã xảy ra lỗi khi cập nhật sách: " + (err.response?.data?.message || err.message));
       setToastType("error");
       setTimeout(() => setToastMsg(""), 1500);
     }

@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 const UploadExcel = () => {
   const [file, setFile] = useState(null);
   const [successMsg, setSuccessMsg] = useState("");
+  const [errorPopup, setErrorPopup] = useState(null);
 
   const handleReadExcel = async () => {
     if (!file) {
@@ -58,10 +59,30 @@ const UploadExcel = () => {
             },
           }
         );
-        setSuccessMsg(" Thêm sách thành công!");
-        setTimeout(() => {
-          window.location.href = "/admin/books";
-        }, 1500);
+        const { message, status, data, errors } = res.data;
+        if (status === "Success") {
+          setSuccessMsg(message);
+          setTimeout(() => {
+            window.location.href = "/admin/books";
+          }, 1500);
+        } else if (status === "PartialSuccess") {
+          setSuccessMsg(message);
+          setTimeout(() => {
+            setSuccessMsg("");
+          }, 3000);
+          // Không chuyển trang ở đây, sẽ chuyển khi bấm OK ở popup
+        } else {
+          setSuccessMsg("Có lỗi xảy ra khi thêm sách.");
+        }
+        // Hiển thị chi tiết lỗi nếu có
+        if (errors && errors.length > 0) {
+          setTimeout(() => {
+            setErrorPopup({
+              count: errors.length,
+              details: errors.map(e => `- [${e.index + 1}] ${e.title}: ${e.error}`).join("\n")
+            });
+          }, 500);
+        }
         console.log("✅ Server response:", res.data);
       } catch (err) {
         console.error("❌ Lỗi khi gửi Excel:", err.response?.data || err.message);
@@ -80,6 +101,21 @@ const UploadExcel = () => {
       {successMsg && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-6 py-3 rounded-lg shadow-lg animate-fade-in flex items-center gap-2">
           {successMsg}
+        </div>
+      )}
+      {errorPopup && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white border border-red-400 text-red-700 px-8 py-6 rounded-xl shadow-2xl animate-fade-in flex flex-col items-center gap-4 max-w-md w-full">
+          <div className="font-bold text-lg mb-2">Có {errorPopup.count} sách chưa được thêm:</div>
+          <pre className="text-sm text-left whitespace-pre-wrap w-full mb-2">{errorPopup.details}</pre>
+          <button
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold mt-2"
+            onClick={() => {
+              setErrorPopup(null);
+              window.location.href = "/admin/books";
+            }}
+          >
+            OK
+          </button>
         </div>
       )}
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 flex items-center justify-center gap-2">

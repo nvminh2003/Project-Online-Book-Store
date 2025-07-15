@@ -152,6 +152,23 @@ const AddBook = () => {
     if (images.length === 0) {
       setToastMsg("Vui lòng chọn ít nhất một ảnh sách."); setToastType("error"); setTimeout(() => setToastMsg(""), 1500); return;
     }
+    // Check trùng ISBN
+    try {
+      const isbnCheck = await axios.get(`${apiUrl}/books?limit=1000`);
+      const allBooks = isbnCheck.data?.data?.books || [];
+      if (allBooks.some(b => String(b.isbn).trim() === String(bookData.isbn).trim())) {
+        setToastMsg("ISBN đã tồn tại. Vui lòng nhập mã ISBN khác.");
+        setToastType("error");
+        setTimeout(() => setToastMsg(""), 2000);
+        return;
+      }
+    } catch (err) {
+      console.error("Lỗi khi kiểm tra ISBN:", err);
+      setToastMsg("Không kiểm tra được ISBN. Vui lòng thử lại.");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 2000);
+      return;
+    }
     try {
       setUploading(true);
       const imageUrls = await uploadImagesToCloudinary();
