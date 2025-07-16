@@ -20,7 +20,12 @@ const OrderHistoryPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchOrders();
+      // Đảm bảo luôn bắt đầu từ trang 1 để xem đơn hàng mới nhất
+      if (pagination.page !== 1) {
+        setPagination(prev => ({ ...prev, page: 1 }));
+      } else {
+        fetchOrders();
+      }
     }
   }, [isAuthenticated, pagination.page]);
 
@@ -33,8 +38,12 @@ const OrderHistoryPage = () => {
         limit: pagination.limit
       });
 
-      // console.log("📦 Response từ API:", response); // giữ lại để debug tiếp
-      setOrders(response.data.orders || []);
+      // Đảm bảo sắp xếp theo createdAt mới nhất trước
+      const sortedOrders = (response.data.orders || []).sort((a, b) =>
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setOrders(sortedOrders);
 
       // Nếu response.data.pagination tồn tại
       if (response.data.pagination) {
@@ -53,6 +62,11 @@ const OrderHistoryPage = () => {
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleRefresh = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchOrders();
   };
 
   const getStatusBadge = (status) => {
@@ -145,9 +159,17 @@ const OrderHistoryPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch sử đơn hàng</h1>
-        <p className="text-gray-600">Xem lại tất cả đơn hàng của bạn</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch sử đơn hàng</h1>
+          <p className="text-gray-600">Xem lại tất cả đơn hàng của bạn</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Làm mới
+        </button>
       </div>
 
       {orders.length === 0 ? (

@@ -1,4 +1,5 @@
 import axios from "axios";
+import apiClient from './apiClient';
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
@@ -11,7 +12,7 @@ const orderService = {
   getUserOrders: async (params = {}) => {
     try {
       const token = getToken();
-      const response = await axios.get(`${API_URL}/orders/my-orders`, {
+      const response = await apiClient.get(`${API_URL}/orders/my-orders`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`
@@ -27,7 +28,7 @@ const orderService = {
   getOrderDetail: async (id) => {
     try {
       const token = getToken();
-      const response = await axios.get(`${API_URL}/orders/${id}/detail`, {
+      const response = await apiClient.get(`${API_URL}/orders/${id}/detail`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -42,7 +43,7 @@ const orderService = {
   getAllOrders: async (params = {}) => {
     try {
       const token = getToken();
-      const response = await axios.get(`${API_URL}/orders`, {
+      const response = await apiClient.get(`${API_URL}/orders`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`
@@ -58,7 +59,7 @@ const orderService = {
   getOrderById: async (id) => {
     try {
       const token = getToken();
-      const response = await axios.get(`${API_URL}/orders/${id}/detail`, {
+      const response = await apiClient.get(`${API_URL}/orders/${id}/detail`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -73,7 +74,7 @@ const orderService = {
   updateOrderStatus: async (id, orderStatus) => {
     try {
       const token = getToken();
-      const response = await axios.patch(`${API_URL}/orders/update-order-status/${id}`, { orderStatus }, {
+      const response = await apiClient.patch(`${API_URL}/orders/update-order-status/${id}`, { orderStatus }, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -88,7 +89,7 @@ const orderService = {
   updatePaymentStatus: async (id, paymentStatus) => {
     try {
       const token = getToken();
-      const response = await axios.patch(`${API_URL}/orders/update-payment-status/${id}`, { paymentStatus }, {
+      const response = await apiClient.patch(`${API_URL}/orders/update-payment-status/${id}`, { paymentStatus }, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -103,7 +104,7 @@ const orderService = {
   exportOrdersToExcel: async () => {
     try {
       const token = getToken();
-      const response = await axios.get(`${API_URL}/orders/export/excel`, {
+      const response = await apiClient.get(`${API_URL}/orders/export/excel`, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${token}`
@@ -121,7 +122,7 @@ const orderService = {
       headers: { "Content-Type": "application/json" },
     };
     if (token) config.headers["Authorization"] = `Bearer ${token}`;
-    return axios.post(`${API_URL}/orders`, orderDetails, config);
+    return apiClient.post(`${API_URL}/orders`, orderDetails, config);
   },
 
   // Fetch order history (paginated)
@@ -132,7 +133,7 @@ const orderService = {
       params: { page, limit },
     };
     if (token) config.headers["Authorization"] = `Bearer ${token}`;
-    return axios.get(`${API_URL}/orders`, config);
+    return apiClient.get(`${API_URL}/orders`, config);
   },
 
   fetchOrderDetailAPI: async (orderId) => {
@@ -141,21 +142,21 @@ const orderService = {
       headers: { "Content-Type": "application/json" },
     };
     if (token) config.headers["Authorization"] = `Bearer ${token}`;
-    return axios.get(`${API_URL}/orders/${orderId}`, config);
+    return apiClient.get(`${API_URL}/orders/${orderId}`, config);
   },
 
   payosCheckoutSuccess: async (orderId) => {
     const token = getToken();
     const config = {};
     if (token) config.headers = { Authorization: `Bearer ${token}` };
-    return axios.get(`${API_URL}/orders/payos/success/${orderId}`, config);
+    return apiClient.get(`${API_URL}/orders/payos/success/${orderId}`, config);
   },
 
   payosCheckoutCancel: async (orderId) => {
     const token = getToken();
     const config = {};
     if (token) config.headers = { Authorization: `Bearer ${token}` };
-    return axios.get(`${API_URL}/orders/payos/cancel/${orderId}`, config);
+    return apiClient.get(`${API_URL}/orders/payos/cancel/${orderId}`, config);
   },
 
 

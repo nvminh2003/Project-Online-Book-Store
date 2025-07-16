@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Icon } from '@iconify/react';
+import categoryService from '../../services/categoryService';
 
 const API = process.env.REACT_APP_API_URL_BACKEND;
 
@@ -27,8 +28,8 @@ const Categories = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/categories`);
-      const filtered = res.data.data.filter((c) =>
+      const res = await categoryService.getAllCategories();
+      const filtered = res.data.filter((c) =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setCategories(filtered);
@@ -59,7 +60,7 @@ const Categories = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await axios.delete(`${API}/categories/${deleteId}`, headers);
+      await categoryService.deleteCategory(deleteId);
       setToastMsg("Đã xoá danh mục thành công!");
       setToastType("success");
       setTimeout(() => setToastMsg(""), 1500);
@@ -97,13 +98,9 @@ const Categories = () => {
     }
     try {
       if (editingCategory) {
-        await axios.put(
-          `${API}/categories/${editingCategory._id}`,
-          { name: nameInput },
-          headers
-        );
+        await categoryService.updateCategory(editingCategory._id, { name: nameInput });
       } else {
-        await axios.post(`${API}/categories`, { name: nameInput }, headers);
+        await categoryService.createCategory({ name: nameInput });
       }
       setShowForm(false);
       setNameInput("");
@@ -187,11 +184,10 @@ const Categories = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded ${
-                    currentPage === i + 1
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-black"
-                  }`}
+                  className={`px-3 py-1 border rounded ${currentPage === i + 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-black"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -203,40 +199,40 @@ const Categories = () => {
 
       {/* Popup Form */}
       {showForm && (
-  <>
-    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all">
-      <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800">
-          {editingCategory ? "Sửa danh mục" : "Thêm danh mục"}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Tên danh mục"
-            className="w-full border px-4 py-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-800"
-            >
-              Huỷ
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Lưu
-            </button>
+        <>
+          <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
+              <h3 className="text-xl font-semibold mb-4 text-gray-800">
+                {editingCategory ? "Sửa danh mục" : "Thêm danh mục"}
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Tên danh mục"
+                  className="w-full border px-4 py-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-800"
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
-  </>
-)}
+        </>
+      )}
 
       {toastMsg && (
         <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>

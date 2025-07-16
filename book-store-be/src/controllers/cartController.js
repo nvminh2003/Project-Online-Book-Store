@@ -11,7 +11,7 @@ const populateCart = async (cartId) => {
       // Removed non-existent fields isPublished and isDeleted
       "title sellingPrice images authors publisher stockQuantity"
     )
-    .populate("user", "email customerInfo.fullName");
+    .populate("user", "email info.fullName");
 };
 
 // Helper function to calculate total price safely
@@ -335,7 +335,7 @@ const clearCart = async (req, res) => {
 
     const updatedCart = await Cart.findById(cart._id).populate(
       "user",
-      "email customerInfo.fullName"
+      "email info.fullName"
     );
 
     return res.status(200).json({

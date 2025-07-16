@@ -515,14 +515,43 @@ const getReviewById = async (req, res) => {
     }
 };
 
+// Get featured reviews for homepage (public)
+const getFeaturedReviews = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 3;
+
+        // Lấy những review có rating >= 4, không bị ẩn, và sắp xếp theo rating giảm dần
+        const reviews = await Review.find({
+            rating: { $gte: 4 },
+            isHidden: false
+        })
+            .populate('user', 'email info')
+            .populate('book', 'title images')
+            .sort({ rating: -1, createdAt: -1 })
+            .limit(limit);
+
+        res.status(200).json({
+            status: "Success",
+            message: "Lấy đánh giá nổi bật thành công",
+            data: {
+                reviews,
+                total: reviews.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message, status: "Error" });
+    }
+};
+
 module.exports = {
     createReview,
+    updateReview,
     getReviewsByBook,
     getUserReviews,
-    updateReview,
     deleteReview,
     toggleReviewVisibility,
     getAllReviews,
     getReviewByOrderAndBook,
-    getReviewById
+    getReviewById,
+    getFeaturedReviews
 };

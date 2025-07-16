@@ -29,12 +29,12 @@ import OrderDetailPage from "../pages/checkout/OrderDetailPage";
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
-import AdminDiscounts from "../pages/admin/Discounts";
+// import AdminDiscounts from "../pages/admin/Discounts";
 import AdminUsers from "../pages/admin/Users";
 import AdminOrders from "../pages/admin/Orders";
 import AdminBlog from "../pages/admin/Blog";
 import AdminReview from "../pages/admin/Reviews";
-// import AdminReports from "../pages/admin/Reports";
+import AdminReports from "../pages/admin/Reports";
 import AdminActivity from "../pages/admin/AdminActivity";
 
 // Blog Pages
@@ -43,7 +43,7 @@ import BlogDetailPage from "../pages/blog/BlogDetailPage";
 
 // Static Pages
 import AboutUs from "../pages/AboutUs";
-import PaymentInfo from "../pages/PaymentInfo";
+// import PaymentInfo from "../pages/PaymentInfo";
 import SalesPolicy from "../pages/SalesPolicy";
 import ReviewForm from "../components/user/ReviewForm";
 import CheckoutPage from "../pages/checkout/CheckoutPage";
@@ -54,13 +54,12 @@ export const routes = [
   { path: "/auth/register", page: RegisterPage, isShowHeader: true },
   { path: "/auth/login", page: LoginPage, isShowHeader: true },
   { path: "/auth/cart", page: CartPage, isShowHeader: true },
-  // { path: "/auth/cart", page: CartPage, isShowHeader: true },
   { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
   { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
   { path: "/auth/change-password", page: ChangePasswordPage, isShowHeader: true },
   { path: "/reset-password", page: ResetPasswordPage, isShowHeader: true },
   { path: "/about", page: AboutUs, isShowHeader: true },
-  { path: "/payment-info", page: PaymentInfo, isShowHeader: true },
+  // { path: "/payment-info", page: PaymentInfo, isShowHeader: true },
   { path: "/sales-policy", page: SalesPolicy, isShowHeader: true },
   { path: "/blogs", page: BlogListingPage, isShowHeader: true },
   { path: "/blogs/:id", page: BlogDetailPage, isShowHeader: true },
@@ -129,17 +128,17 @@ export const routes = [
     ),
     isShowHeader: false,
   },
-  {
-    path: "/admin/discounts",
-    page: () => (
-      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_DISCOUNT">
-        <AdminLayout>
-          <AdminDiscounts />
-        </AdminLayout>
-      </ProtectedRoute>
-    ),
-    isShowHeader: false,
-  },
+  // {
+  //   path: "/admin/discounts",
+  //   page: () => (
+  //     <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_DISCOUNT">
+  //       <AdminLayout>
+  //         <AdminDiscounts />
+  //       </AdminLayout>
+  //     </ProtectedRoute>
+  //   ),
+  //   isShowHeader: false,
+  // },
   {
     path: "/admin/users",
     page: () => (
@@ -195,17 +194,17 @@ export const routes = [
     ),
     isShowHeader: false,
   },
-  // {
-  //   path: "/admin/reports",
-  //   page: () => (
-  //     <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
-  //       <AdminLayout>
-  //         <AdminReports />
-  //       </AdminLayout>
-  //     </ProtectedRoute>
-  //   ),
-  //   isShowHeader: false,
-  // },
+  {
+    path: "/admin/reports",
+    page: () => (
+      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
+        <AdminLayout>
+          <AdminReports />
+        </AdminLayout>
+      </ProtectedRoute>
+    ),
+    isShowHeader: false,
+  },
 
   // Not found fallback
   { path: "*", page: NotFoundPage },

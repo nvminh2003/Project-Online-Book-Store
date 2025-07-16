@@ -1,6 +1,6 @@
 // src/components/review/ReviewItem.jsx
 import React from "react";
-import Icon from "../common/Icon";
+// import Icon from "../common/Icon";
 
 const ReviewItem = ({ review }) => {
     const {
@@ -24,7 +24,11 @@ const ReviewItem = ({ review }) => {
         <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                    <Icon icon="mdi:account-circle" className="text-gray-500" width={24} height={24} />
+                    {/* <Icon icon="mdi:account-circle" className="text-gray-500" width={24} height={24} /> */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+                        {reviewerName.charAt(0).toUpperCase()}
+                    </div>
+
                     <span className="text-sm font-semibold text-gray-800">{reviewerName}</span>
                 </div>
                 <div className="flex items-center space-x-1">

@@ -109,7 +109,59 @@ const sendOrderConfirmationEmail = async (email, order) => {
     }
 };
 
+const sendAccountLockedEmail = async (email, fullName) => {
+    const loginUrl = `${process.env.FRONTEND_URL}/auth/login`;
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Tài khoản của bạn đã bị khóa tạm thời',
+        html: `
+            <h2>Thông báo khóa tài khoản</h2>
+            <p>Xin chào <b>${fullName || email}</b>,</p>
+            <p>Tài khoản của bạn trên hệ thống <b>Book Store</b> đã bị <b>khóa tạm thời</b>.</p>
+            <p>Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua email <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a> hoặc số điện thoại <b>097 4148 047</b>.</p>
+             <hr>
+            <p><a href="${loginUrl}" style="display: inline-block; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px;">Đăng nhập vào tài khoản</a></p>
+            <p>Trân trọng,<br>Đội ngũ Book Store</p>
+        `
+    };
+    try {
+        await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error('Error sending account locked email:', error);
+        return false;
+    }
+};
+
+const sendAccountUnlockedEmail = async (email, fullName) => {
+    const loginUrl = `${process.env.FRONTEND_URL}/auth/login`;
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Tài khoản của bạn đã được mở khóa',
+        html: `
+            <h2>Thông báo mở khóa tài khoản</h2>
+            <p>Xin chào <b>${fullName || email}</b>,</p>
+            <p>Tài khoản của bạn trên hệ thống <b>Book Store</b> đã được <b>mở khóa</b>. Bạn có thể đăng nhập và sử dụng dịch vụ bình thường.</p>
+            <p>Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua email <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a> hoặc số điện thoại <b>097 4148 047</b>.</p>
+            <hr>
+            <p><a href="${loginUrl}" style="display: inline-block; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px;">Đăng nhập vào tài khoản</a></p>
+            <p>Trân trọng,<br>Đội ngũ Book Store</p>
+        `
+    };
+    try {
+        await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error('Error sending account unlocked email:', error);
+        return false;
+    }
+};
+
 module.exports = {
     sendResetPasswordEmail,
-    sendOrderConfirmationEmail
+    sendOrderConfirmationEmail,
+    sendAccountLockedEmail,
+    sendAccountUnlockedEmail
 }; 

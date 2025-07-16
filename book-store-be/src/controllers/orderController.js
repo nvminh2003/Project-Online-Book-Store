@@ -2,7 +2,6 @@
 const Order = require("../models/orderModel");
 const Book = require("../models/bookModel");
 const Cart = require("../models/cartModel");
-const DiscountCode = require("../models/discountCodeModel");
 const AdminActivityLog = require("../models/AdminActivityLog");
 const { sendOrderConfirmationEmail } = require("../utils/emailService");
 const Account = require("../models/accountModel");
@@ -17,13 +16,6 @@ const payos = new PayOS(
   process.env.PAYOS_CHECKSUM_KEY
 );
 
-// Generate unique order code
-// const generateOrderCode = () => {
-//   // Use a safe positive integer, e.g. last 9 digits of timestamp + random
-//   const base = Number(Date.now().toString().slice(-9));
-//   const random = Math.floor(Math.random() * 1000);
-//   return base * 1000 + random; // Always a positive integer, < 9007199254740991
-// };
 const generateOrderCode = () => {
   // PayOS requires orderCode to be a positive integer
   // Use shorter timestamp (last 8 digits) + 2 digit random = max 10 digits
@@ -46,28 +38,7 @@ const generateOrderCode = () => {
   return orderCode;
 };
 
-// // Create PayOS payment link
-// const createPaymentLink = async (paymentData) => {
-//   const { orderCode, totalAmount, fullName, phone, orderId } = paymentData;
-
-//   const order = {
-//     amount: totalAmount,
-//     description: `Book order for ${fullName}`,
-//     orderCode: orderCode,
-//     returnUrl: `${process.env.FRONTEND_URL}/auth/checkout/success/${orderId}`,
-//     cancelUrl: `${process.env.FRONTEND_URL}/auth/checkout/cancel/${orderId}`,
-//     buyerName: fullName,
-//     buyerPhone: phone,
-//   };
-
-//   try {
-//     const paymentLinkResponse = await payos.createPaymentLink(order);
-//     return paymentLinkResponse.checkoutUrl;
-//   } catch (error) {
-//     throw new Error(`PayOS link creation failed: ${error.message}`);
-//   }
-// };
-// Create PayOS payment link following PayOS API documentation: https://payos.vn/docs/api/#operation/payment-request
+// Create PayOS payment link
 const createPaymentLink = async (paymentData) => {
   const { orderCode, totalAmount, fullName, phone, orderId } = paymentData;
 
@@ -525,7 +496,7 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find(query)
       .populate("items.book", "title sellingPrice images")
       .populate("items.reviewId", "rating comment images createdAt")
-      .populate("user", "email customerInfo.fullName")
+      .populate("user", "email info.fullName")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -584,7 +555,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findOne(query)
       .populate("items.book", "title sellingPrice images")
       .populate("items.reviewId", "rating comment images createdAt")
-      .populate("user", "email customerInfo.fullName").lean();
+      .populate("user", "email info.fullName").lean();
 
     if (!order) {
       return res.status(404).json({
@@ -728,6 +699,14 @@ const updateOrderStatus = async (req, res) => {
     if (orderStatus === "completed" && order.paymentStatus !== "paid") {
       return res.status(400).json({
         message: "Không thể hoàn thành đơn hàng chưa được thanh toán.",
+        status: "Error"
+      });
+    }
+
+    // Chặn không cho cập nhật về "pending" nếu đã thanh toán
+    if (order.paymentStatus === 'paid' && orderStatus === 'pending') {
+      return res.status(400).json({
+        message: "Không thể chuyển đơn hàng đã thanh toán về trạng thái chờ xác nhận.",
         status: "Error"
       });
     }
@@ -898,13 +877,13 @@ const exportOrdersToExcel = async (req, res) => {
   try {
     const orders = await Order.find({})
       .populate("items.book", "title")
-      .populate("user", "email customerInfo.fullName")
+      .populate("user", "email info.fullName")
       .sort({ createdAt: -1 });
 
     // Chuẩn bị dữ liệu cho sheet
     const data = orders.map(order => ({
       'Mã đơn': order.orderCode,
-      'Khách hàng': order.fullName || order.user?.customerInfo?.fullName || '',
+      'Khách hàng': order.fullName || order.user?.info?.fullName || '',
       'Email': order.user?.email || '',
       'Số điện thoại': order.phone,
       'Tổng tiền': order.totalAmount,

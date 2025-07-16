@@ -109,12 +109,12 @@ const CartSummary = ({
       </div>
 
       <div className="mt-6">
-        <label
+        {/* <label
           htmlFor="coupon"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           Mã giảm giá
-        </label>
+        </label> */}
         {/* <div className="flex">
           <input
             type="text"
@@ -144,7 +144,7 @@ const CartSummary = ({
       </button>
 
       <div className="mt-6 text-center">
-        <Link to="/" className="text-sm text-blue-500 hover:text-blue-700 no-underline">
+        <Link to="/getbook" className="text-sm text-blue-500 hover:text-blue-700 no-underline">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4 inline mr-1"

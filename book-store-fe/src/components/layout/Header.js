@@ -5,6 +5,7 @@ import logo from '../../assets/image.png';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from "../../contexts/CartContext";
 import { useWishlist } from "../../contexts/WishlistContext";
+import { notifySuccess } from "../common/ToastManager";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,10 +16,14 @@ const Header = () => {
   const location = useLocation();
   const menuRef = useRef(null);
 
+  // Hide cart and wishlist buttons for admin users
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness';
+
   const isActivePath = (path) => location.pathname === path;
 
   const handleLogout = async () => {
     await logout();
+    notifySuccess("Đăng xuất thành công!");
     setIsMenuOpen(false);
     navigate('/');
   };
@@ -71,7 +76,7 @@ const Header = () => {
             <Link
               key={index}
               to={item.to}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
             >
               {item.label}
             </Link>
@@ -81,13 +86,13 @@ const Header = () => {
             <div className="pt-2 space-y-1">
               <Link
                 to="/auth/login"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
               >
                 Đăng nhập
               </Link>
               <Link
                 to="/auth/register"
-                className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors no-underline"
               >
                 Đăng ký
               </Link>
@@ -102,7 +107,7 @@ const Header = () => {
               </Link>
               <Link
                 to="/orders"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
               >
                 Lịch sử đơn hàng
               </Link>
@@ -156,21 +161,14 @@ const Header = () => {
               className={`no-underline transition-colors ${isActivePath('/getbook') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Sách mới sách hay
+              Sách hay sách mới
             </Link>
             <Link
               to="/blogs"
               className={`no-underline transition-colors ${isActivePath('/blogs') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Blogs
-            </Link>
-            <Link
-              to="/payment-info"
-              className={`no-underline transition-colors ${isActivePath('/payment-info') ? 'text-blue-600' : 'text-black hover:text-blue-600'
-                }`}
-            >
-              Thông tin thanh toán
+              Tin tức
             </Link>
             <Link
               to="/sales-policy"
@@ -239,33 +237,37 @@ const Header = () => {
               </Link>
             )}
 
-            {/* Wishlist */}
-            <Link
-              to="/auth/wishlist"
-              className={`relative transition-colors ${isActivePath("/wishlist")
-                ? "text-blue-600"
-                : "text-black hover:text-red-500"
-                }`}
-            >
-              <Icon icon="mdi:heart-outline" className="w-6 h-6" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+            {/* Wishlist - ẩn cho admin */}
+            {!isAdmin && (
+              <Link
+                to="/auth/wishlist"
+                className={`relative transition-colors ${isActivePath("/wishlist")
+                  ? "text-blue-600"
+                  : "text-black hover:text-red-500"
+                  }`}
+              >
+                <Icon icon="mdi:heart-outline" className="w-6 h-6" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
-            {/* Cart */}
-            <Link
-              to="/auth/cart"
-              className={`relative transition-colors ${isActivePath('/auth/cart') ? 'text-blue-600' : 'text-black hover:text-blue-600'
-                }`}
-            >
-              <Icon icon="mdi:cart-outline" className="w-6 h-6" />
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                {cartItemCount || 0}
-              </span>
-            </Link>
+            {/* Cart - ẩn cho admin */}
+            {!isAdmin && (
+              <Link
+                to="/auth/cart"
+                className={`relative transition-colors ${isActivePath('/auth/cart') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                  }`}
+              >
+                <Icon icon="mdi:cart-outline" className="w-6 h-6" />
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                  {cartItemCount || 0}
+                </span>
+              </Link>
+            )}
 
             {/* Mobile Menu */}
             {isAuthenticated &&
@@ -286,12 +288,12 @@ const Header = () => {
                         <div className="border-t my-2" />
                         <Link to="/auth/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Tài khoản của tôi</Link>
                         <Link to="/orders" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Lịch sử đơn hàng</Link>
-                        <button
+                        {/* <button
                           onClick={handleLogout}
                           className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600"
                         >
                           Đăng xuất
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   )}

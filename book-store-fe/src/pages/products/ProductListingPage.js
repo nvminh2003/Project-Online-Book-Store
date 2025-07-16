@@ -4,8 +4,11 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import { useAuth } from "../../contexts/AuthContext"; // Import useAuth hook
 import WishlistButton from "../../components/wishlist/WishlistButton";
 import { notifyError, notifySuccess } from "../../components/common/ToastManager";
+import bookService from '../../services/bookService';
+import categoryService from '../../services/categoryService';
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
 
@@ -17,11 +20,13 @@ const ProductDetailPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const booksPerPage = 8;
   const [sortOption, setSortOption] = useState("default");
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastType, setToastType] = useState("success"); // 'success' | 'error'
-  const { bookId } = useParams();
+  // const { bookId } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart(); // Use the cart context
+  const { user } = useAuth(); // Use the auth context
+
+  // Hide cart and wishlist buttons for admin users
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness';
 
   useEffect(() => {
     fetchCategories();
@@ -30,8 +35,8 @@ const ProductDetailPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(`${API_URL}/categories`);
-      setCategories(res.data.data || []);
+      const res = await categoryService.getAllCategories();
+      setCategories(res.data || []);
     } catch (err) {
       console.error("Error fetching categories:", err);
       setCategories([]);
@@ -40,8 +45,8 @@ const ProductDetailPage = () => {
 
   const fetchBooks = async (categoryId = null) => {
     try {
-      const res = await axios.get(`${API_URL}/books`);
-      let fetchedBooks = res.data.data?.books || [];
+      const res = await bookService.getAllBooks();
+      let fetchedBooks = res.data?.books || [];
       if (categoryId) {
         fetchedBooks = fetchedBooks.filter((book) =>
           (book.categories || []).some((cat) => (cat._id || cat) === categoryId)
@@ -125,12 +130,8 @@ const ProductDetailPage = () => {
   const handleAddToWishlist = async (bookId) => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
-      setToastType("error");
-      setTimeout(() => {
-        setToastMsg("");
-        navigate("/auth/login");
-      }, 1500);
+      notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+      setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
     try {
@@ -141,14 +142,10 @@ const ProductDetailPage = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      setToastMsg("Đã thêm vào mục yêu thích!");
-      setToastType("success");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifySuccess("Đã thêm vào mục yêu thích!");
     } catch (err) {
       console.error("Wishlist error:", err.response?.data || err.message);
-      setToastMsg(err.response?.data?.message || "Không thể thêm vào yêu thích.");
-      setToastType("error");
-      setTimeout(() => setToastMsg(""), 1500);
+      notifyError(err.response?.data?.message || "Không thể thêm vào yêu thích.");
     }
   };
 
@@ -158,11 +155,6 @@ const ProductDetailPage = () => {
 
   return (
     <div className="flex p-4">
-      {toastMsg && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
-          {toastMsg}
-        </div>
-      )}
       <div className="w-64 mr-6 hidden md:block">
         <div className="bg-blue-600 text-white font-bold text-lg px-4 py-3 rounded-t">DANH MỤC SÁCH</div>
         <ul className="bg-blue-50 border border-blue-200 rounded-b shadow divide-y divide-blue-100">
@@ -254,37 +246,37 @@ const ProductDetailPage = () => {
                   {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
                   {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
                   <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
-                    {/* Thêm vào giỏ */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(book._id);
-                      }}
-                      className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
-                      title="Thêm vào giỏ hàng"
-                    >
-                      <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
-                    </button>
+                    {/* Thêm vào giỏ - ẩn cho admin */}
+                    {!isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(book._id);
+                        }}
+                        className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                        title="Thêm vào giỏ hàng"
+                      >
+                        <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
+                      </button>
+                    )}
 
-                    {/* Yêu thích */}
-                    <WishlistButton
-                      bookId={book._id}
-                      variant="icon-only"
-                      onRequireLogin={() => {
-                        setToastMsg("Bạn cần đăng nhập để thêm vào yêu thích.");
-                        setToastType("error");
-                        setTimeout(() => {
-                          setToastMsg("");
-                          navigate("/auth/login");
-                        }, 1500);
-                      }}
-                      onSuccessAdd={() => {
-                        notifySuccess("Thêm sản phẩm yêu thích thành công");
-                      }}
-                      onSuccessRemove={() => {
-                        notifyError("Đã xóa khỏi danh sách yêu thích");
-                      }}
-                    />
+                    {/* Yêu thích - ẩn cho admin */}
+                    {!isAdmin && (
+                      <WishlistButton
+                        bookId={book._id}
+                        variant="icon-only"
+                        onRequireLogin={() => {
+                          notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                          setTimeout(() => navigate("/auth/login"), 1500);
+                        }}
+                        onSuccessAdd={() => {
+                          notifySuccess("Thêm sản phẩm yêu thích thành công");
+                        }}
+                        onSuccessRemove={() => {
+                          notifyError("Đã xóa khỏi danh sách yêu thích");
+                        }}
+                      />
+                    )}
 
                     {/* Xem chi tiết */}
                     <button

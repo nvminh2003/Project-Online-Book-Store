@@ -5,6 +5,7 @@ const { checkAuthMiddleware, authorizeRole } = require('../middleware/authMiddle
 
 // Public routes (no authentication required)
 router.get('/book/:bookId', reviewController.getReviewsByBook);
+router.get('/featured', reviewController.getFeaturedReviews);
 
 // All review routes below require authentication
 router.use(checkAuthMiddleware);

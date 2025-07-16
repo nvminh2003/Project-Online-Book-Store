@@ -23,6 +23,7 @@ const AccountSchema = new mongoose.Schema({
     refreshToken: { type: String },
     resetToken: { type: String },
     resetTokenExpires: { type: Date },
+    lastResetEmailSent: { type: Date }, // Thời gian gửi email reset password cuối cùng
 
     info: {
         fullName: String,

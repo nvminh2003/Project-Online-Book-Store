@@ -5,6 +5,8 @@ import axios from "axios";
 import Spinner from "../../components/common/Spinner";
 import { Icon } from '@iconify/react';
 import { notifySuccess, notifyError } from '../../components/common/ToastManager';
+import bookService from '../../services/bookService';
+import categoryService from '../../services/categoryService';
 
 const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
@@ -27,32 +29,31 @@ const EditBook = () => {
       setLoading(true);
       setError("");
       try {
-        const res = await axios.get(`${API_URL}/books/${bookIdParam}`);
-        const book = res.data.data;
-        if (book) {
+        const book = await bookService.getProductById(bookIdParam);
+        if (book && book.data) {
           setBookData({
-            _id: book._id, // QUAN TRỌNG: Lưu lại _id
-            title: book.title || "",
-            authors: Array.isArray(book.authors)
-              ? book.authors
-              : book.authors
-                ? String(book.authors)
+            _id: book.data._id, // QUAN TRỌNG: Lưu lại _id
+            title: book.data.title || "",
+            authors: Array.isArray(book.data.authors)
+              ? book.data.authors
+              : book.data.authors
+                ? String(book.data.authors)
                   .split(",")
                   .map((s) => s.trim())
                 : [],
-            publisher: book.publisher || "",
-            publicationYear: book.publicationYear || "",
-            pageCount: book.pageCount || "",
-            coverType: book.coverType || "",
-            description: book.description || "",
-            isbn: book.isbn || "",
-            originalPrice: book.originalPrice || "",
-            sellingPrice: book.sellingPrice || "",
-            stockQuantity: book.stockQuantity || "",
-            isFeatured: book.isFeatured || false,
-            isNewArrival: book.isNewArrival || false,
-            categories: (book.categories || []).map((cat) => cat._id || cat), // Lấy ID của category
-            images: book.images || [], // Mảng các URL ảnh hiện tại
+            publisher: book.data.publisher || "",
+            publicationYear: book.data.publicationYear || "",
+            pageCount: book.data.pageCount || "",
+            coverType: book.data.coverType || "",
+            description: book.data.description || "",
+            isbn: book.data.isbn || "",
+            originalPrice: book.data.originalPrice || "",
+            sellingPrice: book.data.sellingPrice || "",
+            stockQuantity: book.data.stockQuantity || "",
+            isFeatured: book.data.isFeatured || false,
+            isNewArrival: book.data.isNewArrival || false,
+            categories: (book.data.categories || []).map((cat) => cat._id || cat), // Lấy ID của category
+            images: book.data.images || [], // Mảng các URL ảnh hiện tại
           });
         } else {
           setError("Không tìm thấy sách.");
@@ -61,7 +62,7 @@ const EditBook = () => {
         console.error("Lỗi khi tải sách:", err);
         setError(
           "Không thể tải dữ liệu sách. " +
-          (err.response?.data?.message || err.message)
+          (err.message || "Lỗi không xác định")
         );
       } finally {
         setLoading(false);
@@ -73,8 +74,8 @@ const EditBook = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(`${API_URL}/categories`);
-        setCategories(res.data?.data || []);
+        const categories = await categoryService.getAllCategories();
+        setCategories(categories.data || []);
       } catch (err) {
         console.error("Lỗi khi tải danh mục:", err);
         setCategories([]);
@@ -192,9 +193,7 @@ const EditBook = () => {
         stockQuantity: Number(bookData.stockQuantity),
       };
 
-      await axios.put(`${API_URL}/books/${bookIdParam}`, updatePayload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await bookService.updateBook(bookIdParam, updatePayload);
 
       notifySuccess(" Cập nhật sách thành công!");
       setTimeout(() => {

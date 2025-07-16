@@ -4,6 +4,8 @@ import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import { Icon } from '@iconify/react';
 import { notifySuccess, notifyError } from '../../components/common/ToastManager';
+import bookService from '../../services/bookService';
+import categoryService from '../../services/categoryService';
 
 const AddBook = () => {
   const [bookData, setBookData] = useState({
@@ -55,10 +57,11 @@ const AddBook = () => {
 
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/categories`);
-        setCategoryOptions(res.data.data);
+        const res = await categoryService.getAllCategories();
+        setCategoryOptions(res.data || []);
       } catch (error) {
         console.error("Lỗi khi lấy danh mục:", error);
+        notifyError(error.message || "Lỗi khi lấy danh mục");
       }
     };
 
@@ -185,11 +188,7 @@ const AddBook = () => {
 
       const token = localStorage.getItem("accessToken");
 
-      await axios.post(`${apiUrl}/books`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await bookService.createBook(payload);
 
       notifySuccess("Thêm sách thành công!");
       setBookData({

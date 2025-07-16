@@ -67,7 +67,7 @@ const ProfileForm = () => {
       setEditMode(false);
       setFormErrors({});
     } catch (err) {
-      const msg = err.response?.data?.message || 'Cập nhật thất bại.';
+      const msg = err.message || 'Cập nhật thất bại.';
       if (msg.includes('Số điện thoại')) {
         setFormErrors({ phone: msg });
       } else if (msg.includes('16 tuổi')) {

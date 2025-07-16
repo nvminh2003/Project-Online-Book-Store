@@ -108,12 +108,18 @@ const CartPage = () => {
         );
     }
 
-    if (error && (!cart || cart.items.length === 0)) {
-        return (
-            <div className="container mx-auto px-4 py-8 text-center text-red-500">
-                <p>Lỗi khi tải giỏ hàng: {String(error)}</p>
-            </div>
-        );
+    // if (error && (!cart || cart.items.length === 0)) {
+    //     return (
+    //         <div className="container mx-auto px-4 py-8 text-center text-red-500">
+    //             <p>Lỗi khi tải giỏ hàng: {String(error)}</p>
+    //         </div>
+    //     );
+    // }
+    if (error && String(error).includes("Invalid token")) {
+        // Optional: clear token
+        localStorage.removeItem("accessToken");
+        navigate("/auth/login");
+        return null;
     }
 
     if (!cart || cart.items.length === 0) {

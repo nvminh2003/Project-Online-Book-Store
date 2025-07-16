@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiClient from './apiClient';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9999/api';
 
@@ -8,7 +9,7 @@ const blogService = {
     // Get all blogs with flexible params (page, limit, status, createdAt, from, to)
     getAllBlogs: async (params = {}) => {
         try {
-            const response = await axios.get(`${API_URL}/blogs`, { params });
+            const response = await apiClient.get(`${API_URL}/blogs`, { params });
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
@@ -18,7 +19,7 @@ const blogService = {
     // Get blog by ID
     getBlogById: async (id) => {
         try {
-            const response = await axios.get(`${API_URL}/blogs/${id}`);
+            const response = await apiClient.get(`${API_URL}/blogs/${id}`);
             return response.data;
         } catch (error) {
             throw error.response?.data || error.message;
@@ -28,7 +29,7 @@ const blogService = {
     // Search blogs
     searchBlogs: async (searchTerm, page = 1, limit = 10) => {
         try {
-            const response = await axios.get(`${API_URL}/blogs/search`, {
+            const response = await apiClient.get(`${API_URL}/blogs/search`, {
                 params: { searchTerm, page, limit }
             });
             return response.data;
@@ -41,7 +42,7 @@ const blogService = {
     getBlogsByDateRange: async (params = {}) => {
         try {
             const token = getToken();
-            const response = await axios.get(`${API_URL}/blogs/date-range`, {
+            const response = await apiClient.get(`${API_URL}/blogs/date-range`, {
                 params,
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -57,7 +58,7 @@ const blogService = {
     createBlog: async (blogData) => {
         try {
             const token = getToken();
-            const response = await axios.post(`${API_URL}/blogs`, blogData, {
+            const response = await apiClient.post(`${API_URL}/blogs`, blogData, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -72,7 +73,7 @@ const blogService = {
     updateBlog: async (id, blogData) => {
         try {
             const token = getToken();
-            const response = await axios.put(`${API_URL}/blogs/${id}`, blogData, {
+            const response = await apiClient.put(`${API_URL}/blogs/${id}`, blogData, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -87,7 +88,7 @@ const blogService = {
     deleteBlog: async (id) => {
         try {
             const token = getToken();
-            const response = await axios.delete(`${API_URL}/blogs/${id}`, {
+            const response = await apiClient.delete(`${API_URL}/blogs/${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Icon } from '@iconify/react';
+import bookService from '../../services/bookService';
+import categoryService from '../../services/categoryService';
 
 const API_URL = process.env.REACT_APP_API_URL_BACKEND;
 
@@ -27,12 +29,11 @@ const Books = () => {
 
   const fetchBooks = async () => {
     try {
-      const res = await axios.get(`${API_URL}/books?page=${page}&limit=10`);
-      const result = res.data?.data;
-      if (result) {
-        setBooks(result.books);
-        setFilteredBooks(result.books);
-        setTotalPages(result.pagination.totalPages);
+      const result = await bookService.getAllBooks(page, 10);
+      if (result && result.data) {
+        setBooks(result.data.books);
+        setFilteredBooks(result.data.books);
+        setTotalPages(result.data.pagination.totalPages);
       }
     } catch (error) {
       console.error("Error fetching books:", error);
@@ -43,8 +44,8 @@ const Books = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(`${API_URL}/categories`);
-      setCategories(res.data?.data?.categories || []);
+      const result = await categoryService.getAllCategories();
+      setCategories(result.data?.categories || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
@@ -99,12 +100,7 @@ const Books = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const token = localStorage.getItem("accessToken");
-      await axios.delete(`${API_URL}/books/${deleteId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await bookService.deleteBook(deleteId);
       setToastMsg("Đã xóa sách thành công!");
       setToastType("success");
       setTimeout(() => setToastMsg(""), 1500);

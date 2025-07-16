@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { Icon } from '@iconify/react';
+import bookService from '../../services/bookService';
 
 const UploadExcel = () => {
   const [file, setFile] = useState(null);
@@ -49,24 +50,16 @@ const UploadExcel = () => {
       });
 
       try {
-        const res = await axios.post(
-          "http://localhost:9999/api/books/upload-excel",
-          { books: jsonData },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await bookService.uploadExcel(jsonData);
         setSuccessMsg(" Thêm sách thành công!");
         setTimeout(() => {
           window.location.href = "/admin/books";
         }, 1500);
-        console.log("✅ Server response:", res.data);
+        console.log("✅ Server response:", res);
       } catch (err) {
-        console.error("❌ Lỗi khi gửi Excel:", err.response?.data || err.message);
-        if (err.response?.status === 401) {
-          alert("Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
+        console.error("❌ Lỗi khi gửi Excel:", err);
+        if (err.message) {
+          alert(err.message);
         } else {
           alert("Lỗi khi thêm sách. Xem console để biết thêm chi tiết.");
         }

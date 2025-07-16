@@ -93,7 +93,7 @@ const getAllBlogs = async (req, res) => {
         }
 
         const blogs = await Blog.find(query)
-            .populate('author', 'email info.fullName')
+            .populate('author', 'email info')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -127,7 +127,7 @@ const getBlogById = async (req, res) => {
     try {
         const query = { _id: req.params.id };
         const blog = await Blog.findOne(query)
-            .populate('author', 'email info.fullName');
+            .populate('author', 'email info');
 
         if (!blog) {
             return res.status(404).json({
@@ -177,7 +177,7 @@ const updateBlog = async (req, res) => {
             req.params.id,
             updatedFields,
             { new: true }
-        ).populate('author', 'email info.fullName');
+        ).populate('author', 'email info');
 
         // Log admin activity
         await AdminActivityLog.create({
@@ -256,7 +256,7 @@ const searchBlogs = async (req, res) => {
 
         const [blogs, total] = await Promise.all([
             Blog.find(query)
-                .populate('author', 'email info.fullName')
+                .populate('author', 'email info')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -326,7 +326,7 @@ const getBlogsByDateRange = async (req, res) => {
 
         const [blogs, total] = await Promise.all([
             Blog.find(query)
-                .populate('author', 'email info.fullName')
+                .populate('author', 'email info')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),

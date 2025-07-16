@@ -155,7 +155,7 @@ const Orders = () => {
 
     const columns = [
         { key: 'orderCode', label: 'Mã đơn' },
-        { key: 'fullName', label: 'Khách hàng', render: (order) => order.fullName || order.user?.customerInfo?.fullName || order.user?.email },
+        { key: 'fullName', label: 'Khách hàng', render: (order) => order.fullName || order.user?.info?.fullName || order.user?.email },
         { key: 'phone', label: 'Số điện thoại' },
         { key: 'totalAmount', label: 'Tổng tiền', render: (order) => order.totalAmount?.toLocaleString() + ' đ' },
         {
@@ -383,7 +383,7 @@ const Orders = () => {
                                 <div><span className="text-gray-500">Mã đơn:</span> <b>{selectedOrder.orderCode}</b></div>
                                 <div><span className="text-gray-500">Ngày tạo:</span> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
 
-                                <div><span className="text-gray-500">Khách hàng:</span> {selectedOrder.fullName || selectedOrder.user?.customerInfo?.fullName || selectedOrder.user?.email}</div>
+                                <div><span className="text-gray-500">Khách hàng:</span> {selectedOrder.fullName || selectedOrder.user?.info?.fullName || selectedOrder.user?.email}</div>
                                 <div><span className="text-gray-500">Số điện thoại:</span> {selectedOrder.phone}</div>
 
                                 <div><span className="text-gray-500">Địa chỉ:</span> {selectedOrder.address}</div>

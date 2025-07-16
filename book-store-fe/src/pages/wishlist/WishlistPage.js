@@ -171,7 +171,7 @@ const WishlistPage = () => {
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Wishlist</h1>
+        <h1 className="text-3xl font-bold">Danh sách sản phẩm yêu thích</h1>
         <Button
           variant="outline"
           onClick={() => navigate("/getbook")} // Fixed: using correct route
@@ -239,7 +239,7 @@ const WishlistPage = () => {
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
                         />
                         <span className="ml-3 text-sm font-medium text-gray-700">
-                          Select All (
+                          Chọn tất cả (
                           {
                             wishlistItems.filter(
                               (item) => item.book && item.book._id
@@ -266,7 +266,7 @@ const WishlistPage = () => {
                               <div className="flex items-center gap-2">
                                 <Icon icon="mdi:delete" className="w-4 h-4" />
                                 <span>
-                                  Remove Selected ({selectedItems.length})
+                                  Xóa tất cả ({selectedItems.length})
                                 </span>
                               </div>
                             )}
@@ -287,7 +287,7 @@ const WishlistPage = () => {
                               <div className="flex items-center gap-2">
                                 <Icon icon="mdi:cart-arrow-down" className="w-4 h-4" />
                                 <span>
-                                  Move Selected to Cart ({selectedItems.length})
+                                  Chuyển tất cả vào giỏ hàng ({selectedItems.length})
                                 </span>
                               </div>
                             )}
@@ -345,7 +345,7 @@ const WishlistPage = () => {
                               {item.book.title || "Unknown Title"}
                             </h3>
                             <p className="text-sm text-gray-600 mb-1 truncate">
-                              by{" "}
+                              Tác giả:{" "}
                               {item.book.authors && item.book.authors.length > 0
                                 ? item.book.authors.join(", ")
                                 : "Unknown Author"}
@@ -371,7 +371,7 @@ const WishlistPage = () => {
                                 </div>
                               )}
                             <p className="text-sm text-gray-500">
-                              Added{" "}
+                              Đã thêm:{" "}
                               {item.dateAdded
                                 ? new Date(item.dateAdded).toLocaleDateString(
                                   "vi-VN"
@@ -405,8 +405,8 @@ const WishlistPage = () => {
                                   }`}
                               >
                                 {(item.book.stockQuantity || 0) > 0
-                                  ? "In Stock"
-                                  : "Out of Stock"}
+                                  ? "Còn hàng"
+                                  : "Hết hàng"}
                               </span>
                             </div>
                           </div>
@@ -432,7 +432,7 @@ const WishlistPage = () => {
                                     icon="mdi:cart-plus"
                                     className="w-4 h-4"
                                   />
-                                  <span>Move to Cart</span>
+                                  <span>Chuyển vào giỏ hàng</span>
                                 </div>
                               )}
                             </Button>
@@ -445,7 +445,7 @@ const WishlistPage = () => {
                                 icon="mdi:heart-remove"
                                 className="w-4 h-4"
                               />
-                              <span>Remove</span>
+                              <span>Xóa</span>
                             </button>
                           </div>
                         </div>

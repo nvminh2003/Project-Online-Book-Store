@@ -39,7 +39,7 @@ const ChangePasswordForm = () => {
             setConfirmPassword('');
             setTimeout(() => navigate('/auth/profile'), 1500);
         } catch (err) {
-            setError(err.response?.data?.message || 'Đổi mật khẩu thất bại.');
+            setError(err.message || 'Đổi mật khẩu thất bại.');
         }
         setLoading(false);
     };

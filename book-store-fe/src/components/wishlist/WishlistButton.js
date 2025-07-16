@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useWishlist } from "../../contexts/WishlistContext";
+import { useAuth } from "../../contexts/AuthContext";
 import Button from "../common/Button";
 import { Icon } from "@iconify/react";
 
@@ -11,7 +12,14 @@ const WishlistButton = ({ bookId, className = "", variant = "default", onRequire
     loading,
     fetchWishlist,
   } = useWishlist();
+  const { user } = useAuth();
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Hide wishlist button for admin users
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness';
+  if (isAdmin) {
+    return null;
+  }
 
   // Check wishlist status from local context only
   const inWishlist = wishlistItems.some(
@@ -82,9 +90,9 @@ const WishlistButton = ({ bookId, className = "", variant = "default", onRequire
       variant={inWishlist ? "primary" : "outline"}
       onClick={handleToggleWishlist}
       disabled={loading || actionLoading}
-      className={`flex items-center space-x-2 transition-all duration-200 ${inWishlist
+      className={`group flex items-center space-x-2 transition-all duration-200 ${inWishlist
         ? "bg-red-500 hover:bg-red-600 text-white border-red-500"
-        : "border-gray-300 hover:border-red-300 hover:text-red-500"
+        : "border border-blue-500 text-blue-500 hover:border-blue-600 hover:text-blue-600"
         } ${className}`}
     >
       {actionLoading ? (
@@ -93,14 +101,15 @@ const WishlistButton = ({ bookId, className = "", variant = "default", onRequire
         <Icon
           icon={inWishlist ? "mdi:heart" : "mdi:heart-outline"}
           className="h-5 w-5"
+          color={inWishlist ? "white" : "#2563eb"} // #2563eb là blue-600
         />
       )}
-      <span>
+      <span className="group-hover:text-yellow-300">
         {actionLoading
-          ? "Processing..."
+          ? "Đang xử lý..."
           : inWishlist
-            ? "In Wishlist"
-            : "Add to Wishlist"}
+            ? "Đã yêu thích"
+            : "Thêm vào yêu thích"}
       </span>
     </Button>
   );

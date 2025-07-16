@@ -1,4 +1,5 @@
 import axios from "axios";
+import apiClient from './apiClient';
 
 const API_BASE_URL =
     process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api";
@@ -14,39 +15,36 @@ const getAxiosConfig = () => {
 };
 
 export const fetchCartAPI = async () => {
-    return axios.get(`${API_BASE_URL}/cart`, getAxiosConfig());
+    return apiClient.get(`${API_BASE_URL}/cart`);
 };
 
 export const addItemToCartAPI = async (bookId, quantity) => {
-    return axios.post(
+    return apiClient.post(
         `${API_BASE_URL}/cart/add`,
         {
             items: [{ bookId, quantity }],
-        },
-        getAxiosConfig()
+        }
     );
 };
 
 export const updateCartItemQuantityAPI = async (bookId, quantity) => {
-    return axios.put(
+    return apiClient.put(
         `${API_BASE_URL}/cart/items/${bookId}`,
-        { quantity },
-        getAxiosConfig()
+        { quantity }
     );
 };
 
 export const removeCartItemAPI = async (bookId) => {
-    return axios.delete(`${API_BASE_URL}/cart/items/${bookId}`, getAxiosConfig());
+    return apiClient.delete(`${API_BASE_URL}/cart/items/${bookId}`);
 };
 
 export const applyCouponToCartAPI = async (couponCode) => {
-    return axios.post(
+    return apiClient.post(
         `${API_BASE_URL}/cart/coupon`,
-        { couponCode },
-        getAxiosConfig()
+        { couponCode }
     );
 };
 
 export const clearCartAPI = async () => {
-    return axios.delete(`${API_BASE_URL}/cart/clear`, getAxiosConfig());
+    return apiClient.delete(`${API_BASE_URL}/cart/clear`);
 };

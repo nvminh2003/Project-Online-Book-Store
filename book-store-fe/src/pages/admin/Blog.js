@@ -53,7 +53,7 @@ const Blog = () => {
         },
         {
             key: 'author',
-            label: 'Tác giả',
+            label: 'Người tạo',
             render: (item) => (
                 <div className="whitespace-normal break-words max-w-xs">
                     {item.author?.info?.fullName || 'Ẩn danh'}

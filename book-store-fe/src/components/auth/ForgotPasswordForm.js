@@ -38,7 +38,7 @@ const ForgotPasswordForm = () => {
       )}
       {success && (
         <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
-          Mật khẩu mới đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.
+          Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.
         </div>
       )}
       <form onSubmit={handleSubmit}>
