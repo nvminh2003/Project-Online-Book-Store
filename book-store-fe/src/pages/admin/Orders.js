@@ -138,15 +138,33 @@ const Orders = () => {
 
     const handleExportExcel = async () => {
         try {
-            const blob = await orderService.exportOrdersToExcel();
-            // Tạo link download
-            const url = window.URL.createObjectURL(new Blob([blob]));
+            const params = {};
+            if (orderStatus) params.orderStatus = orderStatus;
+            if (paymentStatus) params.paymentStatus = paymentStatus;
+            if (paymentMethod) params.paymentMethod = paymentMethod;
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
+            if (searchTerm) params.searchTerm = searchTerm;
+
+            // Validate ngày
+            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+                notifyError('Ngày bắt đầu không được lớn hơn ngày kết thúc');
+                return;
+            }
+
+            // Tạo query string
+            const queryString = new URLSearchParams(params).toString();
+
+            // Gọi API xuất Excel
+            const response = await orderService.exportOrdersToExcel(queryString);
+
+            const url = window.URL.createObjectURL(new Blob([response]));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', 'orders.xlsx');
             document.body.appendChild(link);
             link.click();
-            link.parentNode.removeChild(link);
+            document.body.removeChild(link);
             notifySuccess('Xuất file Excel thành công!');
         } catch (err) {
             notifyError('Xuất file thất bại!');

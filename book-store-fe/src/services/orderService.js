@@ -101,10 +101,10 @@ const orderService = {
   },
 
   // Export orders to Excel
-  exportOrdersToExcel: async () => {
+  exportOrdersToExcel: async (queryString = '') => {
     try {
       const token = getToken();
-      const response = await apiClient.get(`${API_URL}/orders/export/excel`, {
+      const response = await apiClient.get(`${API_URL}/orders/export/excel?${queryString}`, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${token}`

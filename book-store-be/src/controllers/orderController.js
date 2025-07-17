@@ -240,7 +240,9 @@ const createOrder = async (req, res) => {
 
       // Check if all stock updates were successful
       if (result.modifiedCount !== orderItems.length) {
-        // Rollback: some books didn't have enough stock
+        // Rollback: xóa đơn hàng vừa tạo
+        await Order.findByIdAndDelete(newOrder._id);
+
         // Find which books failed
         const failedBooks = [];
         for (const item of orderItems) {
@@ -801,6 +803,7 @@ const handlePayosSuccess = async (req, res) => {
         .status(404)
         .json({ message: "Order not found", status: "Error" });
     }
+    // Nếu đã thanh toán rồi thì không xử lý lại
     if (order.paymentStatus === "paid") {
       return res.status(200).json({
         message: "Order already paid",
@@ -808,18 +811,55 @@ const handlePayosSuccess = async (req, res) => {
         data: order,
       });
     }
-    // Optionally, verify with PayOS API
-    // const payosStatus = await payos.getOrderStatus(order.orderCode);
-    // if (payosStatus.status !== 'PAID') { ... }
+
+    // Atomic stock update for all items  // Thử trừ tồn kho bằng bulkWrite
+    const bulkOps = order.items.map((item) => ({
+      updateOne: {
+        filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
+        update: { $inc: { stockQuantity: -item.quantity } },
+      },
+    }));
+    const result = await Book.bulkWrite(bulkOps);
+
+    // Nếu có bất kỳ sản phẩm nào không đủ tồn kho
+    if (result.modifiedCount !== order.items.length) {
+      // Rollback: set order status to cancelled, paymentStatus to failed
+      order.paymentStatus = "failed";
+      order.orderStatus = "cancelled";
+      await order.save();
+      // Xác định sản phẩm nào lỗi
+      const failedBooks = [];
+      for (const item of order.items) {
+        const book = await Book.findById(item.book);
+        if (!book || book.stockQuantity < item.quantity) {
+          failedBooks.push(book ? book.title : item.book.toString());
+        }
+      }
+      return res.status(400).json({
+        message: `Insufficient stock for: ${failedBooks.join(", ")}. Your payment was successful but the order could not be fulfilled. Please contact support for a refund or try again later!`,
+        status: "Error",
+        data: { orderId: order._id },
+      });
+    }
+
+    // Nếu tất cả cập nhật tồn kho thành công
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";
     await order.save();
-    // Reduce stock
-    for (const item of order.items) {
-      await Book.findByIdAndUpdate(item.book, {
-        $inc: { stockQuantity: -item.quantity },
-      });
+
+    // 1. Clear giỏ hàng sau khi thanh toán PayOS thành công
+    await Cart.updateOne(
+      { user: order.user },
+      { $set: { items: [], coupon: null, subtotal: 0 } }
+    );
+
+    // 2. Gửi email xác nhận đơn hàng
+    const user = await Account.findById(order.user);
+    if (user?.email) {
+      const populatedOrder = await Order.findById(order._id).populate("items.book");
+      await sendOrderConfirmationEmail(user.email, populatedOrder);
     }
+
     return res.status(200).json({
       message: "Order payment successful",
       status: "Success",
@@ -833,49 +873,91 @@ const handlePayosSuccess = async (req, res) => {
 const handlePayosCancel = async (req, res) => {
   try {
     const { orderId } = req.params;
-    console.log("[PayOS Cancel] Cancel request for orderId:", orderId);
+    console.log(`[${new Date().toISOString()}] [PayOS Cancel] Cancel request for orderId: ${orderId}`);
+
     const order = await Order.findById(orderId);
     if (!order) {
-      console.error("[PayOS Cancel] Order not found:", orderId);
-      return res
-        .status(404)
-        .json({ message: "Order not found", status: "Error" });
+      console.error(`[${new Date().toISOString()}] [PayOS Cancel] Order not found: ${orderId}`);
+      return res.status(404).json({ message: "Order not found", status: "Error" });
     }
-    if (
-      order.paymentStatus === "failed" ||
-      order.paymentStatus === "cancelled"
-    ) {
-      console.log("[PayOS Cancel] Order already cancelled:", orderId);
+
+    if (order.paymentStatus === "paid") {
+      return res.status(400).json({
+        message: "Order has already been paid and cannot be cancelled.",
+        status: "Error",
+      });
+    }
+
+    if (["failed", "cancelled"].includes(order.paymentStatus)) {
+      console.log(`[${new Date().toISOString()}] [PayOS Cancel] Order already cancelled: ${orderId}`);
       return res.status(200).json({
         message: "Order already cancelled",
         status: "Success",
         data: order,
       });
     }
+
     order.paymentStatus = "failed";
     order.orderStatus = "cancelled";
     await order.save();
-    // Optionally, restore stock
-    for (const item of order.items) {
-      await Book.findByIdAndUpdate(item.book, {
+
+    // Khôi phục tồn kho an toàn (song song)
+    await Promise.all(order.items.map(item =>
+      Book.findByIdAndUpdate(item.book, {
         $inc: { stockQuantity: item.quantity },
-      });
-    }
-    console.log("[PayOS Cancel] Order cancelled and stock restored:", orderId);
+      })
+    ));
+
+    console.log(`[${new Date().toISOString()}] [PayOS Cancel] Order cancelled and stock restored: ${orderId}`);
     return res.status(200).json({
       message: "Order payment cancelled",
       status: "Success",
       data: order,
     });
   } catch (error) {
-    console.error("[PayOS Cancel] Error:", error);
+    console.error(`[${new Date().toISOString()}] [PayOS Cancel] Error:`, error);
     return res.status(500).json({ message: error.message, status: "Error" });
   }
 };
 
 const exportOrdersToExcel = async (req, res) => {
   try {
-    const orders = await Order.find({})
+    const { orderStatus, paymentStatus, paymentMethod, startDate, endDate, searchTerm } = req.query;
+
+    const query = {};
+
+    // Lọc trạng thái đơn hàng
+    if (orderStatus) query.orderStatus = orderStatus;
+
+    // Lọc trạng thái thanh toán
+    if (paymentStatus) query.paymentStatus = paymentStatus;
+
+    // Lọc phương thức thanh toán
+    if (paymentMethod) query.paymentMethod = paymentMethod;
+
+    // Lọc theo ngày tạo
+    if (startDate && startDate !== 'undefined') {
+      query.createdAt = query.createdAt || {};
+      query.createdAt.$gte = new Date(startDate);
+    }
+
+    if (endDate && endDate !== 'undefined') {
+      query.createdAt = query.createdAt || {};
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = end;
+    }
+
+    // Lọc theo mã đơn, tên, email, sdt
+    if (searchTerm) {
+      query.$or = [
+        { orderCode: { $regex: searchTerm, $options: 'i' } },
+        { fullName: { $regex: searchTerm, $options: 'i' } },
+        { phone: { $regex: searchTerm, $options: 'i' } },
+      ];
+    }
+
+    const orders = await Order.find(query)
       .populate("items.book", "title")
       .populate("user", "email info.fullName")
       .sort({ createdAt: -1 });
@@ -889,6 +971,7 @@ const exportOrdersToExcel = async (req, res) => {
       'Tổng tiền': order.totalAmount,
       'Trạng thái đơn': order.orderStatus,
       'Trạng thái thanh toán': order.paymentStatus,
+      'Phương thức thanh toán': order.paymentMethod,
       'Ngày tạo': order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
       'Sản phẩm': order.items.map(i => `${i.book?.title} (SL: ${i.quantity})`).join('; ')
     }));

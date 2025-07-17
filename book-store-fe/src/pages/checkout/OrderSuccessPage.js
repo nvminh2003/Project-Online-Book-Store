@@ -155,6 +155,13 @@ const OrderSuccessPage = () => {
             Cảm ơn bạn đã mua hàng. Chúng tôi sẽ sớm liên hệ để xác nhận đơn
             hàng.
           </p>
+          <p className="mt-4 text-sm text-green-700">
+            📬 Vui lòng kiểm tra email để xem chi tiết đơn hàng. Nếu bạn không nhận được email sau vài phút, vui lòng liên hệ:
+          </p>
+          <p className="text-sm text-gray-700 mt-1">
+            📞 <strong>Hotline:</strong> <a href="tel:0974148047" className="text-blue-600 hover:underline no-underline">097 4148 047</a><br />
+            📧 <strong>Email:</strong> <a href="mailto:bookstore@gmail.com" className="text-blue-600 hover:underline no-underline">bookstore@gmail.com</a>
+          </p>
           {orderCode && (
             <p className="mt-2 text-md">
               Mã đơn hàng của bạn:{" "}
