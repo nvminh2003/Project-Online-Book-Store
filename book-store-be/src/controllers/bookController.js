@@ -235,6 +235,17 @@ const updateBook = async (req, res) => {
       });
     }
 
+    // Kiểm tra ISBN trùng với sách khác (không phải sách đang sửa)
+    if (isbn && isbn !== book.isbn) {
+      const existed = await Book.findOne({ isbn: isbn, _id: { $ne: new mongoose.Types.ObjectId(req.params.id) } });
+      if (existed) {
+        return res.status(400).json({
+          message: "ISBN đã tồn tại cho một sách khác.",
+          status: "Error",
+        });
+      }
+    }
+
     // Generate new slug if title is changed
     const slug =
       title !== book.title
@@ -320,16 +331,14 @@ const deleteBook = async (req, res) => {
     });
   }
 };
+
 const uploadBooksFromExcel = async (req, res) => {
   try {
     const books = req.body.books;
     if (!Array.isArray(books)) {
-      return res
-        .status(400)
-        .json({ message: "Invalid books data", status: "Error" });
+      return res.status(400).json({ message: "Invalid books data", status: "Error" });
     }
 
-    // Hàm tạo slug như bên createBook
     function removeVietnameseTones(str) {
       return str
         .normalize("NFD")
@@ -338,113 +347,121 @@ const uploadBooksFromExcel = async (req, res) => {
         .replace(/Đ/g, "D");
     }
 
+    // Các trường bắt buộc theo bookModel.js
+    const requiredFields = [
+      "title", "authors", "publisher", "publicationYear", "pageCount", "coverType", "description", "images", "isbn", "originalPrice", "sellingPrice", "stockQuantity", "categories"
+    ];
+
     const createdBooks = [];
+    const errors = [];
 
-    for (const book of books) {
-      const {
-        title,
-        authors,
-        publisher,
-        publicationYear,
-        pageCount,
-        coverType,
-        description,
-        images,
-        isbn,
-        originalPrice,
-        sellingPrice,
-        stockQuantity,
-        isFeatured,
-        isNewArrival,
-        categories,
-      } = book;
-
-      if (
-        !title ||
-        !authors ||
-        !publisher ||
-        !originalPrice ||
-        !sellingPrice ||
-        !stockQuantity
-      ) {
-        continue; // Bỏ qua nếu thiếu trường bắt buộc
+    for (const [idx, book] of books.entries()) {
+      const excelRow = idx + 2; // Hàng đầu tiên là header, dữ liệu bắt đầu từ hàng 2
+      // Validate đủ trường
+      const missingFields = requiredFields.filter(f => !book[f] || (Array.isArray(book[f]) ? book[f].length === 0 : String(book[f]).trim() === ""));
+      if (missingFields.length > 0) {
+        errors.push({
+          row: excelRow,
+          title: book.title || "(Không có tiêu đề)",
+          error: `Thiếu trường: ${missingFields.join(", ")}`
+        });
+        continue;
       }
 
-      const slug = removeVietnameseTones(title)
+      // Kiểm tra ISBN trùng
+      const isbn = String(book.isbn).trim();
+      if (!isbn) {
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "ISBN không hợp lệ" });
+        continue;
+      }
+      const existed = await Book.findOne({ isbn });
+      if (existed) {
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "ISBN đã tồn tại" });
+        continue;
+      }
+
+      // Xử lý images đảm bảo đúng kiểu mảng chuỗi
+      let imageArray = [];
+      if (typeof book.images === "string") {
+        imageArray = book.images.split(",").map((img) => img.trim()).filter(Boolean);
+      } else if (Array.isArray(book.images)) {
+        imageArray = book.images.map((img) => String(img).trim()).filter(Boolean);
+      }
+      if (!Array.isArray(imageArray) || imageArray.length === 0) {
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Ảnh sách không hợp lệ" });
+        continue;
+      }
+
+      // Xử lý categories từ slug
+      let categoryIds = [];
+      if (book.categories) {
+        let categorySlugs = Array.isArray(book.categories)
+          ? book.categories.map((c) => String(c).trim())
+          : String(book.categories).split(",").map((c) => c.trim());
+        const foundCategories = await Category.find({ slug: { $in: categorySlugs } });
+        categoryIds = foundCategories.map((cat) => cat._id);
+        if (categoryIds.length === 0) {
+          errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Không tìm thấy danh mục hợp lệ" });
+          continue;
+        }
+      }
+
+      // Parse các trường số
+      const publicationYear = parseInt(book.publicationYear);
+      const pageCount = parseInt(book.pageCount);
+      const originalPrice = parseFloat(book.originalPrice);
+      const sellingPrice = parseFloat(book.sellingPrice);
+      const stockQuantity = parseInt(book.stockQuantity);
+      if (
+        isNaN(publicationYear) || publicationYear <= 0 ||
+        isNaN(pageCount) || pageCount <= 0 ||
+        isNaN(originalPrice) || originalPrice <= 0 ||
+        isNaN(sellingPrice) || sellingPrice <= 0 ||
+        isNaN(stockQuantity) || stockQuantity < 0
+      ) {
+        errors.push({ row: excelRow, title: book.title || "(Không có tiêu đề)", error: "Giá trị số không hợp lệ" });
+        continue;
+      }
+
+      const slug = removeVietnameseTones(book.title)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
 
-      // ✅ Xử lý images đảm bảo đúng kiểu mảng chuỗi
-      let imageArray = [];
-      if (typeof images === "string") {
-        imageArray = images
-          .split(",")
-          .map((img) => img.trim())
-          .filter(Boolean);
-      } else if (Array.isArray(images)) {
-        imageArray = images.map((img) => String(img).trim()).filter(Boolean);
-      }
-
-      if (!Array.isArray(imageArray)) {
-        console.warn(
-          `⚠️ images for book "${title}" is not an array. Received:`,
-          images
-        );
-        imageArray = [];
-      }
-
-      // Log rõ ràng để debug
-      console.log(`📦 Đang xử lý sách: ${title}`);
-      console.log("🔗 images:", imageArray);
-
-      // Xử lý categories từ slug
-      let categoryIds = [];
-      if (categories) {
-        const categorySlugs = categories.split(",").map((c) => c.trim());
-        const foundCategories = await Category.find({
-          slug: { $in: categorySlugs },
-        });
-        categoryIds = foundCategories.map((cat) => cat._id);
-      }
-
       const newBook = new Book({
-        title,
+        title: book.title,
         slug,
-        authors: authors?.split(",").map((a) => a.trim()),
-        publisher,
-        publicationYear: publicationYear
-          ? parseInt(publicationYear)
-          : undefined,
-        pageCount: pageCount ? parseInt(pageCount) : undefined,
-        coverType,
-        description,
+        authors: Array.isArray(book.authors) ? book.authors : String(book.authors).split(",").map((a) => a.trim()),
+        publisher: book.publisher,
+        publicationYear,
+        pageCount,
+        coverType: book.coverType,
+        description: book.description,
         images: imageArray,
         isbn,
-        originalPrice: parseFloat(originalPrice),
-        sellingPrice: parseFloat(sellingPrice),
-        stockQuantity: parseInt(stockQuantity),
-        isFeatured: isFeatured || false,
-        isNewArrival: isNewArrival || false,
+        originalPrice,
+        sellingPrice,
+        stockQuantity,
+        isFeatured: book.isFeatured || false,
+        isNewArrival: book.isNewArrival || false,
         categories: categoryIds,
         createdBy: req.account._id,
       });
 
       await newBook.save();
-
       await AdminActivityLog.create({
         adminId: req.account._id,
         action: "CREATE_BOOK",
         details: `Admin ${req.account.email} imported book "${newBook.title}" (ID: ${newBook._id}) via Excel`,
       });
-
       createdBooks.push(newBook);
     }
 
     res.status(201).json({
-      message: "Import sách thành công",
-      status: "Success",
+      message: `Import hoàn tất. Đã thêm ${createdBooks.length} sách, ${errors.length} sách chưa được thêm.`,
+      status: errors.length > 0 ? "PartialSuccess" : "Success",
       data: createdBooks,
+      errors,
     });
   } catch (err) {
     console.error("❌ Lỗi import Excel:", err);
