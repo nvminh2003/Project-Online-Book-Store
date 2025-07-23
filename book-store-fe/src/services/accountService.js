@@ -1,12 +1,13 @@
 import axios from 'axios';
+import apiClient from './apiClient';
 
-const API_URL = process.env.REACT_APP_API_URL_BACKEND || 'http://localhost:3000/api';
+const API_URL = process.env.REACT_APP_API_URL_BACKEND || 'http://localhost:9999/api';
 
 const accountService = {
     // Register
     register: async (userData) => {
         try {
-            const response = await axios.post(`${API_URL}/accounts/register`, userData);
+            const response = await apiClient.post(`${API_URL}/accounts/register`, userData);
             if (response.data.status === "Success") {
                 localStorage.setItem('accessToken', response.data.data.accessToken);
                 localStorage.setItem('refreshToken', response.data.data.refreshToken);
@@ -21,7 +22,7 @@ const accountService = {
     // Login
     login: async (credentials) => {
         try {
-            const response = await axios.post(`${API_URL}/accounts/login`, credentials);
+            const response = await apiClient.post(`${API_URL}/accounts/login`, credentials);
             if (response.data.status === "Success") {
                 localStorage.setItem('accessToken', response.data.data.accessToken);
                 localStorage.setItem('refreshToken', response.data.data.refreshToken);
@@ -37,7 +38,7 @@ const accountService = {
     logout: async () => {
         try {
             const token = localStorage.getItem('accessToken');
-            await axios.post(`${API_URL}/accounts/logout`, {}, {
+            await apiClient.post(`${API_URL}/accounts/logout`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             localStorage.removeItem('accessToken');
@@ -51,7 +52,7 @@ const accountService = {
     refreshToken: async () => {
         try {
             const refreshToken = localStorage.getItem('refreshToken');
-            const response = await axios.post(`${API_URL}/accounts/refresh-token`, { refreshToken });
+            const response = await apiClient.post(`${API_URL}/accounts/refresh-token`, { refreshToken });
             if (response.data.status === "Success") {
                 localStorage.setItem('accessToken', response.data.data.accessToken);
                 return response.data;
@@ -91,111 +92,170 @@ const accountService = {
 
     // Get profile from backend
     getProfile: async () => {
-        const token = localStorage.getItem('accessToken');
-        const response = await axios.get(`${API_URL}/accounts/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await apiClient.get(`${API_URL}/accounts/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi lấy thông tin profile');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi lấy thông tin profile');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi lấy thông tin profile');
     },
 
     // Update profile
     updateProfile: async (payload) => {
-        const token = localStorage.getItem('accessToken');
-        const response = await axios.put(`${API_URL}/accounts/profile`, payload, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await apiClient.put(`${API_URL}/accounts/profile`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi cập nhật profile');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi cập nhật profile');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi cập nhật profile');
     },
 
     // Change password
     changePassword: async ({ oldPassword, newPassword }) => {
-        const token = localStorage.getItem('accessToken');
-        const response = await axios.put(`${API_URL}/accounts/change-password`, { oldPassword, newPassword }, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await apiClient.put(`${API_URL}/accounts/change-password`, { oldPassword, newPassword }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi đổi mật khẩu');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi đổi mật khẩu');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi đổi mật khẩu');
     },
 
     // Forgot password
     forgotPassword: async (email) => {
-        const response = await axios.post(`${API_URL}/accounts/forgot-password`, { email });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const response = await apiClient.post(`${API_URL}/accounts/forgot-password`, { email });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi gửi yêu cầu quên mật khẩu');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi gửi yêu cầu quên mật khẩu');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi gửi yêu cầu quên mật khẩu');
     },
 
     // Reset password
     resetPassword: async (token, newPassword) => {
-        const response = await axios.post(`${API_URL}/accounts/reset-password`, { token, newPassword });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const response = await apiClient.post(`${API_URL}/accounts/reset-password`, { token, newPassword });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi đặt lại mật khẩu');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi đặt lại mật khẩu');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi đặt lại mật khẩu');
     },
 
     // Get all users with search and filters
     getAllUsers: async (params = {}) => {
-        const token = localStorage.getItem('accessToken');
-        const queryString = new URLSearchParams({
-            ...params,
-            _t: Date.now() // Add timestamp to prevent caching
-        }).toString();
+        try {
+            const token = localStorage.getItem('accessToken');
+            const queryString = new URLSearchParams({
+                ...params,
+                _t: Date.now() // Add timestamp to prevent caching
+            }).toString();
 
-        const response = await axios.get(`${API_URL}/accounts?${queryString}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+            const response = await apiClient.get(`${API_URL}/accounts?${queryString}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi lấy danh sách người dùng');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi lấy danh sách người dùng');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi lấy danh sách người dùng');
     },
 
     // Thêm vào accountService.js
     updateUser: async (userId, userData) => {
-        const token = localStorage.getItem('accessToken');
-        const response = await axios.put(`${API_URL}/accounts/${userId}`, userData, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await apiClient.put(`${API_URL}/accounts/${userId}`, userData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi cập nhật người dùng');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi cập nhật người dùng');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi cập nhật người dùng');
     },
 
     //delete 
     deleteUser: async (userId) => {
-        const token = localStorage.getItem('accessToken');
-        const response = await axios.delete(`${API_URL}/accounts/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.status === 'Success') {
-            return response.data;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await apiClient.delete(`${API_URL}/accounts/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.status === 'Success') {
+                return response.data;
+            }
+            throw new Error(response.data.message || 'Lỗi xóa người dùng');
+        } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi xóa người dùng');
+            }
+            throw error;
         }
-        throw new Error(response.data.message || 'Lỗi xóa người dùng');
     },
 
     // Create account by Admin
     createAccountByAdmin: async (userData) => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await axios.post(`${API_URL}/accounts/admin/create`, userData, {
+            const response = await apiClient.post(`${API_URL}/accounts/admin/create`, userData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.data.status === "Success") {
                 return response.data;
             }
-            throw new Error(response.data.message);
+            throw new Error(response.data.message || 'Lỗi tạo tài khoản');
         } catch (error) {
+            if (error.response && error.response.data) {
+                throw new Error(error.response.data.message || 'Lỗi tạo tài khoản');
+            }
             throw error;
         }
     }

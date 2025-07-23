@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
-const { checkAuthMiddleware } = require("../middleware/authMiddleware");
+const { checkAuthMiddleware, authorizeRole } = require("../middleware/authMiddleware");
+const A = require('../utils/actionTypes');
+const checkPermission = require("../middleware/checkPermission");
 
-// --- PayOS webhook (no auth) ---
+// --- PayOS webhook and callbacks (no auth required) ---
 router.post("/payos/webhook", orderController.payosWebhook);
+router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
+router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
 
 // All order routes below require authentication
 router.use(checkAuthMiddleware);
@@ -15,14 +19,42 @@ router.get("/payos/order-status", orderController.getPayosOrderStatus);
 
 // Public routes (authenticated users)
 router.post("/", orderController.createOrder);
-router.get("/", orderController.getAllOrders);
-router.get("/:id", orderController.getOrderById);
 
-// PayOS checkout success/cancel handlers
-router.get("/payos/success/:orderId", orderController.handlePayosSuccess);
-router.get("/payos/cancel/:orderId", orderController.handlePayosCancel);
+// Customer routes
+router.get('/my-orders',
+    authorizeRole(['customer']),
+    orderController.getUserOrders
+);
+router.get('/:id/detail',
+    authorizeRole(['adminbusiness', 'customer']),
+    orderController.getOrderById
+);
+router.get(
+    "/:id",
+    authorizeRole(["adminbusiness", "customer"]),
+    orderController.getOrderById
+);
 
-// Admin only routes
-router.put("/:id/status", orderController.updateOrderStatus);
-
+// Admin routes
+router.get("/",
+    authorizeRole(['adminbusiness']),
+    orderController.getAllOrders
+);
+router.patch(
+    "/update-order-status/:id",
+    authorizeRole(['adminbusiness']),
+    checkPermission(A.UPDATE_ORDER_STATUS),
+    orderController.updateOrderStatus
+);
+router.patch(
+    "/update-payment-status/:id",
+    authorizeRole(['adminbusiness']),
+    checkPermission(A.UPDATE_PAYMENT_STATUS),
+    orderController.updatePaymentStatus
+);
+router.get(
+    "/export/excel",
+    authorizeRole(['adminbusiness']),
+    orderController.exportOrdersToExcel
+);
 module.exports = router;

@@ -26,6 +26,8 @@ module.exports = {
         A.CREATE_ORDER,
         A.UPDATE_ORDER,
         A.DELETE_ORDER,
-        A.VIEW_SALES_REPORT
+        A.VIEW_SALES_REPORT,
+        A.UPDATE_ORDER_STATUS,
+        A.UPDATE_PAYMENT_STATUS
     ]
 };

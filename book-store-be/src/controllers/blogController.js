@@ -50,6 +50,21 @@ const getAllBlogs = async (req, res) => {
         const skip = (page - 1) * limit;
         const { createdAt, from, to, searchTerm } = req.query;
 
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
         const query = {};
 
         // 🔍 Tìm kiếm theo tiêu đề hoặc nội dung
@@ -78,7 +93,7 @@ const getAllBlogs = async (req, res) => {
         }
 
         const blogs = await Blog.find(query)
-            .populate('author', 'email info.fullName')
+            .populate('author', 'email info')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -112,7 +127,7 @@ const getBlogById = async (req, res) => {
     try {
         const query = { _id: req.params.id };
         const blog = await Blog.findOne(query)
-            .populate('author', 'email info.fullName');
+            .populate('author', 'email info');
 
         if (!blog) {
             return res.status(404).json({
@@ -162,7 +177,7 @@ const updateBlog = async (req, res) => {
             req.params.id,
             updatedFields,
             { new: true }
-        ).populate('author', 'email info.fullName');
+        ).populate('author', 'email info');
 
         // Log admin activity
         await AdminActivityLog.create({
@@ -241,7 +256,7 @@ const searchBlogs = async (req, res) => {
 
         const [blogs, total] = await Promise.all([
             Blog.find(query)
-                .populate('author', 'email info.fullName')
+                .populate('author', 'email info')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
@@ -277,6 +292,21 @@ const getBlogsByDateRange = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
+        // Validate date range
+        if ((from && !to) || (!from && to)) {
+            return res.status(400).json({
+                message: "Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
+        if (from && to && from > to) {
+            return res.status(400).json({
+                message: "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+                status: "Error"
+            });
+        }
+
         const query = {};
         if (from && to) {
             const fromDate = new Date(from);
@@ -296,7 +326,7 @@ const getBlogsByDateRange = async (req, res) => {
 
         const [blogs, total] = await Promise.all([
             Blog.find(query)
-                .populate('author', 'email info.fullName')
+                .populate('author', 'email info')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),

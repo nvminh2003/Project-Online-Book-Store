@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@iconify/react": "^6.0.0",
-    "@reduxjs/toolkit": "^2.8.2",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -19,10 +19,11 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.1",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
-    "xlsx": "^0.18.5",
+    "recharts": "^3.0.2",
     "suneditor": "^2.47.5",
-    "suneditor-react": "^3.6.1"
+    "suneditor-react": "^3.6.1",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -47,5 +48,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
   }
 }

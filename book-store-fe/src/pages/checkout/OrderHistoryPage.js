@@ -1,227 +1,320 @@
-import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
-import MainLayout from "../../components/layout/MainLayout";
-import Spinner from "../../components/common/Spinner";
-import Button from "../../components/common/Button";
-import Pagination from "../../components/common/Pagination";
-import {
-  fetchOrderHistoryAPI,
-  selectOrderHistory,
-  selectOrderPagination,
-  selectOrderStatus,
-  selectOrderError,
-} from "../../store/slices/orderSlice";
-import { useAuth } from "../../contexts/AuthContext";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import Spinner from '../../components/common/Spinner';
+import Button from '../../components/common/Button';
+import Pagination from '../../components/common/Pagination';
+import orderService from '../../services/orderService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const OrderHistoryPage = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { isAuthenticated, loading: authLoading } = useAuth();
-
-  const orders = useSelector(selectOrderHistory);
-  const pagination = useSelector(selectOrderPagination);
-  const orderStatus = useSelector(selectOrderStatus);
-  const orderError = useSelector(selectOrderError);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const limitPerPage = 10;
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalOrders: 0
+  });
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        navigate("/auth/login", { state: { from: { pathname: "/orders" } } });
-      } else if (orderStatus !== "loading_history") {
-        dispatch(
-          fetchOrderHistoryAPI({ page: currentPage, limit: limitPerPage })
-        );
+    if (isAuthenticated) {
+      // Đảm bảo luôn bắt đầu từ trang 1 để xem đơn hàng mới nhất
+      if (pagination.page !== 1) {
+        setPagination(prev => ({ ...prev, page: 1 }));
+      } else {
+        fetchOrders();
       }
     }
-  }, [
-    dispatch,
-    isAuthenticated,
-    authLoading,
-    navigate,
-    currentPage,
-    orderStatus,
-  ]);
+  }, [isAuthenticated, pagination.page]);
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= (pagination?.totalPages || 1)) {
-      setCurrentPage(newPage);
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await orderService.getUserOrders({
+        page: pagination.page,
+        limit: pagination.limit
+      });
+
+      // Đảm bảo sắp xếp theo createdAt mới nhất trước
+      const sortedOrders = (response.data.orders || []).sort((a, b) =>
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setOrders(sortedOrders);
+
+      // Nếu response.data.pagination tồn tại
+      if (response.data.pagination) {
+        setPagination(prev => ({
+          ...prev,
+          ...response.data.pagination
+        }));
+      }
+
+    } catch (err) {
+      setError(err.message || 'Có lỗi xảy ra khi tải lịch sử đơn hàng');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (
-    authLoading ||
-    (orderStatus === "loading_history" && orders.length === 0)
-  ) {
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleRefresh = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchOrders();
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      pending: { text: 'Chờ xử lý', className: 'bg-yellow-100 text-yellow-800' },
+      confirmed: { text: 'Đang xử lý', className: 'bg-blue-100 text-blue-800' },
+      // shipping: { text: 'Đang giao', className: 'bg-purple-100 text-purple-800' },
+      completed: { text: 'Hoàn thành', className: 'bg-green-100 text-green-800' },
+      cancelled: { text: 'Đã hủy', className: 'bg-red-100 text-red-800' }
+    };
+
+    const config = statusConfig[status] || { text: status, className: 'bg-gray-100 text-gray-800' };
+
     return (
-      <MainLayout>
-        <div className="container mx-auto p-6 text-center">
-          <Spinner />
-          <p className="mt-4">Đang tải lịch sử đơn hàng...</p>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+        {config.text}
+      </span>
+    );
+  };
+
+  const getPaymentStatusBadge = (status) => {
+    const statusConfig = {
+      pending: { text: 'Chờ thanh toán', className: 'bg-yellow-100 text-yellow-800' },
+      paid: { text: 'Đã thanh toán', className: 'bg-green-100 text-green-800' },
+      failed: { text: 'Thanh toán thất bại', className: 'bg-red-100 text-red-800' },
+      // refunded: { text: 'Đã hoàn tiền', className: 'bg-gray-100 text-gray-800' }
+    };
+
+    const config = statusConfig[status] || { text: status, className: 'bg-gray-100 text-gray-800' };
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.className}`}>
+        {config.text}
+      </span>
+    );
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-4">Vui lòng đăng nhập</h1>
+          <p className="text-gray-600 mb-4">Bạn cần đăng nhập để xem lịch sử đơn hàng</p>
+          <Link to="/auth/login">
+            <Button>Đăng nhập</Button>
+          </Link>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
-  if (orderStatus === "failed_history" && orders.length === 0) {
+  if (loading) {
     return (
-      <MainLayout>
-        <div className="container mx-auto p-6 text-center text-red-500">
-          <p>Lỗi khi tải lịch sử đơn hàng: {String(orderError)}</p>
-          <Button
-            onClick={() =>
-              dispatch(
-                fetchOrderHistoryAPI({ page: currentPage, limit: limitPerPage })
-              )
-            }
-            className="mt-4"
-          >
-            Thử lại
-          </Button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center min-h-64">
+          <Spinner />
         </div>
-      </MainLayout>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-4 text-red-600">Lỗi</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={fetchOrders}>Thử lại</Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-semibold mb-8 text-center text-gray-800">
-          Lịch sử đơn hàng
-        </h1>
-        {orders.length === 0 && orderStatus === "succeeded_history" ? (
-          <div className="text-center text-gray-600 py-10">
-            <p className="text-xl mb-4">Bạn chưa có đơn hàng nào.</p>
-            <Link
-              to="/products"
-              className="text-blue-600 hover:text-blue-800 font-semibold"
-            >
-              Bắt đầu mua sắm ngay!
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {orders.map((order) => (
-              <div
-                key={order._id}
-                className="bg-white shadow-lg rounded-lg p-6 hover:shadow-xl transition-shadow"
-              >
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 pb-3 border-b">
-                  <div>
-                    <p className="text-sm text-gray-500">Mã đơn hàng:</p>
-                    <p className="text-lg font-semibold text-blue-600">
-                      {order.orderCode}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2 sm:mt-0">
-                    Ngày đặt:{" "}
-                    {new Date(order.createdAt).toLocaleDateString("vi-VN")}
-                  </p>
-                </div>
-
-                <div className="mb-3">
-                  {order.items.slice(0, 2).map((item) => (
-                    <div
-                      key={item._id || item.book?._id}
-                      className="flex items-center text-sm py-1"
-                    >
-                      <img
-                        src={item.book?.images?.[0] || "/default-book.jpg"}
-                        alt={item.book?.title}
-                        className="w-10 h-12 object-cover rounded mr-3"
-                      />
-                      <span>
-                        {item.book?.title || "Sản phẩm đã bị xóa"} (x
-                        {item.quantity})
-                      </span>
-                    </div>
-                  ))}
-                  {order.items.length > 2 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      và {order.items.length - 2} sản phẩm khác...
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-sm">
-                  <div>
-                    <p className="text-gray-600">
-                      Trạng thái ĐH:{" "}
-                      <span
-                        className={`font-medium px-2 py-0.5 rounded-full text-xs ${
-                          order.orderStatus === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : order.orderStatus === "cancelled"
-                            ? "bg-red-100 text-red-700"
-                            : order.orderStatus === "shipping"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700" // pending
-                        }`}
-                      >
-                        {order.orderStatus === "pending"
-                          ? "Chờ xử lý"
-                          : order.orderStatus === "shipping"
-                          ? "Đang giao"
-                          : order.orderStatus === "completed"
-                          ? "Hoàn thành"
-                          : order.orderStatus === "cancelled"
-                          ? "Đã hủy"
-                          : order.orderStatus}
-                      </span>
-                    </p>
-                    <p className="text-gray-600 mt-1">
-                      Thanh toán:{" "}
-                      <span
-                        className={`font-medium px-2 py-0.5 rounded-full text-xs ${
-                          order.paymentStatus === "paid"
-                            ? "bg-green-100 text-green-700"
-                            : order.paymentStatus === "failed"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700" // pending
-                        }`}
-                      >
-                        {order.paymentStatus === "pending"
-                          ? "Chờ thanh toán"
-                          : order.paymentStatus === "paid"
-                          ? "Đã thanh toán"
-                          : order.paymentStatus === "failed"
-                          ? "Thất bại"
-                          : order.paymentStatus}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="mt-3 sm:mt-0 text-right">
-                    <p className="text-gray-500">Tổng tiền:</p>
-                    <p className="text-lg font-bold text-gray-800">
-                      {(order.totalAmount || 0).toLocaleString("vi-VN")}đ
-                    </p>
-                    <Link
-                      to={`/orders/${order._id}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm mt-1 inline-block"
-                    >
-                      Xem chi tiết
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {pagination && pagination.totalPages > 1 && (
-              <div className="mt-8">
-                <Pagination
-                  currentPage={pagination.page}
-                  totalPages={pagination.totalPages}
-                  onPageChange={handlePageChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch sử đơn hàng</h1>
+          <p className="text-gray-600">Xem lại tất cả đơn hàng của bạn</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Làm mới
+        </button>
       </div>
-    </MainLayout>
+
+      {orders.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có đơn hàng nào</h3>
+          <p className="text-gray-500 mb-6">Bạn chưa có đơn hàng nào. Hãy bắt đầu mua sắm!</p>
+          <Link to="/getbook">
+            <Button>Mua sắm ngay</Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {orders.map((order) => (
+            <div key={order._id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div className="mb-4 sm:mb-0">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Đơn hàng #{order.orderCode}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Đặt hàng lúc: {formatDate(order.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:items-end space-y-2">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Tổng tiền</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {formatPrice(order.totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Items */}
+                <div className="mb-4 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Sản phẩm:</h4>
+                  <div className="space-y-2">
+                    {order.items?.slice(0, 3).map((item, index) => (
+                      <div key={index} className="flex items-center space-x-3">
+                        <img
+                          src={item.book?.images?.[0] || '/default-book.jpg'}
+                          alt={item.book?.title}
+                          className="w-12 h-16 object-cover rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {item.book?.title || 'Sản phẩm đã bị xóa'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Số lượng: {item.quantity}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatPrice(item.price)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {order.items?.length > 3 && (
+                      <p className="text-sm text-gray-500 text-center">
+                        Và {order.items.length - 3} sản phẩm khác...
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div>
+                      <span className="text-sm text-gray-500">Trạng thái đơn hàng: </span>
+                      {getStatusBadge(order.orderStatus)}
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Thanh toán: </span>
+                      {getPaymentStatusBadge(order.paymentStatus)}
+                    </div>
+                    {/* ✅ Thêm trạng thái đánh giá tại đây */}
+                    {order.orderStatus === 'completed' && (
+                      <div>
+                        <span className="text-sm text-gray-500">Đánh giá: </span>
+                        {order.items.every(item => item.reviewId && (typeof item.reviewId === 'object' ? item.reviewId._id : item.reviewId)) ? (
+                          <span className="text-green-600 font-medium">Đã đánh giá</span>
+                        ) : order.items.some(item => item.reviewId && (typeof item.reviewId === 'object' ? item.reviewId._id : item.reviewId)) ? (
+                          <span className="text-yellow-600 font-medium">Đã đánh giá một phần</span>
+                        ) : (
+                          <span className="text-orange-500 font-medium">Chờ đánh giá</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    <Link to={`/orders/${order._id}`}>
+                      <button className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md bg-white hover:bg-blue-50 transition">
+                        Xem chi tiết
+                      </button>
+                    </Link>
+
+                    {/* {order.orderStatus === 'completed' && order.items?.map(item => (
+                      <Link
+                        key={item.book?._id}
+                        to={`/review/${order._id}/${item.book?._id}`}
+                        state={{
+                          book: {
+                            _id: item.book?._id,
+                            title: item.book?.title,
+                            image: item.book?.images?.[0],
+                            price: item.price,
+                            quantity: item.quantity
+                          }
+                        }}
+                      >
+                        <button className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 transition">
+                          Đánh giá sản phẩm
+                        </button>
+                      </Link>
+                    ))} */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

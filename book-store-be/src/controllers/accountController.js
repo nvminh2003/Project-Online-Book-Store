@@ -2,7 +2,7 @@ const Account = require("../models/accountModel");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const getPermissions = require("../utils/getPermissions");
-const { sendResetPasswordEmail } = require("../utils/emailService");
+const { sendResetPasswordEmail, sendAccountLockedEmail, sendAccountUnlockedEmail } = require("../utils/emailService");
 const crypto = require('crypto');
 const AdminActivityLog = require('../models/AdminActivityLog');
 
@@ -39,7 +39,7 @@ const register = async (req, res) => {
         const accessToken = jwt.sign(
             { id: newAccount._id, role: newAccount.role },
             process.env.ACCESS_TOKEN,
-            { expiresIn: "24h" }
+            { expiresIn: "1h" }
         );
 
         const refreshToken = jwt.sign(
@@ -171,6 +171,9 @@ const refreshToken = async (req, res) => {
                 status: "Error"
             });
         }
+        // console.log("Received refresh token:", refreshToken);
+        // console.log("Decoded token:", decoded);
+        // console.log("Account refreshToken in DB:", account.refreshToken);
 
         // Generate new access token
         const accessToken = jwt.sign(
@@ -592,12 +595,32 @@ const updateUser = async (req, res) => {
             user.info.permissions = getPermissions(user.role);
         }
 
+        // Gửi email nếu trạng thái isActive thay đổi
+        let sendMailPromise = null;
+        if (updateData.isActive !== undefined && updateData.isActive !== user.isActive) {
+            // Nếu chuyển từ true -> false: khóa tài khoản
+            if (updateData.isActive === false) {
+                sendMailPromise = sendAccountLockedEmail(user.email, user.info?.fullName);
+            }
+            // Nếu chuyển từ false -> true: mở khóa tài khoản
+            else if (updateData.isActive === true) {
+                sendMailPromise = sendAccountUnlockedEmail(user.email, user.info?.fullName);
+            }
+        }
+
         // Cập nhật trạng thái tài khoản nếu có
         if (updateData.isActive !== undefined) {
             user.isActive = updateData.isActive;
         }
 
         await user.save();
+
+        // Gửi mail nếu có
+        if (sendMailPromise) {
+            sendMailPromise.catch((err) => {
+                console.error('Error sending account status email:', err);
+            });
+        }
 
         // Log admin activity
         await AdminActivityLog.create({

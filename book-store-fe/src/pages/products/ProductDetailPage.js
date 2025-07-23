@@ -1,7 +1,18 @@
 // src/pages/products/ProductDetailPage.js
-import React, { useEffect, useState, useCallback } from "react"; // Thêm useCallback
+import React, { useEffect, useState, useCallback, useRef } from "react"; // Thêm useCallback
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Icon } from '@iconify/react';
+import ReviewList from "../account/ReviewList";
+import reviewService from "../../services/reviewService";
+import { notifySuccess, notifyError } from "../../components/common/ToastManager";
+import { useCart } from "../../contexts/CartContext"; // Import useCart hook
+import { useAuth } from "../../contexts/AuthContext"; // Import useAuth hook
+import WishlistButton from "../../components/wishlist/WishlistButton";
+import bookService from '../../services/bookService';
+import categoryService from '../../services/categoryService';
+import wishlistService from '../../services/wishlistService';
+
 // --- NẾU SAU NÀY DÙNG REDUX CHO ADD TO CART ---
 // import { useDispatch } from "react-redux";
 // import { addItemToCartAPI } from "../../store/slices/cartSlice"; // Đường dẫn đúng
@@ -11,33 +22,43 @@ const API_URL =
   process.env.REACT_APP_API_URL_BACKEND || "http://localhost:9999/api"; // Đảm bảo có /api nếu backend có prefix
 
 const ProductDetailPage = () => {
-  const {bookId} = useParams();
-  const [book, setBook] = useState(null);
+  const { bookId } = useParams();
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null)
-  const [reviews, setReviews] = useState([]);
-  const [newReview, setNewReview] = useState({rating: 0, comment: ""});
+  const [book, setBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
-
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const imageIntervalRef = useRef();
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // Use the cart context
+  const { user } = useAuth(); // Use the auth context
   // const dispatch = useDispatch(); // Bỏ comment nếu dùng Redux
+
+  // Hide cart and wishlist buttons for admin users
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness';
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [reviewsPagination, setReviewsPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0
+  });
 
   const fetchBookDetail = useCallback(async () => {
     setLoading(true);
     setError(null);
     const token = localStorage.getItem("accessToken");
-    // Nếu API xem chi tiết sách không cần token, có thể bỏ config này
     const config = token
       ? { headers: { Authorization: `Bearer ${token}` } }
       : {};
-
     try {
-      const res = await axios.get(`${API_URL}/books/${bookId}`, config);
-      if (res.data && res.data.status === "Success" && res.data.data) {
-        setBook(res.data.data);
+      const res = await bookService.getProductById(bookId);
+      if (res.data && res.status === "Success" && res.data) {
+        setBook(res.data);
       } else {
         setError(res.data?.message || "Không tìm thấy thông tin sách.");
       }
@@ -47,20 +68,44 @@ const ProductDetailPage = () => {
         err.response?.data || err.message
       );
       if (err.response?.status === 401) {
-        alert(
-          "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại."
-        );
-        navigate("/auth/login"); // Hoặc dispatch action logout
+        notifyError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
+        setTimeout(() => navigate("/auth/login"), 1500);
       } else {
         setError(
           err.response?.data?.message ||
-            "Không thể tải thông tin chi tiết sách."
+          "Không thể tải thông tin chi tiết sách."
         );
       }
     } finally {
       setLoading(false);
     }
   }, [bookId, navigate]); // Thêm navigate vào dependencies của useCallback
+
+  // Fetch reviews for the book
+  const fetchReviews = useCallback(async (page = 1) => {
+    if (!bookId) return;
+
+    setReviewsLoading(true);
+    setReviewsError(null);
+    try {
+      const response = await reviewService.getReviewsByBook(bookId, page, 5);
+      if (response.status === "Success") {
+        setReviews(response.data.reviews);
+        setReviewsPagination({
+          page: response.data.pagination.page,
+          totalPages: response.data.pagination.totalPages,
+          total: response.data.pagination.total
+        });
+      } else {
+        setReviewsError(response.message || "Không thể tải đánh giá");
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy đánh giá:", error);
+      setReviewsError("Không thể tải đánh giá sản phẩm");
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [bookId]);
 
   useEffect(() => {
     // const token = localStorage.getItem("accessToken"); // Token đã được kiểm tra trong fetchBookDetail nếu API cần
@@ -71,207 +116,85 @@ const ProductDetailPage = () => {
     // }
     fetchBookDetail();
   }, [fetchBookDetail]); // Gọi fetchBookDetail khi nó thay đổi (chỉ 1 lần khi bookId thay đổi)
-   const fetchReviews = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/reviews/book/${bookId}`);
-      setReviews(res.data);
-    } catch (err) {
-      console.error("Lỗi khi lấy đánh giá:", err);
+
+  // Fetch reviews when bookId changes
+  useEffect(() => {
+    fetchReviews(1);
+  }, [fetchReviews]);
+
+  // Tự động chuyển ảnh chính sau vài giây
+  useEffect(() => {
+    if (book?.images?.length > 1) {
+      imageIntervalRef.current = setInterval(() => {
+        setCurrentImageIdx((prev) => (prev + 1) % book.images.length);
+      }, 4000); // 4 giây đổi ảnh
+      return () => clearInterval(imageIntervalRef.current);
     }
-  }
-   const handleAddReview = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) throw new Error("Bạn chưa đăng nhập");
-
-      if (newReview.rating < 1 || newReview.rating > 5) {
-        alert("Vui lòng chọn số sao từ 1 đến 5.");
-        return;
-      }
-
-      await axios.post(
-        `${API_URL}/reviews`,
-        {
-          book: bookId,
-          rating: newReview.rating,
-          comment: newReview.comment,
-        },
-            {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-    
-      );
-          alert("Gửi đánh giá thành công!");
-      setNewReview({rating: 0, comment: ""});
-      fetchReviews();
-     
-    }
-     catch (err) {
-      console.error("Lỗi khi gửi đánh giá:", err.response?.data || err.message);
-      alert("Không thể gửi đánh giá.");
-  }
-}
-
- const handleEditReview = async (review) => {
-    const newRating = parseInt(prompt("Nhập số sao mới (1-5):", review.rating));
-    const newComment = prompt("Nhập bình luận mới:", review.comment);
-
-    if (!newRating || isNaN(newRating) || newRating < 1 || newRating > 5) {
-      alert("Số sao không hợp lệ.");
-       return;
-    }
-
-    try {
-      const token = localStorage.getItem("accessToken");
-      await axios.put(
-        `${API_URL}/reviews/${review._id}`,
-        { rating: newRating, comment: newComment },
-           alert("Đã cập nhật đánh giá.").
-      fetchReviews())
-    } catch (err) {
-      console.error("Lỗi cập nhật đánh giá:", err);
-      alert("Không thể cập nhật.");
-    }
-  };
-
-  const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm("Bạn chắc chắn muốn xoá đánh giá này?")) return;
-
-    try {
-      const token = localStorage.getItem("accessToken");
-      await axios.delete(`${API_URL}/reviews/${reviewId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      alert("Đã xoá đánh giá.");
-      fetchReviews();
-    } catch (err) {
-      console.error("Lỗi xoá đánh giá:", err);
-      alert("Không thể xoá.");
-    }
-  };
-
-  const handleReportReview = async (reviewId) => {
-    if (!window.confirm("Bạn muốn báo cáo đánh giá này?")) return;
-
-    try {
-      const token = localStorage.getItem("accessToken");
-      await axios.patch(`${API_URL}/reviews/report/${reviewId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      alert("Đã báo cáo đánh giá.");
-       } catch (err) {
-      console.error("Lỗi khi báo cáo đánh giá:", err);
-      alert("Không thể báo cáo.");
-          }
-  };
-
+    return () => { };
+  }, [book]);
 
   const handleAddToCart = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-      navigate("/auth/login");
+      notifyError("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
-
     if (!book || !book._id) {
-      alert(
-        "Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại."
-      );
+      notifyError("Thông tin sách chưa được tải xong hoặc không hợp lệ, vui lòng thử lại.");
       return;
     }
-
     const currentQuantity = Number(quantity);
     if (isNaN(currentQuantity) || currentQuantity < 1) {
-      alert("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
-      setQuantity(1); // Reset về 1
+      notifyError("Số lượng không hợp lệ. Vui lòng chọn ít nhất 1 sản phẩm.");
+      setQuantity(1);
       return;
     }
-
-    const payload = {
-      bookId: book._id,
-      quantity: currentQuantity,
-    };
-
-    console.log("ProductDetailPage - Add to cart payload:", payload); // Để debug
-
     try {
-      // --- NẾU DÙNG REDUX ---
-      // const resultAction = await dispatch(addItemToCartAPI(payload));
-      // if (addItemToCartAPI.fulfilled.match(resultAction)) {
-      //   alert("Đã thêm vào giỏ hàng thành công!");
-      // } else if (addItemToCartAPI.rejected.match(resultAction)) {
-      //   const errorMessage = resultAction.payload || "Không thể thêm vào giỏ hàng.";
-      //   alert(errorMessage);
-      //   if (String(errorMessage).toLowerCase().includes('invalid token') || String(errorMessage).toLowerCase().includes('unauthorized')) {
-      //     // Xử lý khi token không hợp lệ
-      //   }
-      // }
-      // --- KẾT THÚC REDUX ---
+      // Use the addToCart function from CartContext instead of direct API call
+      const result = await addToCart(book._id, currentQuantity);
 
-      // --- HOẶC DÙNG AXIOS TRỰC TIẾP (NHƯ HIỆN TẠI) ---
-      const response = await axios.post(`${API_URL}/cart/add`, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.data && response.data.status === "Success") {
-        alert("Đã thêm vào giỏ hàng thành công!");
+      if (result.success) {
+        notifySuccess("Đã thêm vào giỏ hàng thành công!");
       } else {
-        alert(response.data.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
+        notifyError(result.message || "Có lỗi xảy ra khi thêm vào giỏ hàng.");
       }
-      // --- KẾT THÚC AXIOS TRỰC TIẾP ---
     } catch (err) {
-      console.error(
-        "Lỗi khi thêm vào giỏ hàng:",
-        err.response?.data || err.message
-      );
+      console.error("Lỗi khi thêm vào giỏ hàng:", err.response?.data || err.message);
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
         "Không thể thêm sản phẩm vào giỏ hàng.";
-      alert(errorMessage);
-      if (err.response?.status === 401) {
-        // localStorage.removeItem("accessToken");
-        // navigate("/auth/login");
-      }
+      notifyError(errorMessage);
     }
   };
 
   const handleAddToWishlist = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      alert("Bạn cần đăng nhập để thêm vào yêu thích.");
-      navigate("/auth/login");
+      notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+      setTimeout(() => navigate("/auth/login"), 1500);
       return;
     }
     if (!book || !book._id) {
-      alert("Thông tin sách chưa được tải xong.");
+      notifyError("Thông tin sách chưa được tải xong.");
       return;
     }
     try {
-      await axios.post(
-        `${API_URL}/wishlist/add`,
-        { bookId: book._id },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      alert("Đã thêm vào mục yêu thích!");
+      await wishlistService.addToWishlist(book._id);
+      notifySuccess("Đã thêm vào mục yêu thích!");
     } catch (err) {
       console.error(
         "Lỗi khi thêm vào yêu thích:",
         err.response?.data || err.message
       );
-      alert(err.response?.data?.message || "Không thể thêm vào yêu thích.");
+      notifyError(err.response?.data?.message || "Không thể thêm vào yêu thích.");
     }
+  };
+
+  // Handle review pagination
+  const handleReviewPageChange = (page) => {
+    fetchReviews(page);
   };
 
   if (loading)
@@ -297,317 +220,320 @@ const ProductDetailPage = () => {
       ((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100
     )
     : 0;
-return (
-  <div className="p-6 max-w-5xl mx-auto">
-    {/* Modal xem ảnh to */}
-    {showImageModal && book.images?.length > 0 && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-        <div className="relative bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center">
-          <button
-            className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl font-bold"
-            onClick={() => setShowImageModal(false)}
-          >
-            ×
-          </button>
-          <img
-            src={book.images[currentImageIdx]}
-            alt={`Ảnh ${currentImageIdx + 1}`}
-            className="max-w-[80vw] max-h-[70vh] object-contain rounded mb-4"
-          />
-          <div className="flex gap-4 items-center">
-            <button
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
-              onClick={() =>
-                setCurrentImageIdx(
-                  (prev) => (prev - 1 + book.images.length) % book.images.length
-                )
-              }
-              disabled={book.images.length <= 1}
-            >
-              ←
-            </button>
-            <span className="text-sm text-gray-600">
-              {currentImageIdx + 1} / {book.images.length}
-            </span>
-            <button
-              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
-              onClick={() =>
-                setCurrentImageIdx((prev) => (prev + 1) % book.images.length)
-              }
-              disabled={book.images.length <= 1}
-            >
-              →
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-full md:w-1/3">
-        <div
-          className="relative cursor-pointer"
-          onClick={() => {
-            setShowImageModal(true);
-            setCurrentImageIdx(0);
-          }}
-        >
-          <img
-            src={book.images?.[0] || "/default-book.jpg"}
-            alt={book.title}
-            className="w-full h-auto object-cover rounded-2xl shadow"
-          />
-          {book.images?.length > 1 && (
-            <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
-              Xem tất cả ảnh
-            </span>
-          )}
-        </div>
-        {book.images?.length > 1 && (
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {book.images.slice(1).map((img, idx) => (
-              <img
-                key={idx}
-                src={img}
-                alt={`Ảnh ${idx + 2}`}
-                className="w-full h-20 object-cover rounded-md border cursor-pointer"
-                onClick={() => {
-                  setShowImageModal(true);
-                  setCurrentImageIdx(idx + 1);
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
-      <div className="flex-1 md:w-3/5">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-3">
-          {book.title}
-        </h1>
-        <p className="text-gray-600 mb-2 text-base">
-          Tác giả:{" "}
-          <span className="font-medium text-blue-600">
-            {Array.isArray(book.authors)
-              ? book.authors.join(", ")
-              : book.authors}
-          </span>
-        </p>
-        {book.publisher && (
-          <p className="text-sm text-gray-500 mb-4">
-            Nhà xuất bản: {book.publisher}
-          </p>
-        )}
-
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          {hasDiscount ? (
-            <>
-              <div className="text-md text-gray-500">
-                Giá gốc:{" "}
-                <span className="line-through mr-2">
-                  {(book.originalPrice || 0).toLocaleString("vi-VN")} đ
-                </span>
-              </div>
-              <p className="text-red-600 text-3xl font-bold mb-1">
-                {(book.sellingPrice || 0).toLocaleString("vi-VN")} đ
-              </p>
-              <span className="text-sm bg-red-100 text-red-600 font-semibold px-2 py-1 rounded">
-                Tiết kiệm {discountPercent}%
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* Modal xem ảnh to */}
+      {showImageModal && book.images?.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="relative bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl font-bold"
+              onClick={() => setShowImageModal(false)}
+            >
+              ×
+            </button>
+            <img
+              src={book.images[currentImageIdx]}
+              alt={`Ảnh ${currentImageIdx + 1}`}
+              className="max-w-[80vw] max-h-[70vh] object-contain rounded mb-4"
+            />
+            <div className="flex gap-4 items-center">
+              <button
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
+                onClick={() =>
+                  setCurrentImageIdx(
+                    (prev) =>
+                      (prev - 1 + book.images.length) % book.images.length
+                  )
+                }
+                disabled={book.images.length <= 1}
+              >
+                &#8592;
+              </button>
+              <span className="text-sm text-gray-600">
+                {currentImageIdx + 1} / {book.images.length}
               </span>
-            </>
-          ) : (
-            <p className="text-red-600 text-3xl font-bold">
-              {(book.sellingPrice || book.originalPrice || 0).toLocaleString(
-                "vi-VN"
-              )}{" "}
-              đ
-            </p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <label
-            htmlFor="quantityInput"
-            className="block text-sm font-semibold text-gray-700 mb-1"
-          >
-            Số lượng:
-          </label>
-          <input
-            id="quantityInput"
-            type="number"
-            value={quantity}
-            min="1"
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              setQuantity(isNaN(val) || val < 1 ? 1 : val);
-            }}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-          <button
-            onClick={handleAddToCart}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105"
-          >
-            Thêm vào giỏ hàng
-          </button>
-          <button
-            onClick={handleAddToWishlist}
-            className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
-          >
-            Yêu thích
-          </button>
-          <button
-            onClick={() => navigate(-1)} // Quay lại trang trước
-            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-lg shadow-md transition duration-150 ease-in-out"
-          >
-            Quay lại
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div className="mt-10 pt-6 border-t border-gray-200">
-      {book.description && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">
-            Mô tả sản phẩm
-          </h2>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {book.description}
-          </p>
+              <button
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-lg"
+                onClick={() =>
+                  setCurrentImageIdx((prev) => (prev + 1) % book.images.length)
+                }
+                disabled={book.images.length <= 1}
+              >
+                &#8594;
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
-      <div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-3">
-          Thông tin chi tiết
-        </h2>
-        <ul className="text-gray-700 text-sm space-y-2 bg-gray-50 p-4 rounded-lg">
-          {book.title && (
-            <li>
-              <strong>Tiêu đề:</strong> {book.title}
-            </li>
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="w-full md:w-1/4 flex flex-col items-center">
+          <div
+            className="relative cursor-pointer flex flex-col items-center justify-center bg-transparent"
+            onClick={() => {
+              setShowImageModal(true);
+              setCurrentImageIdx(currentImageIdx);
+            }}
+          >
+            <img
+              src={book.images?.[currentImageIdx] || "/default-book.jpg"}
+              alt={book.title}
+              className="w-full h-auto object-cover rounded-2xl shadow mx-auto bg-transparent"
+              style={{ maxHeight: 220, background: 'transparent' }}
+            />
+            {book.images?.length > 1 && (
+              <span className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-0.5 rounded">
+                Xem tất cả ảnh
+              </span>
+            )}
+          </div>
+          {book.images?.length > 1 && (
+            <div className="mt-3 grid grid-cols-4 gap-1 w-full min-h-14">
+              {book.images.map((img, idx) => (
+                idx !== currentImageIdx && (
+                  <img
+                    key={idx}
+                    src={img}
+                    alt={`Ảnh ${idx + 1}`}
+                    className="w-full h-14 object-cover rounded-md border cursor-pointer transition-all duration-150 hover:scale-105 hover:shadow-lg"
+                    onClick={() => setCurrentImageIdx(idx)}
+                    style={{ visibility: 'visible' }}
+                  />
+                )
+              ))}
+            </div>
           )}
-          {book.authors && book.authors.length > 0 && (
-            <li>
-              <strong>Tác giả:</strong>{" "}
+        </div>
+
+        <div className="flex-1 md:w-3/4">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
+            {book.title}
+          </h1>
+          {book.averageRating > 0 && (
+            <div className="flex items-center text-sm text-yellow-600 gap-1 mb-1">
+              <Icon icon="mdi:star" className="text-yellow-500" width={18} />
+              <span className="font-semibold">{book.averageRating.toFixed(1)}</span>
+              <span className="text-gray-500">({book.totalRatings} đánh giá)</span>
+            </div>
+          )}
+          <p className="text-gray-600 mb-1 text-sm">
+            Tác giả:{" "}
+            <span className="font-medium text-blue-600">
               {Array.isArray(book.authors)
                 ? book.authors.join(", ")
                 : book.authors}
-            </li>
-          )}
+            </span>
+          </p>
           {book.publisher && (
-            <li>
-              <strong>Nhà xuất bản:</strong> {book.publisher}
-            </li>
+            <p className="text-xs text-gray-500 mb-2">
+              Nhà xuất bản: {book.publisher}
+            </p>
           )}
-          {book.publicationYear && (
-            <li>
-              <strong>Năm phát hành:</strong> {book.publicationYear}
-            </li>
-          )}
-          {book.pageCount && (
-            <li>
-              <strong>Số trang:</strong> {book.pageCount}
-            </li>
-          )}
-          {book.coverType && (
-            <li>
-              <strong>Loại bìa:</strong> {book.coverType}
-            </li>
-          )}
-          {book.isbn && (
-            <li>
-              <strong>Mã ISBN:</strong> {book.isbn}
-            </li>
-          )}
-          {typeof book.stockQuantity === "number" && (
-            <li>
-              <strong>Tồn kho:</strong> {book.stockQuantity}
-            </li>
-          )}
-        </ul>
+
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+            {hasDiscount ? (
+              <>
+                <div className="text-sm text-gray-500">
+                  Giá gốc:{" "}
+                  <span className="line-through mr-2">
+                    {(book.originalPrice || 0).toLocaleString("vi-VN")} đ
+                  </span>
+                </div>
+                <p className="text-red-600 text-2xl font-bold mb-1">
+                  {(book.sellingPrice || 0).toLocaleString("vi-VN")} đ
+                </p>
+                <span className="text-xs bg-red-100 text-red-600 font-semibold px-2 py-1 rounded">
+                  Tiết kiệm {discountPercent}%
+                </span>
+              </>
+            ) : (
+              <p className="text-red-600 text-2xl font-bold">
+                {(book.sellingPrice || book.originalPrice || 0).toLocaleString(
+                  "vi-VN"
+                )}{" "}
+                đ
+              </p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="quantityInput"
+              className="block text-xs font-semibold text-gray-700 mb-1"
+            >
+              Số lượng:
+            </label>
+            <input
+              id="quantityInput"
+              type="number"
+              value={quantity}
+              min="1"
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setQuantity(isNaN(val) || val < 1 ? 1 : val);
+              }}
+              className="w-16 px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            {/* Thêm vào giỏ hàng - ẩn cho admin */}
+            {!isAdmin && (
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
+              >
+                <Icon icon="mdi:cart" width="18" height="18" color="#2563eb" />
+                Thêm vào giỏ hàng
+              </button>
+            )}
+            {/* Wishlist button - ẩn cho admin */}
+            {!isAdmin && (
+              <WishlistButton
+                bookId={bookId}
+                className="flex-1 font-semibold px-6 py-3 shadow-md hover:shadow-lg"
+                onRequireLogin={() => {
+                  notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                  setTimeout(() => navigate("/auth/login"), 1500);
+                }}
+                onSuccessAdd={() => {
+                  notifySuccess("Thêm sản phẩm yêu thích thành công");
+                }}
+                onSuccessRemove={() => {
+                  notifyError("Đã xóa khỏi danh sách yêu thích");
+                }}
+              />
+            )}
+            <button
+              onClick={() => navigate(-1)}
+              className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
+            >
+              <Icon icon="mdi:arrow-left" width="18" height="18" color="#2563eb" />
+              Quay lại
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Form gửi đánh giá */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Chọn số sao:</label>
-        <select
-          value={newReview.rating}
-          onChange={(e) =>
-            setNewReview({ ...newReview, rating: parseInt(e.target.value) })
-          }
-          className="border p-2 rounded text-sm"
-        >
-          <option value={0}>-- Chọn --</option>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <option key={star} value={star}>
-              {star} sao
-            </option>
-          ))}
-        </select>
+      <div className="mt-10 pt-6 border-t border-gray-200">
+        {book.description && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+              Mô tả sản phẩm
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {book.description}
+            </p>
+          </div>
+        )}
 
-        <label className="block mt-3 text-sm font-medium mb-1">Bình luận:</label>
-        <textarea
-          value={newReview.comment}
-          onChange={(e) =>
-            setNewReview({ ...newReview, comment: e.target.value })
-          }
-          className="w-full border p-2 rounded text-sm"
-          rows={3}
-        />
-
-        <button
-          onClick={handleAddReview}
-          className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-        >
-          Gửi đánh giá
-        </button>
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-3">
+            Thông tin chi tiết
+          </h2>
+          <ul className="text-gray-700 text-sm space-y-2 bg-gray-50 p-4 rounded-lg">
+            {/* ... (Các li hiển thị thông tin chi tiết giữ nguyên, đảm bảo kiểm tra null/undefined nếu cần) ... */}
+            {book.title && (
+              <li>
+                <strong>Tiêu đề:</strong> {book.title}
+              </li>
+            )}
+            {book.authors && book.authors.length > 0 && (
+              <li>
+                <strong>Tác giả:</strong>{" "}
+                {Array.isArray(book.authors)
+                  ? book.authors.join(", ")
+                  : book.authors}
+              </li>
+            )}
+            {book.publisher && (
+              <li>
+                <strong>Nhà xuất bản:</strong> {book.publisher}
+              </li>
+            )}
+            {book.publicationYear && (
+              <li>
+                <strong>Năm phát hành:</strong> {book.publicationYear}
+              </li>
+            )}
+            {book.pageCount && (
+              <li>
+                <strong>Số trang:</strong> {book.pageCount}
+              </li>
+            )}
+            {book.coverType && (
+              <li>
+                <strong>Loại bìa:</strong> {book.coverType}
+              </li>
+            )}
+            {book.isbn && (
+              <li>
+                <strong>Mã ISBN:</strong> {book.isbn}
+              </li>
+            )}
+            {typeof book.stockQuantity === "number" && (
+              <li>
+                <strong>Tồn kho:</strong> {book.stockQuantity}
+              </li>
+            )}
+            {/* Thêm các thông tin khác nếu có */}
+          </ul>
+        </div>
       </div>
 
-      {/* Danh sách đánh giá */}
-      {reviews.length > 0 ? (
-        <ul className="space-y-4">
-          {reviews.map((review) => (
-            <li key={review._id} className="border p-4 rounded-md bg-gray-50">
-              <p className="font-semibold">{review.user?.email || "Ẩn danh"}</p>
-              <p className="text-yellow-500">{"⭐".repeat(review.rating)}</p>
-              <p className="text-gray-700">{review.comment}</p>
+      {/* Đánh giá sản phẩm */}
+      <div className="mt-10 pt-6 border-t border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Đánh giá sản phẩm ({reviewsPagination.total} đánh giá)
+        </h2>
 
-              {review.user?._id === currentUserId ? (
-                <div className="mt-2 space-x-2">
+        {reviewsLoading ? (
+          <p className="text-center text-gray-500 py-4">Đang tải đánh giá...</p>
+        ) : reviewsError ? (
+          <p className="text-center text-red-500 py-4">{reviewsError}</p>
+        ) : (
+          <>
+            <ReviewList
+              reviews={reviews.map(review => ({
+                reviewerName: review.user?.info?.fullName || review.user?.email || 'Khách hàng',
+                rating: review.rating,
+                comment: review.comment,
+                images: review.images || [],
+                createdAt: review.createdAt
+              }))}
+            />
+
+            {/* Pagination cho reviews */}
+            {reviewsPagination.totalPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handleEditReview(review)}
-                    className="text-blue-600 text-sm"
+                    onClick={() => handleReviewPageChange(reviewsPagination.page - 1)}
+                    disabled={reviewsPagination.page <= 1}
+                    className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                   >
-                    Sửa
+                    Trước
                   </button>
+                  <span className="px-3 py-1 text-gray-600">
+                    Trang {reviewsPagination.page} / {reviewsPagination.totalPages}
+                  </span>
                   <button
-                    onClick={() => handleDeleteReview(review._id)}
-                    className="text-red-600 text-sm"
+                    onClick={() => handleReviewPageChange(reviewsPagination.page + 1)}
+                    disabled={reviewsPagination.page >= reviewsPagination.totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                   >
-                    Xoá
+                    Sau
                   </button>
                 </div>
-              ) : (
-                <div className="mt-2">
-                  <button
-                    onClick={() => handleReportReview(review._id)}
-                    className="text-orange-600 text-sm"
-                  >
-                    Báo cáo
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-gray-500">Chưa có đánh giá nào cho sản phẩm này.</p>
-      )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
     </div>
-  </div>
-);
-}
-export default ProductDetailPage
+  );
+};
+
+export default ProductDetailPage;

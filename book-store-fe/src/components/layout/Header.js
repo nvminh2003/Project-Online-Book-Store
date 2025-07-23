@@ -1,48 +1,72 @@
-import React, { useState } from "react";
-import Input from "../common/Input";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Icon from "../common/Icon";
-import logo from "../../assets/image.png";
-import { useAuth } from "../../contexts/AuthContext";
-import { useSelector } from "react-redux";
-import { fetchCart } from "../../store/slices/cartSlice";
+import logo from '../../assets/image.png';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from "../../contexts/CartContext";
+import { useWishlist } from "../../contexts/WishlistContext";
+import { notifySuccess } from "../common/ToastManager";
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  // --- SỬA SELECTOR CHO ĐÚNG ---
-  const cartItemsFromStore = useSelector((state) => state.cart.items || []); // Lấy trực tiếp mảng items
-  const cartItemCount = cartItemsFromStore.reduce(
-    (total, item) => total + (item.quantity || 0),
-    0
-  );
-
+  const { cartItemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const menuRef = useRef(null);
+
+  // Hide cart and wishlist buttons for admin users
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness';
 
   const isActivePath = (path) => location.pathname === path;
 
   const handleLogout = async () => {
     await logout();
-    navigate("/");
+    notifySuccess("Đăng xuất thành công!");
+    setIsMenuOpen(false);
+    navigate('/');
   };
 
   const handleAdminClick = () => {
-    if (user?.role === "superadmin") {
-      navigate("/admin/users");
-    } else if (user?.role === "admindev") {
-      navigate("/admin/books");
-    } else if (user?.role === "adminbusiness") {
-      navigate("/admin/orders");
+    setIsMenuOpen(false);
+    if (user?.role === 'superadmin') {
+      navigate('/admin');
+    } else if (user?.role === 'admindev') {
+      navigate('/admin');
+    } else if (user?.role === 'adminbusiness') {
+      navigate('/admin');
     }
   };
+
+  useEffect(() => {
+    setIsMenuOpen(false); // Tự động đóng menu khi URL thay đổi
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
 
   const renderMobileMenu = () => {
     if (!isMenuOpen) return null;
 
     const menuItems = [
-      { label: "Trang chủ", to: "/" },
-      { label: "Sản phẩm", to: "/products" },
-      { label: "Sách hay sách mới", to: "/products?filter=new-arrivals" },
+      { label: 'Trang chủ', to: '/' },
+      { label: 'Sản phẩm', to: '/products' },
+      { label: 'Sách hay sách mới', to: '/getbook' },
     ];
 
     return (
@@ -52,7 +76,7 @@ const Header = () => {
             <Link
               key={index}
               to={item.to}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
             >
               {item.label}
             </Link>
@@ -62,13 +86,13 @@ const Header = () => {
             <div className="pt-2 space-y-1">
               <Link
                 to="/auth/login"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
               >
                 Đăng nhập
               </Link>
               <Link
                 to="/auth/register"
-                className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors no-underline"
               >
                 Đăng ký
               </Link>
@@ -83,13 +107,11 @@ const Header = () => {
               </Link>
               <Link
                 to="/orders"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors no-underline"
               >
                 Lịch sử đơn hàng
               </Link>
-              {(user?.role === "superadmin" ||
-                user?.role === "admindev" ||
-                user?.role === "adminbusiness") && (
+              {(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                 <button
                   onClick={handleAdminClick}
                   className="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
@@ -128,32 +150,25 @@ const Header = () => {
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link
-              to="/products?filter=mkmn"
-              className={`no-underline transition-colors ${location.search === "?filter=mkmn" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+              to="/"
+              className={`no-underline transition-colors ${isActivePath('/') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Sách MKMN
+              Trang chủ
             </Link>
             <Link
-              to="/products?filter=new-arrivals"
-              className={`no-underline transition-colors ${location.search === "?filter=new-arrivals" ? 'text-blue-600' : 'text-black hover:text-blue-600'
+              to="/getbook"
+              className={`no-underline transition-colors ${isActivePath('/getbook') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Sách mới sách hay
+              Sách hay sách mới
             </Link>
             <Link
               to="/blogs"
               className={`no-underline transition-colors ${isActivePath('/blogs') ? 'text-blue-600' : 'text-black hover:text-blue-600'
                 }`}
             >
-              Blogs
-            </Link>
-            <Link
-              to="/payment-info"
-              className={`no-underline transition-colors ${isActivePath('/payment-info') ? 'text-blue-600' : 'text-black hover:text-blue-600'
-                }`}
-            >
-              Thông tin thanh toán
+              Tin tức
             </Link>
             <Link
               to="/sales-policy"
@@ -185,8 +200,8 @@ const Header = () => {
                 <Link
                   to="/auth/register"
                   className={`px-4 py-2 rounded-full font-medium no-underline transition-colors ${isActivePath('/auth/register')
-                      ? 'bg-blue-700 text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-blue-700 text-white'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                 >
                   Đăng ký
@@ -194,16 +209,8 @@ const Header = () => {
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-4">
-                <Link
-                  to="/auth/profile"
-                  className={`font-medium no-underline transition-colors ${isActivePath('/auth/profile') ? 'text-blue-600' : 'text-black hover:text-blue-600'
-                    }`}
-                >
-                  Tài khoản
-                </Link>
-                {(user?.role === "superadmin" ||
-                  user?.role === "admindev" ||
-                  user?.role === "adminbusiness") && (
+
+                {(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                   <button
                     onClick={handleAdminClick}
                     className="text-black hover:text-blue-600 font-medium transition-colors"
@@ -219,41 +226,52 @@ const Header = () => {
                 </button>
               </div>
             )}
-
-            {/* Wishlist */}
-            <Link
-              to="/wishlist"
-              className={`relative transition-colors ${isActivePath('/wishlist') ? 'text-blue-600' : 'text-black hover:text-red-500'
-                }`}
-            >
-              <Icon icon="mdi:heart-outline" className="w-6 h-6" />
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                0
-              </span>
-            </Link>
-
-            {/* Cart */}
+            {/* User */}
             {isAuthenticated && (
               <Link
-                to="/auth/cart" // SỬA LẠI ĐƯỜNG DẪN NẾU CẦN (ví dụ: /cart)
-                className="relative text-gray-700 hover:text-blue-600 transition-colors"
+                to="/auth/profile"
+                className={`relative transition-colors ${isActivePath('/auth/profile') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                  }`}
               >
-                <Icon icon="mdi:cart-outline" className="w-6 h-6" />
-                {cartItemCount > 0 && ( // Chỉ hiển thị badge nếu có sản phẩm
+                <Icon icon="line-md:account" className="w-6 h-6" />
+              </Link>
+            )}
+
+            {/* Wishlist - ẩn cho admin */}
+            {!isAdmin && (
+              <Link
+                to="/auth/wishlist"
+                className={`relative transition-colors ${isActivePath("/wishlist")
+                  ? "text-blue-600"
+                  : "text-black hover:text-red-500"
+                  }`}
+              >
+                <Icon icon="mdi:heart-outline" className="w-6 h-6" />
+                {wishlistCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                    {cartItemCount} {/* HIỂN THỊ SỐ LƯỢNG ĐÃ TÍNH */}
+                    {wishlistCount}
                   </span>
                 )}
               </Link>
             )}
 
-            {/* Mobile Menu Button (chỉ hiển thị khi đã đăng nhập và không phải admin/superadmin) */}
+            {/* Cart - ẩn cho admin */}
+            {!isAdmin && (
+              <Link
+                to="/auth/cart"
+                className={`relative transition-colors ${isActivePath('/auth/cart') ? 'text-blue-600' : 'text-black hover:text-blue-600'
+                  }`}
+              >
+                <Icon icon="mdi:cart-outline" className="w-6 h-6" />
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                  {cartItemCount || 0}
+                </span>
+              </Link>
+            )}
+
+            {/* Mobile Menu */}
             {isAuthenticated &&
-              !(
-                user?.role === "superadmin" ||
-                user?.role === "admindev" ||
-                user?.role === "adminbusiness"
-              ) && (
+              !(user?.role === 'superadmin' || user?.role === 'admindev' || user?.role === 'adminbusiness') && (
                 <div className="relative">
                   <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -262,45 +280,20 @@ const Header = () => {
                     <Icon name="mdi:menu" className="w-6 h-6" />
                   </button>
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
+                    <div ref={menuRef} className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-50">
                       <div className="py-2">
-                        <Link
-                          to="/"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
-                        >
-                          Trang chủ
-                        </Link>
-                        <Link
-                          to="/products"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
-                        >
-                          Sản phẩm
-                        </Link>
-                        <Link
-                          to="/products?filter=new-arrivals"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
-                        >
-                          Sách hay sách mới
-                        </Link>
+                        <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Trang chủ</Link>
+                        {/* <Link to="/products" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sản phẩm</Link> */}
+                        <Link to="/getbook" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Sách hay sách mới</Link>
                         <div className="border-t my-2" />
-                        <Link
-                          to="/auth/profile"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
-                        >
-                          Tài khoản của tôi
-                        </Link>
-                        <Link
-                          to="/orders"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline"
-                        >
-                          Lịch sử đơn hàng
-                        </Link>
-                        <button
+                        <Link to="/auth/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Tài khoản của tôi</Link>
+                        <Link to="/orders" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 no-underline">Lịch sử đơn hàng</Link>
+                        {/* <button
                           onClick={handleLogout}
                           className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600"
                         >
                           Đăng xuất
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   )}

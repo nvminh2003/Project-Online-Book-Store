@@ -12,5 +12,8 @@ router.post('/add', wishlistController.addToWishlist);
 router.delete('/remove/:bookId', wishlistController.removeFromWishlist);
 router.delete('/clear', wishlistController.clearWishlist);
 router.get('/check/:bookId', wishlistController.checkBookInWishlist);
+router.post('/move-to-cart', wishlistController.moveToCart);
+router.post('/move-multiple-to-cart', wishlistController.moveMultipleToCart);
+router.delete('/remove-multiple', wishlistController.removeMultipleFromWishlist);
 
 module.exports = router;

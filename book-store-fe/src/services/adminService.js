@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiClient from './apiClient';
 
 const API_URL = process.env.REACT_APP_API_URL_BACKEND || 'http://localhost:9999/api';
 
@@ -10,7 +11,7 @@ const adminService = {
             if (!token) {
                 throw new Error('No authentication token found');
             }
-            const response = await axios.get(`${API_URL}/admin/activities`, {
+            const response = await apiClient.get(`${API_URL}/admin/activities`, {
                 params: { page, limit, _t: Date.now() },
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -30,7 +31,7 @@ const adminService = {
             if (!token) {
                 throw new Error('No authentication token found');
             }
-            const response = await axios.get(`${API_URL}/admin/activities/date-range`, {
+            const response = await apiClient.get(`${API_URL}/admin/activities/date-range`, {
                 params: { startDate, endDate, page, limit, _t: Date.now() },
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -50,7 +51,7 @@ const adminService = {
             if (!token) {
                 throw new Error('No authentication token found');
             }
-            const response = await axios.get(`${API_URL}/admin/activities/search`, {
+            const response = await apiClient.get(`${API_URL}/admin/activities/search`, {
                 params: { searchTerm, page, limit, _t: Date.now() },
                 headers: { Authorization: `Bearer ${token}` }
             });

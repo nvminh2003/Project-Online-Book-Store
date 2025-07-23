@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Icon } from '@iconify/react';
+import categoryService from '../../services/categoryService';
 
 const API = process.env.REACT_APP_API_URL_BACKEND;
 
@@ -11,6 +13,10 @@ const Categories = () => {
   const [showForm, setShowForm] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("success"); // 'success' | 'error'
+  const [deleteId, setDeleteId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const token = localStorage.getItem("accessToken");
   const headers = {
@@ -22,13 +28,15 @@ const Categories = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/categories`);
-      const filtered = res.data.data.filter((c) =>
+      const res = await categoryService.getAllCategories();
+      const filtered = res.data.filter((c) =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setCategories(filtered);
     } catch (error) {
-      alert("Lỗi khi lấy danh mục");
+      setToastMsg("Lỗi khi lấy danh mục");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
     } finally {
       setLoading(false);
     }
@@ -44,13 +52,27 @@ const Categories = () => {
     currentPage * 10
   );
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn chắc chắn muốn xoá?")) return;
+  const confirmDelete = (id) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      await axios.delete(`${API}/categories/${id}`, headers);
+      await categoryService.deleteCategory(deleteId);
+      setToastMsg("Đã xoá danh mục thành công!");
+      setToastType("success");
+      setTimeout(() => setToastMsg(""), 1500);
+      setShowDeleteModal(false);
+      setDeleteId(null);
       fetchCategories();
     } catch (error) {
-      alert("Xoá thất bại");
+      setToastMsg("Xoá thất bại");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
+      setShowDeleteModal(false);
+      setDeleteId(null);
     }
   };
 
@@ -68,23 +90,28 @@ const Categories = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nameInput.trim()) return alert("Tên không được trống");
-
+    if (!nameInput.trim()) {
+      setToastMsg("Tên không được trống");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
+      return;
+    }
     try {
       if (editingCategory) {
-        await axios.put(
-          `${API}/categories/${editingCategory._id}`,
-          { name: nameInput },
-          headers
-        );
+        await categoryService.updateCategory(editingCategory._id, { name: nameInput });
       } else {
-        await axios.post(`${API}/categories`, { name: nameInput }, headers);
+        await categoryService.createCategory({ name: nameInput });
       }
       setShowForm(false);
       setNameInput("");
+      setToastMsg("Lưu danh mục thành công!");
+      setToastType("success");
+      setTimeout(() => setToastMsg(""), 1500);
       fetchCategories();
     } catch (error) {
-      alert(error?.response?.data?.message || "Thao tác thất bại");
+      setToastMsg(error?.response?.data?.message || "Thao tác thất bại");
+      setToastType("error");
+      setTimeout(() => setToastMsg(""), 1500);
     }
   };
 
@@ -116,31 +143,33 @@ const Categories = () => {
         <p>Đang tải...</p>
       ) : (
         <>
-          <table className="w-full table-auto border border-gray-300">
+          <table className="w-full table-auto border border-gray-200 text-gray-700">
             <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-4 py-2 text-left">Tên</th>
-                <th className="border px-4 py-2 text-left">Slug</th>
-                <th className="border px-4 py-2">Thao tác</th>
+              <tr className="bg-gray-50 text-gray-500">
+                <th className="border border-gray-200 px-4 py-2 text-left font-semibold">Tên</th>
+                <th className="border border-gray-200 px-4 py-2 text-left font-semibold">Slug</th>
+                <th className="border border-gray-200 px-4 py-2 font-semibold">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {displayedCategories.map((cat) => (
                 <tr key={cat._id} className="hover:bg-gray-50">
-                  <td className="border px-4 py-2">{cat.name}</td>
-                  <td className="border px-4 py-2">{cat.slug}</td>
-                  <td className="border px-4 py-2 text-center space-x-2">
+                  <td className="border border-gray-200 px-4 py-2 text-gray-700">{cat.name}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-gray-700">{cat.slug}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-center space-x-2">
                     <button
                       onClick={() => handleEdit(cat)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                      className="bg-transparent p-1 rounded hover:bg-blue-100 transition"
+                      title="Sửa"
                     >
-                      Sửa
+                      <Icon icon="fluent:edit-20-filled" width="28" height="28" color="#2563eb" />
                     </button>
                     <button
-                      onClick={() => handleDelete(cat._id)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                      onClick={() => confirmDelete(cat._id)}
+                      className="bg-transparent p-1 rounded hover:bg-red-100 transition"
+                      title="Xoá"
                     >
-                      Xoá
+                      <Icon icon="fluent:delete-20-filled" width="28" height="28" color="#f44336" />
                     </button>
                   </td>
                 </tr>
@@ -155,11 +184,10 @@ const Categories = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded ${
-                    currentPage === i + 1
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-black"
-                  }`}
+                  className={`px-3 py-1 border rounded ${currentPage === i + 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-black"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -171,40 +199,69 @@ const Categories = () => {
 
       {/* Popup Form */}
       {showForm && (
-  <>
-    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all">
-      <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800">
-          {editingCategory ? "Sửa danh mục" : "Thêm danh mục"}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Tên danh mục"
-            className="w-full border px-4 py-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-800"
-            >
-              Huỷ
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Lưu
-            </button>
+        <>
+          <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
+              <h3 className="text-xl font-semibold mb-4 text-gray-800">
+                {editingCategory ? "Sửa danh mục" : "Thêm danh mục"}
+              </h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Tên danh mục"
+                  className="w-full border px-4 py-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-gray-800"
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
-  </>
-)}
+        </>
+      )}
+
+      {toastMsg && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg animate-fade-in text-center text-base font-medium ${toastType === "success" ? "bg-green-100 border border-green-400 text-green-700" : "bg-red-100 border border-red-400 text-red-700"}`}>
+          {toastMsg}
+        </div>
+      )}
+      {/* Modal xác nhận xóa */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs text-center pointer-events-auto border border-gray-200">
+            <div className="mb-4 text-lg font-semibold text-gray-800">Xác nhận xoá danh mục?</div>
+            <div className="mb-6 text-gray-600">Bạn có chắc chắn muốn xoá danh mục này không?</div>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={handleDelete}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition font-medium"
+              >
+                Xoá
+              </button>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteId(null); }}
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-medium"
+              >
+                Huỷ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

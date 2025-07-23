@@ -1,90 +1,101 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import MainLayout from "../../components/layout/MainLayout";
 import Spinner from "../../components/common/Spinner";
 import Button from "../../components/common/Button";
-import {
-  fetchOrderDetailAPI,
-  clearCurrentOrder,
-  selectCurrentOrder,
-  selectOrderStatus,
-  selectOrderError,
-} from "../../store/slices/orderSlice";
-import { resetCart } from "../../store/slices/cartSlice";
-import { payosCheckoutSuccess } from "../../services/orderService";
+import orderService from "../../services/orderService";
+import { useCart } from "../../contexts/CartContext";
+import Modal from "../../components/common/Modal";
 
 const OrderSuccessPage = () => {
   const { orderId } = useParams();
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { clearCart } = useCart();
 
-  const currentOrder = useSelector(selectCurrentOrder);
-  const orderApiStatus = useSelector(selectOrderStatus);
-  const orderApiError = useSelector(selectOrderError);
+  const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState(null);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState({ title: "", body: "" });
+
+  const openModal = (title, body) => {
+    setModalContent({ title, body });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
 
   useEffect(() => {
-    if (orderId) {
-      payosCheckoutSuccess(orderId)
-        .then(() => {
-          if (
-            !currentOrder ||
-            currentOrder._id !== orderId ||
-            orderApiStatus === "idle" ||
-            orderApiStatus === "failed_detail"
-          ) {
-            dispatch(fetchOrderDetailAPI(orderId));
-          }
-        })
-        .catch(() => {
-          dispatch(fetchOrderDetailAPI(orderId));
-        });
-    } else {
-      navigate("/");
-    }
-    dispatch(resetCart());
-    return () => {
-      dispatch(clearCurrentOrder());
-    };
-  }, [dispatch, orderId, currentOrder, navigate, orderApiStatus]);
+    const fetchOrderDetails = async () => {
+      setLoading(true);
+      try {
+        // If coming from PayOS, update order status
+        const isPendingPayOS =
+          localStorage.getItem("pendingOrderId") === orderId;
+        if (isPendingPayOS) {
+          localStorage.removeItem("pendingOrderId");
+          await orderService.payosCheckoutSuccess(orderId);
+          console.log("PayOS payment marked as successful for order:", orderId);
+        }
 
-  if (
-    orderApiStatus === "loading_detail" ||
-    (!currentOrder &&
-      orderApiStatus !== "failed_detail" &&
-      orderApiStatus !== "succeeded_detail")
-  ) {
+        // Fetch order details
+        const response = await orderService.fetchOrderDetailAPI(orderId);
+        setOrder(response.data.data);
+
+        // Clear cart after successful order
+        await clearCart();
+
+        // Show payment success message if coming from PayOS
+        if (isPendingPayOS) {
+          openModal(
+            "Thanh toán thành công",
+            "Thanh toán của bạn đã được xác nhận. Đơn hàng đang được xử lý."
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch order details:", err);
+        setError(err.response?.data?.message || "Failed to load order details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (orderId) {
+      fetchOrderDetails();
+    }
+  }, [orderId, clearCart]);
+
+  if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center">
           <Spinner />
           <p className="mt-4 text-lg text-gray-600">
             Đang tải thông tin đơn hàng...
           </p>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
-  if (orderApiStatus === "failed_detail" && !currentOrder) {
+  if (error) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center text-red-500">
           <h1 className="text-2xl font-semibold mb-4">Lỗi khi tải đơn hàng</h1>
-          <p className="mb-6">
-            {String(orderApiError || "Không thể tải thông tin đơn hàng.")}
-          </p>
+          <p className="mb-6">{error}</p>
           <Button onClick={() => navigate("/")} variant="primary">
             Về trang chủ
           </Button>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
-  if (!currentOrder) {
+  if (!order) {
     return (
-      <MainLayout>
+      <>
         <div className="container mx-auto px-4 py-12 text-center">
           <p className="text-xl text-gray-700">
             Không tìm thấy thông tin đơn hàng đã đặt.
@@ -93,7 +104,7 @@ const OrderSuccessPage = () => {
             Về trang chủ
           </Button>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
@@ -104,22 +115,23 @@ const OrderSuccessPage = () => {
     address,
     items,
     totalAmount,
-    discountAmount,
+    discountAmount = 0,
     discountCode,
-    shippingFee,
+    shippingFee = 0, // Updated to 0 for free shipping
     paymentMethod,
     paymentStatus,
-    orderStatus: currentOrderStatus,
+    orderStatus,
     createdAt,
-  } = currentOrder;
+  } = order;
 
-  const calculatedSubtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const calculatedSubtotal =
+    items?.reduce(
+      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+      0
+    ) || 0;
 
   return (
-    <MainLayout>
+    <>
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="bg-green-50 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-md mb-10 text-center">
           <svg
@@ -142,6 +154,13 @@ const OrderSuccessPage = () => {
           <p className="text-lg">
             Cảm ơn bạn đã mua hàng. Chúng tôi sẽ sớm liên hệ để xác nhận đơn
             hàng.
+          </p>
+          <p className="mt-4 text-sm text-green-700">
+            📬 Vui lòng kiểm tra email để xem chi tiết đơn hàng. Nếu bạn không nhận được email sau vài phút, vui lòng liên hệ:
+          </p>
+          <p className="text-sm text-gray-700 mt-1">
+            📞 <strong>Hotline:</strong> <a href="tel:0974148047" className="text-blue-600 hover:underline no-underline">097 4148 047</a><br />
+            📧 <strong>Email:</strong> <a href="mailto:bookstore@gmail.com" className="text-blue-600 hover:underline no-underline">bookstore@gmail.com</a>
           </p>
           {orderCode && (
             <p className="mt-2 text-md">
@@ -179,50 +198,52 @@ const OrderSuccessPage = () => {
                 <strong>Phương thức thanh toán:</strong>{" "}
                 {paymentMethod === "COD"
                   ? "Thanh toán khi nhận hàng"
-                  : paymentMethod}
+                  : paymentMethod === "PAYOS"
+                    ? "Thanh toán qua PayOS"
+                    : paymentMethod}
               </p>
               <p>
                 <strong>Trạng thái thanh toán:</strong>
                 <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    paymentStatus === "paid"
-                      ? "bg-green-100 text-green-700"
-                      : paymentStatus === "failed"
+                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${paymentStatus === "paid"
+                    ? "bg-green-100 text-green-700"
+                    : paymentStatus === "failed"
                       ? "bg-red-100 text-red-700"
                       : "bg-yellow-100 text-yellow-700"
-                  }`}
+                    }`}
                 >
                   {paymentStatus === "pending"
                     ? "Chờ thanh toán"
                     : paymentStatus === "paid"
-                    ? "Đã thanh toán"
-                    : paymentStatus === "failed"
-                    ? "Thất bại"
-                    : paymentStatus}
+                      ? "Đã thanh toán"
+                      : paymentStatus === "failed"
+                        ? "Thất bại"
+                        : paymentStatus === "awaiting_payment"
+                          ? "Chờ thanh toán"
+                          : paymentStatus}
                 </span>
               </p>
               <p className="mt-1">
                 <strong>Trạng thái đơn hàng:</strong>
                 <span
-                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${
-                    currentOrderStatus === "completed"
-                      ? "bg-green-100 text-green-700"
-                      : currentOrderStatus === "cancelled"
+                  className={`ml-1 font-medium px-2 py-0.5 rounded-full text-xs ${orderStatus === "completed"
+                    ? "bg-green-100 text-green-700"
+                    : orderStatus === "cancelled"
                       ? "bg-red-100 text-red-700"
-                      : currentOrderStatus === "shipping"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
+                      : orderStatus === "confirmed"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
                 >
-                  {currentOrderStatus === "pending"
+                  {orderStatus === "pending"
                     ? "Chờ xử lý"
-                    : currentOrderStatus === "shipping"
-                    ? "Đang giao"
-                    : currentOrderStatus === "completed"
-                    ? "Hoàn thành"
-                    : currentOrderStatus === "cancelled"
-                    ? "Đã hủy"
-                    : currentOrderStatus}
+                    : orderStatus === "confirmed"
+                      ? "Đã xác nhận"
+                      : orderStatus === "completed"
+                        ? "Hoàn thành"
+                        : orderStatus === "cancelled"
+                          ? "Đã hủy"
+                          : orderStatus}
                 </span>
               </p>
             </div>
@@ -233,9 +254,9 @@ const OrderSuccessPage = () => {
               Sản phẩm đã đặt:
             </h3>
             <ul className="divide-y divide-gray-200 border rounded-md">
-              {items.map((item) => (
+              {items?.map((item, index) => (
                 <li
-                  key={item.book?._id || item._id}
+                  key={item.book?._id || index}
                   className="p-3 flex space-x-4"
                 >
                   <img
@@ -255,7 +276,7 @@ const OrderSuccessPage = () => {
                     </p>
                   </div>
                   <p className="text-md font-semibold text-gray-800 self-center">
-                    {((item.price || 0) * item.quantity).toLocaleString(
+                    {((item.price || 0) * (item.quantity || 0)).toLocaleString(
                       "vi-VN"
                     )}
                     đ
@@ -286,7 +307,7 @@ const OrderSuccessPage = () => {
             </div>
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t mt-1">
               <span>Tổng cộng thanh toán:</span>
-              <span>{totalAmount.toLocaleString("vi-VN")}đ</span>
+              <span>{(totalAmount || 0).toLocaleString("vi-VN")}đ</span>
             </div>
           </div>
 
@@ -300,21 +321,30 @@ const OrderSuccessPage = () => {
         <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
           <Button
             onClick={() => navigate("/")}
-            variant="outline"
+            variant="secondary"
             className="w-full sm:w-auto"
           >
             Tiếp tục mua sắm
           </Button>
           <Button
-            onClick={() => navigate("/orders")}
-            variant="primary"
+            onClick={() => navigate(`/orders/${orderId}`)}
+            variant="info"
             className="w-full sm:w-auto"
           >
             Xem lịch sử đơn hàng
           </Button>
         </div>
       </div>
-    </MainLayout>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={modalContent.title}
+        footerContent={<Button onClick={closeModal}>Đóng</Button>}
+      >
+        <p>{modalContent.body}</p>
+      </Modal>
+    </>
   );
 };
 

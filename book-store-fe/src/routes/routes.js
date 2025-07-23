@@ -3,101 +3,79 @@ import NotFoundPage from "../pages/NotFoundPage";
 import LoginPage from "../pages/auth/LoginPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import CartPage from "../pages/cart/CartPage";
 import AdminLayout from "../components/layout/AdminLayout";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
-import ProductDetailPage from "../pages/products/ProductDetailPage";
+import ProfilePage from "../pages/account/ProfilePage";
+import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
+import GoogleSuccess from "../pages/auth/GoogleSuccess";
+import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
+import WishlistPage from "../pages/wishlist/WishlistPage";
+
+// Product Pages
 import ProductListingPage from "../pages/products/ProductListingPage";
+import ProductDetailPage from "../pages/products/ProductDetailPage";
 import AddBook from "../pages/products/Addbook";
 import EditBook from "../pages/products/Editbook";
-//check out pages
-import ShippingPage from "../pages/checkout/ShippingPage";
-import PaymentPage from "../pages/checkout/PaymentPage";
-import OrderReviewPage from "../pages/checkout/OrderReviewPage";
+import UploadExcel from "../pages/products/UploadExcel";
+
+// Checkout Pages
 import OrderSuccessPage from "../pages/checkout/OrderSuccessPage";
 import OrderCancelPage from "../pages/checkout/OrderCancelPage";
-import UploadExcel from "../pages/products/UploadExcel";
+import OrderHistoryPage from "../pages/checkout/OrderHistoryPage";
+import OrderDetailPage from "../pages/checkout/OrderDetailPage";
+
 // Admin Pages
 import AdminBooks from "../pages/admin/Books";
 import AdminCategories from "../pages/admin/Categories";
-import AdminDiscounts from "../pages/admin/Discounts";
+// import AdminDiscounts from "../pages/admin/Discounts";
 import AdminUsers from "../pages/admin/Users";
 import AdminOrders from "../pages/admin/Orders";
-import AdminReviews from "../pages/admin/Reviews";
 import AdminBlog from "../pages/admin/Blog";
+import AdminReview from "../pages/admin/Reviews";
 import AdminReports from "../pages/admin/Reports";
-import GoogleSuccess from "../pages/auth/GoogleSuccess";
-import ProfilePage from "../pages/account/ProfilePage";
-import ChangePasswordPage from "../pages/auth/ChangePasswordPage";
-
-import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
 import AdminActivity from "../pages/admin/AdminActivity";
-import RoleBasedDashboard from "../pages/auth/RoleBasedDashboard";
-import AboutUs from "../pages/AboutUs";
-import PaymentInfo from "../pages/PaymentInfo";
-import SalesPolicy from "../pages/SalesPolicy";
 
 // Blog Pages
 import BlogListingPage from "../pages/blog/BlogListingPage";
 import BlogDetailPage from "../pages/blog/BlogDetailPage";
 
+// Static Pages
+import AboutUs from "../pages/AboutUs";
+// import PaymentInfo from "../pages/PaymentInfo";
+import SalesPolicy from "../pages/SalesPolicy";
+import ReviewForm from "../components/user/ReviewForm";
+import CheckoutPage from "../pages/checkout/CheckoutPage";
+
 export const routes = [
+  // Public Pages
+  { path: "/", page: HomePage, isShowHeader: true },
+  { path: "/auth/register", page: RegisterPage, isShowHeader: true },
+  { path: "/auth/login", page: LoginPage, isShowHeader: true },
+  { path: "/auth/cart", page: CartPage, isShowHeader: true },
+  { path: "/auth/forgot-password", page: ForgotPasswordPage, isShowHeader: true },
+  { path: "/auth/profile", page: ProfilePage, isShowHeader: true },
+  { path: "/auth/change-password", page: ChangePasswordPage, isShowHeader: true },
+  { path: "/reset-password", page: ResetPasswordPage, isShowHeader: true },
+  { path: "/about", page: AboutUs, isShowHeader: true },
+  // { path: "/payment-info", page: PaymentInfo, isShowHeader: true },
+  { path: "/sales-policy", page: SalesPolicy, isShowHeader: true },
+  { path: "/blogs", page: BlogListingPage, isShowHeader: true },
+  { path: "/blogs/:id", page: BlogDetailPage, isShowHeader: true },
 
+  // Product Routes
+  { path: "/getbook", page: ProductListingPage, isShowHeader: true },
+  { path: "/detailbook/:bookId", page: ProductDetailPage, isShowHeader: true },
+  { path: "/addbook", page: AddBook, isShowHeader: true },
+  { path: "/editbook/:id", page: EditBook, isShowHeader: true },
+  { path: "/autoadd", page: UploadExcel, isShowHeader: true },
 
-    {
-        path: "/",
-        page: HomePage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/register",
-        page: RegisterPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/login",
-        page: LoginPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/cart",
-        page: CartPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/forgot-password",
-        page: ForgotPasswordPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/profile",
-        page: ProfilePage,
-        isShowHeader: true,
-    },
-    {
-        path: "/auth/change-password",
-        page: ChangePasswordPage,
-        isShowHeader: true,
-    },
-      // --- THÊM CÁC ROUTE CHO CHECKOUT (VỚI PREFIX /auth) ---
+  // Checkout Routes
+  { path: "/auth/checkout", page: CheckoutPage, isShowHeader: true },
   {
-    path: "/auth/checkout/shipping",
-    page: ShippingPage, // Render trực tiếp component ShippingPage
-    isShowHeader: true, // Hoặc false nếu bạn có layout riêng cho checkout
-  },
-  {
-    path: "/auth/checkout/payment",
-    page: PaymentPage, // Render trực tiếp component PaymentPage
-    isShowHeader: true,
-  },
-  {
-    path: "/auth/checkout/review",
-    page: OrderReviewPage, // Render trực tiếp component OrderReviewPage
-    isShowHeader: true,
-  },
-  {
-    path: "/auth/checkout/success/:orderId", // Thêmã hiểu, bạn muốn đoạn code **chỉ riêng cho phần checkout routes** trong file :orderId để hiển thị chi tiết đơn hàng thành công
-    page: OrderSuccessPage, // Render trực tiếp component OrderSuccessPage
+    path: "/auth/checkout/success/:orderId",
+    page: OrderSuccessPage,
     isShowHeader: true,
   },
   {
@@ -105,44 +83,22 @@ export const routes = [
     page: OrderCancelPage,
     isShowHeader: true,
   },
-  // --- KẾT THÚC ĐOẠN CODE CHO `routes.js`
-    {
-        path: "/reset-password",
-        page: ResetPasswordPage,
-        isShowHeader: true
-    },
-    {
-        path: "/about",
-        page: AboutUs,
-        isShowHeader: true,
-    },
-    {
-        path: "/payment-info",
-        page: PaymentInfo,
-        isShowHeader: true,
-    },
-    {
-        path: "/sales-policy",
-        page: SalesPolicy,
-        isShowHeader: true,
-    },
-    {
-        path: "/blogs",
-        page: BlogListingPage,
-        isShowHeader: true,
-    },
-    {
-        path: "/blogs/:id",
-        page: BlogDetailPage,
-        isShowHeader: true,
-    },
-    // Admin Routes
+
+  { path: "/orders", page: OrderHistoryPage, isShowHeader: true },
+  { path: "/orders/:id", page: OrderDetailPage, isShowHeader: true },
+
+  { path: "/review/:orderId/:bookId", page: ReviewForm, isShowHeader: true },
+  { path: "/review/:orderId/:bookId/:reviewId", page: ReviewForm, isShowHeader: true },
+
+  { path: "/auth/wishlist", page: WishlistPage, isShowHeader: true },
+  // Auth Callback
+  { path: "/auth/google/success", page: GoogleSuccess, isShowHeader: false },
+
+  // Admin Routes (role + permission)
   {
     path: "/admin",
     page: () => (
-      <ProtectedRoute
-        requiredRole={["admindev", "adminbusiness", "superadmin"]}
-      >
+      <ProtectedRoute requiredRole={["admindev", "adminbusiness", "superadmin"]}>
         <AdminLayout>
           <RoleBasedDashboard />
         </AdminLayout>
@@ -164,10 +120,7 @@ export const routes = [
   {
     path: "/admin/categories",
     page: () => (
-      <ProtectedRoute
-        requiredRole="admindev"
-        requiredPermission="VIEW_CATEGORY"
-      >
+      <ProtectedRoute requiredRole="admindev" requiredPermission="VIEW_CATEGORY">
         <AdminLayout>
           <AdminCategories />
         </AdminLayout>
@@ -175,20 +128,17 @@ export const routes = [
     ),
     isShowHeader: false,
   },
-  {
-    path: "/admin/discounts",
-    page: () => (
-      <ProtectedRoute
-        requiredRole="adminbusiness"
-        requiredPermission="VIEW_DISCOUNT"
-      >
-        <AdminLayout>
-          <AdminDiscounts />
-        </AdminLayout>
-      </ProtectedRoute>
-    ),
-    isShowHeader: false,
-  },
+  // {
+  //   path: "/admin/discounts",
+  //   page: () => (
+  //     <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_DISCOUNT">
+  //       <AdminLayout>
+  //         <AdminDiscounts />
+  //       </AdminLayout>
+  //     </ProtectedRoute>
+  //   ),
+  //   isShowHeader: false,
+  // },
   {
     path: "/admin/users",
     page: () => (
@@ -203,10 +153,7 @@ export const routes = [
   {
     path: "/admin/view-admin-activity",
     page: () => (
-      <ProtectedRoute
-        requiredRole="superadmin"
-        requiredPermission="VIEW_ADMIN_ACTIVITY"
-      >
+      <ProtectedRoute requiredRole="superadmin" requiredPermission="VIEW_ADMIN_ACTIVITY">
         <AdminLayout>
           <AdminActivity />
         </AdminLayout>
@@ -217,10 +164,7 @@ export const routes = [
   {
     path: "/admin/orders",
     page: () => (
-      <ProtectedRoute
-        requiredRole="adminbusiness"
-        requiredPermission="VIEW_ORDER"
-      >
+      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_ORDER">
         <AdminLayout>
           <AdminOrders />
         </AdminLayout>
@@ -229,14 +173,11 @@ export const routes = [
     isShowHeader: false,
   },
   {
-    path: "/admin/reviews",
+    path: "/admin/review",
     page: () => (
-      <ProtectedRoute
-        requiredRole="adminbusiness"
-        requiredPermission="VIEW_REVIEW"
-      >
+      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_REVIEW">
         <AdminLayout>
-          <AdminReviews />
+          <AdminReview />
         </AdminLayout>
       </ProtectedRoute>
     ),
@@ -256,10 +197,7 @@ export const routes = [
   {
     path: "/admin/reports",
     page: () => (
-      <ProtectedRoute
-        requiredRole="adminbusiness"
-        requiredPermission="VIEW_SALES_REPORT"
-      >
+      <ProtectedRoute requiredRole="adminbusiness" requiredPermission="VIEW_SALES_REPORT">
         <AdminLayout>
           <AdminReports />
         </AdminLayout>
@@ -268,38 +206,6 @@ export const routes = [
     isShowHeader: false,
   },
 
-    {
-        path: '/auth/google/success',
-        page: GoogleSuccess,
-        isShowHeader: false,
-    },
-    {
-        path: "*",
-        page: NotFoundPage,
-    },
-     {
-    path: "/getbook",
-    page: ProductListingPage,
-    isShowHeader: true,
-  },
-  {
-    path: "/detailbook/:bookId",
-    page: ProductDetailPage,
-    isShowHeader: true,
-  },
-  {
-    path: "/addbook",
-    page: AddBook,
-    isShowHeader: true,
-  },
-  {
-    path: "/editbook/:id",
-    page: EditBook,
-    isShowHeader: true,
-  },
-  {
-    path: "/autoadd",
-    page: UploadExcel,
-    isShowHeader: true,
-  },
+  // Not found fallback
+  { path: "*", page: NotFoundPage },
 ];

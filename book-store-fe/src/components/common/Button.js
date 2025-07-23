@@ -10,6 +10,7 @@ const Button = React.forwardRef(
       isLoading = false,
       disabled = false,
       type = "button",
+      className = "",
       ...rest
     },
     ref
@@ -39,7 +40,8 @@ const Button = React.forwardRef(
       sizeClasses[size] || sizeClasses.md,
       disabledClasses,
       loadingClasses,
-    ].join(" ");
+      className,
+    ].filter(Boolean).join(" ");
 
     return (
       <button

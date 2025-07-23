@@ -329,21 +329,20 @@ const Users = () => {
             let displayErrorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
             const newFormErrors = {};
 
-            if (error.response && error.response.data) {
-                displayErrorMessage = error.response.data.message || displayErrorMessage;
+            // Sử dụng error.message từ service đã được sửa
+            displayErrorMessage = error.message || displayErrorMessage;
 
-                if (displayErrorMessage.includes("Email đã tồn tại")) {
-                    newFormErrors['email'] = displayErrorMessage;
-                } else if (displayErrorMessage.includes("Email và mật khẩu là bắt buộc")) {
-                    newFormErrors['email'] = displayErrorMessage;
-                } else if (displayErrorMessage.includes("Mật khẩu phải có ít nhất 8 ký tự")) {
-                    newFormErrors['password'] = displayErrorMessage;
-                } else if (displayErrorMessage.includes("Họ tên và số điện thoại là bắt buộc")) {
-                    newFormErrors['info.fullName'] = displayErrorMessage;
-                    newFormErrors['info.phone'] = displayErrorMessage;
-                } else if (displayErrorMessage.includes("Số điện thoại phải có đúng 10 chữ số")) {
-                    newFormErrors['info.phone'] = displayErrorMessage;
-                }
+            if (displayErrorMessage.includes("Email đã tồn tại")) {
+                newFormErrors['email'] = displayErrorMessage;
+            } else if (displayErrorMessage.includes("Email và mật khẩu là bắt buộc")) {
+                newFormErrors['email'] = displayErrorMessage;
+            } else if (displayErrorMessage.includes("Mật khẩu phải có ít nhất 8 ký tự")) {
+                newFormErrors['password'] = displayErrorMessage;
+            } else if (displayErrorMessage.includes("Họ tên và số điện thoại là bắt buộc")) {
+                newFormErrors['info.fullName'] = displayErrorMessage;
+                newFormErrors['info.phone'] = displayErrorMessage;
+            } else if (displayErrorMessage.includes("Số điện thoại phải có đúng 10 chữ số")) {
+                newFormErrors['info.phone'] = displayErrorMessage;
             }
 
             setFormErrors(newFormErrors);
@@ -445,6 +444,7 @@ const Users = () => {
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     title={selectedUser ? 'Cập nhật thông tin người dùng' : 'Thêm người dùng'}
+                    size='lg'
                 >
                     <form onSubmit={handleSubmit}>
                         {generalError && (
