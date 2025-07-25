@@ -21,7 +21,7 @@ const checkAuthMiddleware = async (req, res, next) => {
         // Check if account is active
         if (!user.isActive) {
             return res.status(401).json({
-                message: "Account is deactivated",
+                message: "Tài khoản của bạn đã bị khóa",
                 status: "Error",
             });
         }

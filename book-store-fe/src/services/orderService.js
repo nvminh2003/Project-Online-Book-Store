@@ -159,6 +159,21 @@ const orderService = {
     return apiClient.get(`${API_URL}/orders/payos/cancel/${orderId}`, config);
   },
 
+  // Hủy đơn hàng bởi customer
+  cancelOrderByCustomer: async (orderId) => {
+    try {
+      const token = getToken();
+      const response = await apiClient.patch(`${API_URL}/orders/cancel-by-customer/${orderId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
 
   // payosCheckoutCancel: async (orderId) => {
   //   return axios.get(`${API_URL}/orders/payos/cancel/${orderId}`);

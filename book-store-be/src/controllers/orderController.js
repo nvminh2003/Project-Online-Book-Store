@@ -225,43 +225,37 @@ const createOrder = async (req, res) => {
 
     await newOrder.save();
 
-    // For COD orders, update stock immediately with atomic operations
-    // For PayOS orders, stock will be updated only when payment is successful
-    if (paymentMethod === "COD") {
-      // Use atomic bulkWrite to prevent race conditions
-      const bulkOps = orderItems.map((item) => ({
-        updateOne: {
-          filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
-          update: { $inc: { stockQuantity: -item.quantity } },
-        },
-      }));
+    // Trừ tồn kho ngay khi tạo đơn cho cả COD và PAYOS
+    const bulkOps = orderItems.map((item) => ({
+      updateOne: {
+        filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
+        update: { $inc: { stockQuantity: -item.quantity } },
+      },
+    }));
 
-      const result = await Book.bulkWrite(bulkOps);
+    const result = await Book.bulkWrite(bulkOps);
 
-      // Check if all stock updates were successful
-      if (result.modifiedCount !== orderItems.length) {
-        // Rollback: xóa đơn hàng vừa tạo
-        await Order.findByIdAndDelete(newOrder._id);
+    // Check if all stock updates were successful
+    if (result.modifiedCount !== orderItems.length) {
+      // Rollback: xóa đơn hàng vừa tạo
+      await Order.findByIdAndDelete(newOrder._id);
 
-        // Find which books failed
-        const failedBooks = [];
-        for (const item of orderItems) {
-          const book = await Book.findById(item.book);
-          if (book.stockQuantity < item.quantity) {
-            failedBooks.push(book.title);
-          }
+      // Find which books failed
+      const failedBooks = [];
+      for (const item of orderItems) {
+        const book = await Book.findById(item.book);
+        if (book.stockQuantity < item.quantity) {
+          failedBooks.push(book.title);
         }
-
-        return res.status(400).json({
-          message: `Insufficient stock for: ${failedBooks.join(
-            ", "
-          )}. Please refresh your cart and try again.`,
-          status: "Error",
-        });
       }
 
-      console.log(`Stock updated successfully for COD order: ${newOrder._id}`);
+      return res.status(400).json({
+        message: `Insufficient stock for: ${failedBooks.join(", ")}. Please refresh your cart and try again.`,
+        status: "Error",
+      });
     }
+
+    console.log(`Stock updated successfully for order: ${newOrder._id}`);
 
     if (appliedDiscount) {
       appliedDiscount.usesCount += 1;
@@ -812,37 +806,7 @@ const handlePayosSuccess = async (req, res) => {
       });
     }
 
-    // Atomic stock update for all items  // Thử trừ tồn kho bằng bulkWrite
-    const bulkOps = order.items.map((item) => ({
-      updateOne: {
-        filter: { _id: item.book, stockQuantity: { $gte: item.quantity } },
-        update: { $inc: { stockQuantity: -item.quantity } },
-      },
-    }));
-    const result = await Book.bulkWrite(bulkOps);
-
-    // Nếu có bất kỳ sản phẩm nào không đủ tồn kho
-    if (result.modifiedCount !== order.items.length) {
-      // Rollback: set order status to cancelled, paymentStatus to failed
-      order.paymentStatus = "failed";
-      order.orderStatus = "cancelled";
-      await order.save();
-      // Xác định sản phẩm nào lỗi
-      const failedBooks = [];
-      for (const item of order.items) {
-        const book = await Book.findById(item.book);
-        if (!book || book.stockQuantity < item.quantity) {
-          failedBooks.push(book ? book.title : item.book.toString());
-        }
-      }
-      return res.status(400).json({
-        message: `Insufficient stock for: ${failedBooks.join(", ")}. Your payment was successful but the order could not be fulfilled. Please contact support for a refund or try again later!`,
-        status: "Error",
-        data: { orderId: order._id },
-      });
-    }
-
-    // Nếu tất cả cập nhật tồn kho thành công
+    // Không cần trừ tồn kho nữa, chỉ cập nhật trạng thái
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";
     await order.save();
@@ -901,7 +865,7 @@ const handlePayosCancel = async (req, res) => {
     order.orderStatus = "cancelled";
     await order.save();
 
-    // Khôi phục tồn kho an toàn (song song)
+    // Hoàn lại tồn kho khi hủy/thanh toán thất bại
     await Promise.all(order.items.map(item =>
       Book.findByIdAndUpdate(item.book, {
         $inc: { stockQuantity: item.quantity },
@@ -993,6 +957,53 @@ const exportOrdersToExcel = async (req, res) => {
   }
 };
 
+// Hủy đơn hàng bởi customer
+const cancelOrderByCustomer = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (order.user.toString() !== req.account._id.toString())
+      return res.status(403).json({ message: "Không có quyền hủy đơn này" });
+    if (order.orderStatus !== "pending")
+      return res.status(400).json({ message: "Chỉ được hủy đơn ở trạng thái chờ xử lý" });
+    // Nếu là PayOS và đã thanh toán thì không cho hủy
+    if (order.paymentMethod === "PAYOS" && order.paymentStatus === "paid") {
+      return res.status(400).json({ message: "Đơn hàng đã thanh toán không thể hủy." });
+    }
+    order.orderStatus = "cancelled";
+    order.paymentStatus = "failed";
+    await order.save();
+    // Cộng lại kho
+    await Promise.all(order.items.map(item =>
+      Book.findByIdAndUpdate(item.book, { $inc: { stockQuantity: item.quantity } })
+    ));
+    res.json({ message: "Đã hủy đơn hàng thành công", status: "Success" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Xác nhận đã nhận hàng bởi customer
+const completeOrderByCustomer = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (order.user.toString() !== req.account._id.toString())
+      return res.status(403).json({ message: "Không có quyền xác nhận đơn này" });
+    if (order.orderStatus !== "confirmed")
+      return res.status(400).json({ message: "Chỉ xác nhận khi đơn đã giao thành công" });
+    // Nếu là PayOS thì phải đã thanh toán mới cho xác nhận
+    if (order.paymentMethod === "PAYOS" && order.paymentStatus !== "paid") {
+      return res.status(400).json({ message: "Đơn hàng chưa thanh toán không thể xác nhận hoàn thành." });
+    }
+    order.orderStatus = "completed";
+    await order.save();
+    res.json({ message: "Đã xác nhận nhận hàng thành công", status: "Success" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -1005,5 +1016,7 @@ module.exports = {
   handlePayosCancel,
   updatePaymentStatus,
   getUserOrders,
-  exportOrdersToExcel
+  exportOrdersToExcel,
+  cancelOrderByCustomer,
+  completeOrderByCustomer
 };
