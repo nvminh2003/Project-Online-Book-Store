@@ -59,10 +59,10 @@ const BlogPostCard = ({ blog }) => {
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center space-x-4">
             {/* Author */}
-            <div className="flex items-center">
+            {/* <div className="flex items-center">
               <Icon icon="mdi:account" className="w-4 h-4 mr-1" />
               <span>{blog.author?.info?.fullName || blog.author?.email || 'Unknown'}</span>
-            </div>
+            </div> */}
 
             {/* Date */}
             <div className="flex items-center">

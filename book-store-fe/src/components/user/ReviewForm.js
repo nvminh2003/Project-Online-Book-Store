@@ -294,18 +294,18 @@ const ReviewForm = () => {
                     <div className="flex justify-end gap-2">
                         {isReadOnly ? (
                             <>
-                                <Button type="button" variant="danger" onClick={handleDelete} disabled={submitting}>
+                                {/* <Button type="button" variant="danger" onClick={handleDelete} disabled={submitting}>
                                     Xóa đánh giá
-                                </Button>
+                                </Button> */}
                                 <Button type="button" onClick={() => setViewMode(false)}>
                                     Sửa đánh giá
                                 </Button>
                             </>
                         ) : isEditMode ? (
                             <>
-                                <Button type="button" variant="danger" onClick={handleDelete} disabled={submitting}>
+                                {/* <Button type="button" variant="danger" onClick={handleDelete} disabled={submitting}>
                                     Xóa đánh giá
-                                </Button>
+                                </Button> */}
                                 <Button type="button" variant="secondary" onClick={() => setViewMode(true)}>
                                     Hủy
                                 </Button>

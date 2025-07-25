@@ -5,16 +5,25 @@ const getPermissions = require("../utils/getPermissions");
 const { sendResetPasswordEmail, sendAccountLockedEmail, sendAccountUnlockedEmail } = require("../utils/emailService");
 const crypto = require('crypto');
 const AdminActivityLog = require('../models/AdminActivityLog');
+const isStrongPassword = require('../utils/validatePasswordStrength');
 
 // Register new account
 const register = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+
         // Validate required fields
         if (!email || !password) {
             return res.status(400).json({
                 message: "Email và mật khẩu là bắt buộc",
+                status: "Error"
+            });
+        }
+        // Kiểm tra độ mạnh mật khẩu
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({
+                message: "Mật khẩu phải tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.",
                 status: "Error"
             });
         }
@@ -95,7 +104,7 @@ const login = async (req, res) => {
         // Check if account is active
         if (!account.isActive) {
             return res.status(401).json({
-                message: "Tài khoản của bạn đã bị vô hiệu hóa",
+                message: "Tài khoản của bạn đã bị khóa",
                 status: "Error"
             });
         }
@@ -293,9 +302,12 @@ const changePassword = async (req, res) => {
             return res.status(400).json({ status: 'Error', message: 'Mật khẩu cũ không đúng' });
         }
 
+        // Kiểm tra độ mạnh mật khẩu mới
+        if (!isStrongPassword(newPassword)) {
+            return res.status(400).json({ status: 'Error', message: 'Mật khẩu mới phải tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.' });
+        }
         user.password = newPassword;
         await user.save();
-
         res.json({ status: 'Success', message: 'Đổi mật khẩu thành công' });
     } catch (error) {
         res.status(500).json({ status: 'Error', message: error.message });
@@ -419,12 +431,15 @@ const resetPassword = async (req, res) => {
             });
         }
 
+        // Kiểm tra độ mạnh mật khẩu mới
+        if (!isStrongPassword(newPassword)) {
+            return res.status(400).json({ status: 'Error', message: 'Mật khẩu mới phải tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.' });
+        }
         // Update password
         account.password = newPassword;
         account.resetToken = undefined;
         account.resetTokenExpires = undefined;
         await account.save();
-
         res.json({
             status: 'Success',
             message: 'Mật khẩu đã được đặt lại thành công'
@@ -447,6 +462,15 @@ const createAccountByAdmin = async (req, res) => {
         if (req.account.role !== 'superadmin') {
             return res.status(403).json({
                 message: "Không có quyền tạo tài khoản người dùng với vai trò này",
+                status: "Error"
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                message: "Email không hợp lệ",
                 status: "Error"
             });
         }
@@ -476,6 +500,13 @@ const createAccountByAdmin = async (req, res) => {
             });
         }
 
+        // Kiểm tra độ mạnh mật khẩu
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({
+                message: "Mật khẩu phải tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.",
+                status: "Error"
+            });
+        }
         const newAccount = new Account({
             email,
             password,

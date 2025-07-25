@@ -39,13 +39,6 @@ const ResetPasswordForm = () => {
             return;
         }
 
-        // Validate password strength
-        if (formData.newPassword.length < 6) {
-            setError('Mật khẩu phải có ít nhất 6 ký tự');
-            setLoading(false);
-            return;
-        }
-
         try {
             await accountService.resetPassword(token, formData.newPassword);
             setSuccess(true);

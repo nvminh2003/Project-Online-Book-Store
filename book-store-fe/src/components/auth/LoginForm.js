@@ -16,8 +16,16 @@ const LoginForm = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check for error message in URL parameters
+    // Ưu tiên hiển thị thông báo bị khóa nếu có param deactivated
     const params = new URLSearchParams(location.search);
+    const deactivated = params.get('deactivated');
+    if (deactivated) {
+      setError('Tài khoản của bạn đã bị khóa');
+      // Clear the deactivated param from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      return;
+    }
     const errorMessage = params.get('error');
     if (errorMessage) {
       setError(decodeURIComponent(errorMessage));

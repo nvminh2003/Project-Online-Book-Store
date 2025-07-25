@@ -34,6 +34,8 @@ router.get(
     authorizeRole(["adminbusiness", "customer"]),
     orderController.getOrderById
 );
+router.patch('/cancel-by-customer/:id', checkAuthMiddleware, orderController.cancelOrderByCustomer);
+router.patch('/complete-by-customer/:id', checkAuthMiddleware, orderController.completeOrderByCustomer);
 
 // Admin routes
 router.get("/",

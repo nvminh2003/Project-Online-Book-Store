@@ -33,6 +33,24 @@ apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        // Xử lý tài khoản bị vô hiệu hóa
+        if (
+            error.response &&
+            (error.response.status === 401 || error.response.status === 403) &&
+            error.response.data &&
+            error.response.data.message &&
+            (
+                error.response.data.message.includes('vô hiệu hóa') ||
+                error.response.data.message.includes('bị khóa') ||
+                error.response.data.message.toLowerCase().includes('deactivated')
+            )
+        ) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            window.location.href = '/auth/login?deactivated=1';
+            return Promise.reject(error);
+        }
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             if (originalRequest.url.includes('/accounts/refresh-token')) {
                 // Nếu refresh token cũng hết hạn, logout

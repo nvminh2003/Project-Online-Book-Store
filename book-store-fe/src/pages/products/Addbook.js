@@ -173,6 +173,10 @@ const AddBook = () => {
       notifyError("Số lượng phải là số dương.");
       return;
     }
+    if (String(bookData.isbn).trim() === "") {
+      notifyError("ISBN không được để trống.");
+      return;
+    }
     if (bookData.categories.length === 0) {
       notifyError("Vui lòng chọn danh mục.");
       return;

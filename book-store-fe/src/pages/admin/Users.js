@@ -32,7 +32,7 @@ const Users = () => {
         {
             name: 'email',
             label: 'Email',
-            type: 'email',
+            type: 'text',
             required: true,
             placeholder: 'Nhập email'
         },
@@ -299,6 +299,15 @@ const Users = () => {
         setFormErrors({});
         setGeneralError('');
 
+        // 1. Validate định dạng email trước
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!formValues.email || !emailRegex.test(formValues.email)) {
+            setFormErrors({ email: 'Email không hợp lệ. Vui lòng nhập đúng định dạng, ví dụ: example@gmail.com' });
+            notifyDismiss(toastId);
+            return;
+        }
+
+        // 2. Gửi request lên BE để kiểm tra email đã tồn tại chưa
         try {
             const submitData = {
                 email: formValues.email,
@@ -327,32 +336,43 @@ const Users = () => {
             fetchUsers();
         } catch (error) {
             let displayErrorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại.';
-            const newFormErrors = {};
-
-            // Sử dụng error.message từ service đã được sửa
+            if (error.response && error.response.data && error.response.data.errors) {
+                setFormErrors(error.response.data.errors);
+                notifyDismiss(toastId);
+                return;
+            }
             displayErrorMessage = error.message || displayErrorMessage;
 
+            // Nếu lỗi là email đã tồn tại thì chỉ báo lỗi email
             if (displayErrorMessage.includes("Email đã tồn tại")) {
-                newFormErrors['email'] = displayErrorMessage;
-            } else if (displayErrorMessage.includes("Email và mật khẩu là bắt buộc")) {
-                newFormErrors['email'] = displayErrorMessage;
-            } else if (displayErrorMessage.includes("Mật khẩu phải có ít nhất 8 ký tự")) {
-                newFormErrors['password'] = displayErrorMessage;
-            } else if (displayErrorMessage.includes("Họ tên và số điện thoại là bắt buộc")) {
-                newFormErrors['info.fullName'] = displayErrorMessage;
-                newFormErrors['info.phone'] = displayErrorMessage;
-            } else if (displayErrorMessage.includes("Số điện thoại phải có đúng 10 chữ số")) {
-                newFormErrors['info.phone'] = displayErrorMessage;
+                setFormErrors({ email: displayErrorMessage });
+                notifyDismiss(toastId);
+                return;
             }
 
-            setFormErrors(newFormErrors);
+            // Nếu không phải lỗi email, validate các trường còn lại ở FE
+            const formErrors = {};
+            const validRoles = ['customer', 'admindev', 'adminbusiness'];
+            if (!formValues.role || !validRoles.includes(formValues.role)) {
+                formErrors['role'] = 'Vai trò không hợp lệ';
+            }
+            if (!formValues['info.fullName'] || formValues['info.fullName'].trim() === "") {
+                formErrors['info.fullName'] = "Họ tên là bắt buộc";
+            }
+            const phone = formValues['info.phone'];
+            if (!phone || phone.trim() === "") {
+                formErrors['info.phone'] = "Số điện thoại là bắt buộc";
+            } else if (!/^[0-9]{10}$/.test(phone)) {
+                formErrors['info.phone'] = "Số điện thoại phải có đúng 10 chữ số";
+            }
+            if (Object.keys(formErrors).length > 0) {
+                setFormErrors(formErrors);
+                notifyDismiss(toastId);
+                return;
+            }
+
+            setGeneralError(displayErrorMessage);
             notifyDismiss(toastId);
-
-            if (Object.keys(newFormErrors).length === 0) {
-                setGeneralError(displayErrorMessage);
-            } else {
-                setGeneralError('');
-            }
             notifyUpdateError(toastId, displayErrorMessage);
         }
     };

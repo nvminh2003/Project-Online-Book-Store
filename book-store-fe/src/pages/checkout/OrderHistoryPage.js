@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import AdminModal from '../../components/admin/AdminModal';
 import Spinner from '../../components/common/Spinner';
 import Button from '../../components/common/Button';
-import Pagination from '../../components/common/Pagination';
+import AdminPagination from '../../components/admin/AdminPagination';
 import orderService from '../../services/orderService';
+import { notifySuccess, notifyError, notifyLoading, notifyUpdateSuccess, notifyUpdateError, notifyDismiss } from '../../components/common/ToastManager';
 import { useAuth } from '../../contexts/AuthContext';
 
 const OrderHistoryPage = () => {
@@ -16,16 +18,14 @@ const OrderHistoryPage = () => {
     totalPages: 1,
     totalOrders: 0
   });
+  // Modal xác nhận hủy đơn
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Đảm bảo luôn bắt đầu từ trang 1 để xem đơn hàng mới nhất
-      if (pagination.page !== 1) {
-        setPagination(prev => ({ ...prev, page: 1 }));
-      } else {
-        fetchOrders();
-      }
+      fetchOrders();
     }
   }, [isAuthenticated, pagination.page]);
 
@@ -62,11 +62,7 @@ const OrderHistoryPage = () => {
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handleRefresh = () => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-    fetchOrders();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const getStatusBadge = (status) => {
@@ -164,12 +160,6 @@ const OrderHistoryPage = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch sử đơn hàng</h1>
           <p className="text-gray-600">Xem lại tất cả đơn hàng của bạn</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Làm mới
-        </button>
       </div>
 
       {orders.length === 0 ? (
@@ -276,26 +266,28 @@ const OrderHistoryPage = () => {
                         Xem chi tiết
                       </button>
                     </Link>
-
-                    {/* {order.orderStatus === 'completed' && order.items?.map(item => (
-                      <Link
-                        key={item.book?._id}
-                        to={`/review/${order._id}/${item.book?._id}`}
-                        state={{
-                          book: {
-                            _id: item.book?._id,
-                            title: item.book?.title,
-                            image: item.book?.images?.[0],
-                            price: item.price,
-                            quantity: item.quantity
-                          }
+                    {/* Nút Hủy đơn cho trạng thái pending */}
+                    {order.orderStatus === 'pending' ? (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          setOrderToCancel(order);
+                          setIsCancelModalOpen(true);
                         }}
                       >
-                        <button className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 transition">
-                          Đánh giá sản phẩm
-                        </button>
-                      </Link>
-                    ))} */}
+                        Hủy đơn
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled
+                        title={order.orderStatus === 'confirmed' ? 'Đơn đã được xác nhận, không thể hủy.' : 'Không thể hủy đơn ở trạng thái này.'}
+                      >
+                        Hủy đơn
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -305,15 +297,65 @@ const OrderHistoryPage = () => {
           {/* Pagination */}
           {pagination.totalPages > 1 && (
             <div className="mt-8">
-              <Pagination
+              <AdminPagination
                 currentPage={pagination.page}
                 totalPages={pagination.totalPages}
+                totalItems={pagination.totalOrders}
+                itemsPerPage={pagination.limit}
                 onPageChange={handlePageChange}
               />
             </div>
           )}
         </div>
       )}
+      {/* Modal xác nhận hủy đơn hàng */}
+      <AdminModal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          setIsCancelModalOpen(false);
+          setOrderToCancel(null);
+        }}
+        title="Xác nhận hủy đơn hàng"
+      >
+        <p className="text-gray-700 mb-4">
+          Bạn có chắc chắn muốn hủy đơn hàng{' '}
+          <span className="font-semibold">#{orderToCancel?.orderCode}</span> không?
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsCancelModalOpen(false);
+              setOrderToCancel(null);
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!orderToCancel) return;
+              let toastId;
+              try {
+                toastId = notifyLoading('Đang xử lý hủy đơn...');
+                await orderService.cancelOrderByCustomer(orderToCancel._id);
+                notifyDismiss(toastId);
+                notifySuccess('Đã hủy đơn hàng thành công!');
+                setIsCancelModalOpen(false);
+                setOrderToCancel(null);
+                fetchOrders();
+              } catch (err) {
+                notifyDismiss(toastId);
+                notifyError(err.message || 'Hủy đơn thất bại!');
+              }
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Xác nhận hủy
+          </button>
+        </div>
+      </AdminModal>
     </div>
   );
 };
