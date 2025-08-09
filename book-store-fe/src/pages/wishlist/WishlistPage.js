@@ -120,16 +120,28 @@ const WishlistPage = () => {
 
   const handleMoveSelectedToCart = async () => {
     if (selectedItems.length === 0) return;
+    // Lọc sản phẩm hết hàng
+    const selectedBooks = wishlistItems.filter(item => selectedItems.includes(item.book?._id));
+    const outOfStock = selectedBooks.filter(item => !item.book || item.book.stockQuantity <= 0);
+    const inStock = selectedBooks.filter(item => item.book && item.book.stockQuantity > 0);
+
+    if (outOfStock.length === selectedBooks.length) {
+      notifyError("Tất cả sản phẩm đã hết hàng và không thể thêm vào giỏ!");
+      return;
+    }
+    if (outOfStock.length > 0) {
+      notifyError(`Không thể thêm vào giỏ các sản phẩm đã hết hàng: ${outOfStock.map(i => i.book?.title).join(", ")}`);
+    }
+    if (inStock.length === 0) return;
     setActionLoading((prev) => ({ ...prev, moveSelectedToCart: true }));
     try {
-      const res = await wishlistService.moveMultipleToCart(selectedItems);
+      const res = await wishlistService.moveMultipleToCart(inStock.map(i => i.book._id));
       if (res.status === "Success" || res.status === "Warning") {
         notifySuccess(res.message || "Đã chuyển vào giỏ hàng");
         setSelectedItems([]);
         await loadWishlist();
         await fetchCart();
         if (typeof window !== 'undefined' && window.location) {
-          // Optionally reload cart count in header
           window.dispatchEvent(new Event('cart-updated'));
         }
       } else {

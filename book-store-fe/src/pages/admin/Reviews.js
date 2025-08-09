@@ -18,6 +18,9 @@ const Review = () => {
     const [keyword, setKeyword] = useState('');
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [reviewToDelete, setReviewToDelete] = useState(null);
+    // Thêm state cho xác nhận ẩn/hiện
+    const [isToggleModalOpen, setIsToggleModalOpen] = useState(false);
+    const [reviewToToggle, setReviewToToggle] = useState(null);
     const [filters, setFilters] = useState({
         status: '',
         rating: '',
@@ -55,14 +58,19 @@ const Review = () => {
         setCurrentPage(1);
     };
 
-    const handleToggleVisibility = async (reviewId) => {
+    // Hàm xác nhận toggle
+    const handleToggleVisibility = async () => {
+        if (!reviewToToggle) return;
         try {
-            await reviewService.toggleReviewVisibility(reviewId);
+            await reviewService.toggleReviewVisibility(reviewToToggle._id);
             notifySuccess('Cập nhật trạng thái đánh giá thành công');
-            fetchReviews(); // Refresh data
+            fetchReviews();
         } catch (error) {
             console.error('Failed to toggle review visibility:', error);
             notifyError('Không thể cập nhật trạng thái đánh giá');
+        } finally {
+            setIsToggleModalOpen(false);
+            setReviewToToggle(null);
         }
     };
 
@@ -118,12 +126,15 @@ const Review = () => {
             render: (item) => (
                 <div className="flex gap-2">
                     <button
-                        onClick={() => handleToggleVisibility(item._id)}
-                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                        onClick={() => {
+                            setReviewToToggle(item);
+                            setIsToggleModalOpen(true);
+                        }}
+                        className={`px-3 py-1 text-sm text-white rounded hover:opacity-90 ${item.isHidden ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
                     >
                         {item.isHidden ? 'Hiện' : 'Ẩn'}
                     </button>
-                    <button
+                    {/* <button
                         onClick={() => {
                             setReviewToDelete(item);
                             setIsConfirmModalOpen(true);
@@ -131,8 +142,7 @@ const Review = () => {
                         className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
                     >
                         Xóa
-                    </button>
-
+                    </button> */}
                 </div>
             )
         }
@@ -180,6 +190,40 @@ const Review = () => {
                     itemsPerPage={10}
                     onPageChange={setCurrentPage}
                 />
+
+                {/* Xác nhận ẩn/hiện review */}
+                <AdminModal
+                    isOpen={isToggleModalOpen}
+                    onClose={() => {
+                        setIsToggleModalOpen(false);
+                        setReviewToToggle(null);
+                    }}
+                    title={`Xác nhận ${reviewToToggle?.isHidden ? 'hiện' : 'ẩn'} đánh giá`}
+                >
+                    <p className="text-gray-700 mb-4">
+                        Bạn có chắc chắn muốn {reviewToToggle?.isHidden ? 'hiện' : 'ẩn'} đánh giá này của người dùng
+                        <span className="font-semibold"> {reviewToToggle?.user?.info?.fullName || reviewToToggle?.user?.email}</span> không?
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsToggleModalOpen(false);
+                                setReviewToToggle(null);
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleToggleVisibility}
+                            className={`px-4 py-2 ${reviewToToggle?.isHidden ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white rounded-md`}
+                        >
+                            {reviewToToggle?.isHidden ? 'Hiện' : 'Ẩn'}
+                        </button>
+                    </div>
+                </AdminModal>
 
                 {/* Xác nhận xóa review */}
                 <AdminModal

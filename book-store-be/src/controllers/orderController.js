@@ -621,13 +621,52 @@ const updatePaymentStatus = async (req, res) => {
       });
     }
 
+    // Lưu trạng thái cũ để so sánh
+    const oldPaymentStatus = order.paymentStatus;
     order.paymentStatus = paymentStatus;
+
+    // Tự động cập nhật trạng thái đơn hàng dựa trên trạng thái thanh toán
+    // Logic nghiệp vụ:
+    // 1. Khi thanh toán thành công (paid) → đơn hàng chuyển sang completed (đã thanh toán thành công)
+    // 2. Với COD: admin có thể confirm (giao hàng) trước, sau đó khách thanh toán → chuyển sang completed
+    // 3. Với COD: nếu admin confirm nhưng khách không thanh toán (failed) → tự động hủy đơn
+    if (paymentStatus === "paid") {
+      if (order.orderStatus === "pending") {
+        return res.status(400).json({
+          message: "Đơn hàng phải xác nhận trước khi thanh toán!",
+          status: "Error"
+        });
+      } else if (order.orderStatus === "confirmed") {
+        order.orderStatus = "completed";
+      }
+    } else if (paymentStatus === "failed") {
+      if (order.orderStatus === "pending") {
+        return res.status(400).json({
+          message: "Đơn hàng phải xác nhận trước khi cập nhật trạng thái thanh toán!",
+          status: "Error"
+        });
+      }
+      // Khi thanh toán thất bại
+      if (order.paymentMethod === "COD" && order.orderStatus === "confirmed") {
+        // Đơn COD đã confirm nhưng thanh toán thất bại → tự động hủy đơn
+        order.orderStatus = "cancelled";
+
+        // Hoàn lại tồn kho khi hủy đơn
+        for (const item of order.items) {
+          const book = await Book.findById(item.book);
+          if (book) {
+            await book.updateOne({ $inc: { stockQuantity: item.quantity } });
+          }
+        }
+      }
+    }
+
     await order.save();
 
     await AdminActivityLog.create({
       adminId: req.account._id,
       action: 'UPDATE_PAYMENT_STATUS',
-      details: `Admin ${req.account.email} đã cập nhật trạng thái thanh toán cho đơn hàng ${order._id} thành ${paymentStatus}`
+      details: `Admin ${req.account.email} đã cập nhật trạng thái thanh toán cho đơn hàng ${order._id} từ ${oldPaymentStatus} thành ${paymentStatus}`
     });
 
     res.status(200).json({
@@ -684,7 +723,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    //Chặn trường hợp huỷ đơn đã thanh toán
+    //Chặn trường hợp huỷ đơn đã thanh toán (trừ trường hợp đặc biệt)
     if (orderStatus === 'cancelled' && order.paymentStatus === 'paid') {
       return res.status(400).json({
         message: "Không thể huỷ đơn hàng đã thanh toán.",
@@ -708,6 +747,13 @@ const updateOrderStatus = async (req, res) => {
     }
 
     if (orderStatus === "cancelled") {
+      // Khi hủy đơn hàng, tự động cập nhật trạng thái thanh toán thành failed
+      // (trừ trường hợp đã thanh toán rồi thì giữ nguyên)
+      if (order.paymentStatus !== "paid") {
+        order.paymentStatus = "failed";
+      }
+
+      // Hoàn lại tồn kho khi hủy đơn
       for (const item of order.items) {
         const book = await Book.findById(item.book);
         if (book) {
@@ -926,6 +972,23 @@ const exportOrdersToExcel = async (req, res) => {
       .populate("user", "email info.fullName")
       .sort({ createdAt: -1 });
 
+    // Chuẩn bị map tiếng Việt cho trạng thái
+    const ORDER_STATUS_VI = {
+      pending: 'Chờ xác nhận',
+      confirmed: 'Đã xác nhận/giao hàng',
+      completed: 'Đã hoàn thành',
+      cancelled: 'Đã hủy',
+    };
+    const PAYMENT_STATUS_VI = {
+      pending: 'Chờ thanh toán',
+      paid: 'Đã thanh toán',
+      failed: 'Thanh toán thất bại',
+    };
+    const PAYMENT_METHOD_VI = {
+      COD: 'Thanh toán khi nhận hàng',
+      PAYOS: 'Thanh toán online',
+    };
+
     // Chuẩn bị dữ liệu cho sheet
     const data = orders.map(order => ({
       'Mã đơn': order.orderCode,
@@ -933,8 +996,8 @@ const exportOrdersToExcel = async (req, res) => {
       'Email': order.user?.email || '',
       'Số điện thoại': order.phone,
       'Tổng tiền': order.totalAmount,
-      'Trạng thái đơn': order.orderStatus,
-      'Trạng thái thanh toán': order.paymentStatus,
+      'Trạng thái đơn': ORDER_STATUS_VI[order.orderStatus] || order.orderStatus,
+      'Trạng thái thanh toán': PAYMENT_STATUS_VI[order.paymentStatus] || order.paymentStatus,
       'Phương thức thanh toán': order.paymentMethod,
       'Ngày tạo': order.createdAt ? new Date(order.createdAt).toLocaleString() : '',
       'Sản phẩm': order.items.map(i => `${i.book?.title} (SL: ${i.quantity})`).join('; ')

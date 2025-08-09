@@ -146,24 +146,30 @@ const Users = () => {
             label: 'Thao tác',
             render: (item) => (
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => handleToggleStatus(item)}
-                        className={`${item.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}`}
-                    >
-                        {item.isActive ? 'Khóa' : 'Mở khóa'}
-                    </button>
+                    {item.role !== 'superadmin' && (
+                        <button
+                            onClick={() => handleToggleStatus(item)}
+                            className={`${item.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}`}
+                        >
+                            {item.isActive ? 'Khóa' : 'Mở khóa'}
+                        </button>
+                    )}
                     <button
                         onClick={() => handleEditUser(item)}
                         className="text-blue-600 hover:text-blue-800"
                     >
                         <Icon icon="fluent:edit-20-filled" width="20" height="20" />
                     </button>
+                    {/*
                     <button
                         onClick={() => handleDeleteUser(item)}
                         className="text-red-600 hover:text-red-800"
+                        disabled={item.role === 'superadmin'}
+                        title={item.role === 'superadmin' ? 'Không thể xóa Super Admin' : ''}
                     >
                         <Icon icon="fluent:delete-20-filled" width="20" height="20" />
                     </button>
+                    */}
                 </div>
             )
         }

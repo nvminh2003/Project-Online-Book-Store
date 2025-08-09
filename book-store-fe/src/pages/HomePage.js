@@ -309,73 +309,81 @@ const HomePage = () => {
                     ) : (
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {featuredBooks.map(book => (
-                                    <div key={book._id} className="flex flex-col h-full border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300">
-                                        <div>
-                                            <div className="aspect-[3/4] w-full overflow-hidden mb-3">
-                                                <img
-                                                    src={book.images && book.images.length > 0 ? book.images[0] : 'https://via.placeholder.com/300x400?text=No+Image'}
-                                                    alt={book.title}
-                                                    className="w-full h-full object-cover rounded-md cursor-pointer transition-transform duration-200 hover:scale-105"
-                                                    onClick={() => handleViewDetail(book._id)}
-                                                />
+                                {featuredBooks.map(book => {
+                                    const isOutOfStock = typeof book.stockQuantity === 'number' && book.stockQuantity <= 0;
+                                    return (
+                                        <div key={book._id} className={`flex flex-col h-full border rounded-lg p-4 text-center shadow-sm hover:shadow-md transition-shadow duration-300 ${isOutOfStock ? 'opacity-60 pointer-events-none' : ''}`}>
+                                            <div>
+                                                <div className="aspect-[3/4] w-full overflow-hidden mb-3 relative">
+                                                    <img
+                                                        src={book.images && book.images.length > 0 ? book.images[0] : 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                        alt={book.title}
+                                                        className="w-full h-full object-cover rounded-md cursor-pointer transition-transform duration-200 hover:scale-105"
+                                                        onClick={() => handleViewDetail(book._id)}
+                                                    />
+                                                    {isOutOfStock && (
+                                                        <span className="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-0.5 rounded animate-pulse">Hết hàng</span>
+                                                    )}
+                                                </div>
+                                                <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-[40px]">{book.title}</h3>
+                                                <p className="text-sm text-gray-500 italic min-h-[20px]">{book.authors ? book.authors.join(', ') : "Tác giả không rõ"}</p>
+                                                <div className="mb-3 min-h-[32px]">
+                                                    {book.originalPrice && book.originalPrice > book.sellingPrice && (
+                                                        <span className="text-sm text-gray-400 line-through mr-1">
+                                                            {formatPrice(book.originalPrice)}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-lg font-bold text-red-600">{formatPrice(book.sellingPrice)}</span>
+                                                </div>
                                             </div>
-                                            <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-[40px]">{book.title}</h3>
-                                            <p className="text-sm text-gray-500 italic min-h-[20px]">{book.authors ? book.authors.join(', ') : "Tác giả không rõ"}</p>
-                                            <div className="mb-3 min-h-[32px]">
-                                                {book.originalPrice && book.originalPrice > book.sellingPrice && (
-                                                    <span className="text-sm text-gray-400 line-through mr-1">
-                                                        {formatPrice(book.originalPrice)}
-                                                    </span>
+                                            <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
+                                                {/* Thêm vào giỏ - ẩn cho admin */}
+                                                {!isAdmin && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAddToCart(book._id);
+                                                        }}
+                                                        className={`bg-white border border-blue-500 p-3 rounded-full flex items-center justify-center transition-all duration-200 ${isOutOfStock ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'hover:bg-blue-100 hover:scale-110 hover:shadow-lg'}`}
+                                                        title="Thêm vào giỏ hàng"
+                                                        disabled={isOutOfStock}
+                                                    >
+                                                        <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
+                                                    </button>
                                                 )}
-                                                <span className="text-lg font-bold text-red-600">{formatPrice(book.sellingPrice)}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
-                                            {/* Thêm vào giỏ - ẩn cho admin */}
-                                            {!isAdmin && (
+                                                {/* Yêu thích - ẩn cho admin */}
+                                                {!isAdmin && (
+                                                    <WishlistButton
+                                                        bookId={book._id}
+                                                        variant="icon-only"
+                                                        onRequireLogin={() => {
+                                                            notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
+                                                            setTimeout(() => navigate("/auth/login"), 1500);
+                                                        }}
+                                                        onSuccessAdd={() => {
+                                                            notifySuccess("Thêm sản phẩm yêu thích thành công");
+                                                        }}
+                                                        onSuccessRemove={() => {
+                                                            notifyError("Đã xóa khỏi danh sách yêu thích");
+                                                        }}
+                                                        disabled={isOutOfStock}
+                                                    />
+                                                )}
+                                                {/* Xem chi tiết */}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleAddToCart(book._id);
+                                                        handleViewDetail(book._id);
                                                     }}
-                                                    className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
-                                                    title="Thêm vào giỏ hàng"
+                                                    className="bg-white border border-purple-500 p-3 rounded-full hover:bg-purple-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                                                    title="Xem chi tiết"
                                                 >
-                                                    <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
+                                                    <Icon icon="mdi:eye" width="20" height="20" color="#7c3aed" />
                                                 </button>
-                                            )}
-                                            {/* Yêu thích - ẩn cho admin */}
-                                            {!isAdmin && (
-                                                <WishlistButton
-                                                    bookId={book._id}
-                                                    variant="icon-only"
-                                                    onRequireLogin={() => {
-                                                        notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
-                                                        setTimeout(() => navigate("/auth/login"), 1500);
-                                                    }}
-                                                    onSuccessAdd={() => {
-                                                        notifySuccess("Thêm sản phẩm yêu thích thành công");
-                                                    }}
-                                                    onSuccessRemove={() => {
-                                                        notifyError("Đã xóa khỏi danh sách yêu thích");
-                                                    }}
-                                                />
-                                            )}
-                                            {/* Xem chi tiết */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleViewDetail(book._id);
-                                                }}
-                                                className="bg-white border border-purple-500 p-3 rounded-full hover:bg-purple-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
-                                                title="Xem chi tiết"
-                                            >
-                                                <Icon icon="mdi:eye" width="20" height="20" color="#7c3aed" />
-                                            </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             {/* Link "Xem thêm" */}
