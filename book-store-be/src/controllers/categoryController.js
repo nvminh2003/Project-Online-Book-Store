@@ -43,13 +43,13 @@ const createCategory = async (req, res) => {
             slug,
             createdBy: req.account._id
         });
-        
+
         await newCategory.save();
         await AdminActivityLog.create({
-                            adminId: req.account._id,
-                            action: 'CREATE_CATEGORY',
-                            details: `Admin ${req.account.email} updated account ${newCategory.name} (ID: ${newCategory._id})`
-                        });
+            adminId: req.account._id,
+            action: 'CREATE_CATEGORY',
+            details: `Admin ${req.account.email} updated account ${newCategory.name} (ID: ${newCategory._id})`
+        });
 
         res.status(201).json({
             message: "Category created successfully",
@@ -155,10 +155,10 @@ const updateCategory = async (req, res) => {
             { new: true }
         );
         await AdminActivityLog.create({
-                            adminId: req.account._id,
-                            action: 'UPDATE_CATEGORY',
-                            details: `Admin ${req.account.email} updated account ${category.name} (ID: ${category._id})`
-                        });
+            adminId: req.account._id,
+            action: 'UPDATE_CATEGORY',
+            details: `Admin ${req.account.email} updated account ${category.name} (ID: ${category._id})`
+        });
 
         res.status(200).json({
             message: "Category updated successfully",
@@ -196,10 +196,10 @@ const deleteCategory = async (req, res) => {
 
         await Category.findByIdAndDelete(req.params.id);
         await AdminActivityLog.create({
-                            adminId: req.account._id,
-                            action: 'DELETE_CATEGORY',
-                            details: `Admin ${req.account.email} updated account ${category.name} (ID: ${category._id})`
-                        });
+            adminId: req.account._id,
+            action: 'DELETE_CATEGORY',
+            details: `Admin ${req.account.email} updated account ${category.name} (ID: ${category._id})`
+        });
 
         res.status(200).json({
             message: "Category deleted successfully",
