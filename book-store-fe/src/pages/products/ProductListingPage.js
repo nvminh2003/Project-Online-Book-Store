@@ -216,15 +216,19 @@ const ProductDetailPage = () => {
             paginatedBooks.map((book) => {
               const hasDiscount = typeof book.sellingPrice === "number" && typeof book.originalPrice === "number" && book.originalPrice > book.sellingPrice;
               const discountPercent = hasDiscount ? Math.round(((book.originalPrice - book.sellingPrice) / book.originalPrice) * 100) : 0;
+              const isOutOfStock = typeof book.stockQuantity === 'number' && book.stockQuantity <= 0;
               return (
                 <div
                   key={book._id}
-                  className="relative bg-white rounded-lg shadow-md border border-gray-200 p-3 flex flex-col items-center w-[220px] min-h-[410px] group cursor-pointer transition-all duration-200 hover:shadow-2xl hover:scale-105 hover:border-blue-400 hover:bg-blue-50"
+                  className={`relative bg-white rounded-lg shadow-md border border-gray-200 p-3 flex flex-col items-center w-[220px] min-h-[410px] group cursor-pointer transition-all duration-200 hover:shadow-2xl hover:scale-105 hover:border-blue-400 hover:bg-blue-50 ${isOutOfStock ? 'opacity-60 pointer-events-none' : ''}`}
                   style={{ margin: '0 0.5rem', minHeight: 410, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
                   onClick={() => handleViewDetail(book._id)}
                 >
                   {hasDiscount && (
                     <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded">-{discountPercent}%</span>
+                  )}
+                  {isOutOfStock && (
+                    <span className="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-0.5 rounded animate-pulse">Hết hàng</span>
                   )}
                   <img
                     src={book.images?.[0] || "/default-book.jpg"}
@@ -244,7 +248,6 @@ const ProductDetailPage = () => {
                   </div>
 
                   {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
-                  {/* 3 icon buttons luôn hiển thị dưới giá, thẳng hàng, đều nhau, luôn ở cuối card */}
                   <div className="flex flex-row gap-3 mt-auto w-full justify-center items-end pb-2">
                     {/* Thêm vào giỏ - ẩn cho admin */}
                     {!isAdmin && (
@@ -253,8 +256,9 @@ const ProductDetailPage = () => {
                           e.stopPropagation();
                           handleAddToCart(book._id);
                         }}
-                        className="bg-white border border-blue-500 p-3 rounded-full hover:bg-blue-100 hover:scale-110 hover:shadow-lg flex items-center justify-center transition-all duration-200"
+                        className={`bg-white border border-blue-500 p-3 rounded-full flex items-center justify-center transition-all duration-200 ${isOutOfStock ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'hover:bg-blue-100 hover:scale-110 hover:shadow-lg'}`}
                         title="Thêm vào giỏ hàng"
+                        disabled={isOutOfStock}
                       >
                         <Icon icon="mdi:cart" width="20" height="20" color="#2563eb" />
                       </button>
@@ -275,6 +279,7 @@ const ProductDetailPage = () => {
                         onSuccessRemove={() => {
                           notifyError("Đã xóa khỏi danh sách yêu thích");
                         }}
+                        disabled={isOutOfStock}
                       />
                     )}
 

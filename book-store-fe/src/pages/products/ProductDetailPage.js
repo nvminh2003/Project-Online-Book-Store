@@ -197,6 +197,9 @@ const ProductDetailPage = () => {
     fetchReviews(page);
   };
 
+  // Kiểm tra hết hàng
+  const isOutOfStock = book && typeof book.stockQuantity === 'number' && book.stockQuantity <= 0;
+
   if (loading)
     return (
       <p className="p-4 text-center text-gray-500">Đang tải dữ liệu sách...</p>
@@ -374,6 +377,7 @@ const ProductDetailPage = () => {
                 setQuantity(isNaN(val) || val < 1 ? 1 : val);
               }}
               className="w-16 px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+              disabled={isOutOfStock}
             />
           </div>
 
@@ -382,17 +386,18 @@ const ProductDetailPage = () => {
             {!isAdmin && (
               <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm"
+                className={`flex-1 bg-white border border-blue-500 text-blue-600 font-semibold px-3 py-2 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center gap-1 hover:bg-blue-100 hover:scale-105 hover:shadow-xl text-sm ${isOutOfStock ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
+                disabled={isOutOfStock}
               >
                 <Icon icon="mdi:cart" width="18" height="18" color="#2563eb" />
-                Thêm vào giỏ hàng
+                {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
               </button>
             )}
             {/* Wishlist button - ẩn cho admin */}
             {!isAdmin && (
               <WishlistButton
                 bookId={bookId}
-                className="flex-1 font-semibold px-6 py-3 shadow-md hover:shadow-lg"
+                className={`flex-1 font-semibold px-6 py-3 shadow-md hover:shadow-lg ${isOutOfStock ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
                 onRequireLogin={() => {
                   notifyError("Bạn cần đăng nhập để thêm vào yêu thích.");
                   setTimeout(() => navigate("/auth/login"), 1500);
@@ -403,6 +408,7 @@ const ProductDetailPage = () => {
                 onSuccessRemove={() => {
                   notifyError("Đã xóa khỏi danh sách yêu thích");
                 }}
+                disabled={isOutOfStock}
               />
             )}
             <button
@@ -413,6 +419,17 @@ const ProductDetailPage = () => {
               Quay lại
             </button>
           </div>
+
+          {/* Nếu hết hàng, hiển thị banner giống Shopee */}
+          {isOutOfStock && (
+            <div className="mt-4 p-4 bg-gray-100 border border-dashed border-red-400 rounded-lg flex items-center gap-3 animate-pulse">
+              <Icon icon="mdi:alert-circle-outline" width="32" height="32" className="text-red-500" />
+              <div>
+                <div className="text-lg font-bold text-red-600 mb-1">Sản phẩm tạm hết hàng</div>
+                <div className="text-gray-600 text-sm">Vui lòng chọn sản phẩm khác hoặc quay lại sau.</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

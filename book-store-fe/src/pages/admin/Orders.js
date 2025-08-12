@@ -27,6 +27,19 @@ const PAYMENT_METHOD = [
     { value: 'PAYOS', label: 'PayOS' },
 ];
 
+// Map tiếng Việt cho trạng thái đơn hàng và thanh toán
+const ORDER_STATUS_VI = {
+    pending: 'Chờ xác nhận',
+    confirmed: 'Đã xác nhận/giao hàng',
+    completed: 'Đã hoàn thành',
+    cancelled: 'Đã hủy',
+};
+const PAYMENT_STATUS_VI = {
+    pending: 'Chờ thanh toán',
+    paid: 'Đã thanh toán',
+    failed: 'Thanh toán thất bại',
+};
+
 const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -418,7 +431,7 @@ const Orders = () => {
                                                 ? 'bg-gray-500'
                                                 : 'bg-blue-500'
                                         }`}>
-                                        {selectedOrder.orderStatus}
+                                        {ORDER_STATUS_VI[selectedOrder.orderStatus] || selectedOrder.orderStatus}
                                     </span>
                                 </div>
 
@@ -430,7 +443,7 @@ const Orders = () => {
                                             ? 'bg-red-500'
                                             : 'bg-yellow-500'
                                         }`}>
-                                        {selectedOrder.paymentStatus}
+                                        {PAYMENT_STATUS_VI[selectedOrder.paymentStatus] || selectedOrder.paymentStatus}
                                     </span>
                                 </div>
                             </div>

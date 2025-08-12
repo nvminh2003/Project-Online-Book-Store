@@ -371,6 +371,10 @@ const toggleReviewVisibility = async (req, res) => {
         review.isHidden = !review.isHidden;
         await review.save();
 
+        // Cập nhật lại rating cho sách sau khi ẩn/hiện review
+        const updateBookRating = require('../utils/updateBookRating');
+        await updateBookRating(review.book);
+
         res.status(200).json({
             status: "Success",
             message: review.isHidden
